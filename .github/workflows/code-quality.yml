@@ -7,6 +7,11 @@ on:
   push:
   pull_request:
 
+# Avoid duplicate runs when both push and pull_request trigger for the same commit
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: true
+
 jobs:
   lint:
     name: Python lint (Ruff)
