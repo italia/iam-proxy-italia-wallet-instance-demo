@@ -1,0 +1,7 @@
+{
+  "extends": "stylelint-config-standard",
+  "ignoreFiles": ["static/css/qr_code/all.min.css", "static/tom-select.css"],
+  "rules": {
+    "no-descending-specificity": null
+  }
+}

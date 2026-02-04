@@ -1,0 +1,24 @@
+[project]
+name = "iam-proxy-italia-wallet-instance-demo"
+readme = "README.md"
+requires-python = ">=3.10"
+
+[tool.ruff]
+target-version = "py310"
+line-length = 120
+exclude = [".git", "__pycache__", ".venv", "venv", "static", "templates"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP", "B", "C4", "SIM"]
+ignore = ["E501"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.radon]
+min = "B"
+
+[tool.xenon]
+max_absolute = "B"
+max_modules = "B"
+max_average = "A"

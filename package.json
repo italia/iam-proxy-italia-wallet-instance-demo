@@ -1,0 +1,10 @@
+{
+  "name": "iam-proxy-italia-wallet-instance-demo",
+  "private": true,
+  "description": "Dev dependencies for linting (HTML/CSS)",
+  "devDependencies": {
+    "htmlhint": "^1.1.4",
+    "stylelint": "^16.9.0",
+    "stylelint-config-standard": "^36.0.1"
+  }
+}

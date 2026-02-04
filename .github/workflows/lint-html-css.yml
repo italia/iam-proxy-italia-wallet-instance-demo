@@ -1,0 +1,49 @@
+# HTML and CSS linting
+# - stylelint: CSS/SCSS linting
+# - HTMLHint: HTML linting
+name: Lint HTML & CSS
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  css:
+    name: CSS (stylelint)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run stylelint
+        run: npx stylelint 'static/**/*.css' --max-warnings 0
+        continue-on-error: true
+
+  html:
+    name: HTML (HTMLHint)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run HTMLHint
+        run: npx htmlhint "templates/**/*.html" "static/**/*.html"
+        continue-on-error: true
