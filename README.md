@@ -259,6 +259,8 @@ The released software is an initial development release version:
 ## 8. License
 
 This project is licensed under the Apache License, Version 2.0.
-For more details, see the [LICENSE](LICENSE) file,
+For more details, see the [LICENSE](LICENSE) file.
+
+**Icons and images:** UI icons (trash, memory, card, PDF, QR code) are from [Bootstrap Icons](https://icons.getbootstrap.com/) (MIT), in line with the [Bootstrap Italia](https://italia.github.io/bootstrap-italia/) design system. For a full list of assets and their licenses, see [docs/ASSETS.md](docs/ASSETS.md).
 
 <br/>
