@@ -33,7 +33,7 @@ def from_json_filter(value):
     try:
         return json.loads(value)
     except (TypeError, json.JSONDecodeError) as e:
-        logger.error(f"Errore parsing JSON nel filtro: {e}, valore: {value}")
+        logging.getLogger(__name__).error(f"Errore parsing JSON nel filtro: {e}, valore: {value}")
         return []
     
 @app.template_filter('split')

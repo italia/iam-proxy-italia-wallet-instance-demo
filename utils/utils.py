@@ -1,35 +1,36 @@
 import base64
 import binascii
 from datetime import datetime, timezone
+import hashlib
+import io
 import json
 import secrets
-import hashlib
-import secrets
 import string
+from typing import Tuple, Union
+from urllib.parse import parse_qs, urlparse
+
 import fitz
-import io
 import jmespath
 from jwcrypto import jwk
-from cryptography.hazmat.primitives.asymmetric import ec
-from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePrivateNumbers
-from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.exceptions import InvalidSignature
-from cryptography.hazmat.primitives.serialization import Encoding, PrivateFormat, NoEncryption
-from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePrivateKey
-from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePublicKey
-from cryptography.hazmat.primitives.serialization import load_pem_private_key
-from cryptography.hazmat.primitives.serialization import load_pem_public_key
 from cryptography.hazmat.backends import default_backend
-
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives.asymmetric.ec import (
     EllipticCurvePrivateKey,
+    EllipticCurvePrivateNumbers,
     EllipticCurvePublicKey,
     SECP256R1,
     SECP384R1,
     SECP521R1,
 )
-
-from typing import Union, Tuple
+from cryptography.hazmat.primitives.serialization import (
+    Encoding,
+    NoEncryption,
+    PrivateFormat,
+    load_pem_private_key,
+    load_pem_public_key,
+)
 
 from constants import CONTENT_PDF_BASE_64_PREFIX
 
@@ -440,7 +441,6 @@ def to_datetime(value):
     except Exception as e:
         raise ValueError("Errore in to_utc_datetime: {e}")
 
-from urllib.parse import urlparse, parse_qs
 
 def estrai_parametro_query_string(url: str, parametro: str) -> str | None:
     """

@@ -15,8 +15,7 @@ from utils.cborUtils import decode_and_verify_issuer_signed
 from bs4 import BeautifulSoup
 from state import app_state
 from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePrivateKey, EllipticCurvePublicKey
-from typing import Tuple
-from typing import Optional
+from typing import Optional, Tuple
 from flask import current_app
 from urllib.parse import parse_qs, urlencode, urlparse
 

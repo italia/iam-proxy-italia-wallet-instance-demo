@@ -26,7 +26,6 @@ jobs:
 
       - name: Run stylelint
         run: npx stylelint 'static/**/*.css' --max-warnings 0
-        continue-on-error: true
 
   html:
     name: HTML (HTMLHint)
@@ -46,4 +45,3 @@ jobs:
 
       - name: Run HTMLHint
         run: npx htmlhint "templates/**/*.html" "static/**/*.html"
-        continue-on-error: true

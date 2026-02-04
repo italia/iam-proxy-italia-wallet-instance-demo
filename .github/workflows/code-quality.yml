@@ -47,14 +47,12 @@ jobs:
       - name: Cyclomatic complexity (CC)
         run: |
           radon cc app.py routes/ service/ utils/ state.py constants.py -a -s --total-average
-        continue-on-error: true
 
       - name: Maintainability index (MI)
         run: |
           radon mi app.py routes/ service/ utils/ state.py constants.py -s -n B
-        continue-on-error: true
 
       - name: Fail on high complexity (Xenon)
         run: |
           pip install xenon
-          xenon --max-absolute B --max-modules B --max-average A app.py routes/ service/ utils/
+          xenon --max-absolute B --max-modules B --max-average B app.py routes/ service/ utils/

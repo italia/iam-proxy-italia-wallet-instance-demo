@@ -17,9 +17,8 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import ec, utils
 
 # Funzione helper per creare DER signature da r, s
-from cryptography.hazmat.primitives.asymmetric.utils import encode_dss_signature
-from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.exceptions import InvalidSignature
+from cryptography.hazmat.primitives.asymmetric.utils import encode_dss_signature
 
 # Assicurati che 'make_issuer_key_callback' sia definito in utils/utils.py oppure qui stesso
 from utils.utils import (
