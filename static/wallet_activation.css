@@ -1,0 +1,219 @@
+/* wallet_activation.css */
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #f4f6f9;
+  color: #2c3e50;
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.container {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  padding: 30px 40px;
+  max-width: 480px;
+  width: 90%;
+}
+
+header {
+  text-align: center;
+  margin-bottom: 25px;
+}
+
+header img {
+  height: 68px;
+  margin-bottom: 15px;
+}
+
+header h1 {
+  font-size: 1.5rem;   /* riduci a 1.5 rem, puoi provare anche 1.2rem o 1.4rem */
+  white-space: nowrap; /* evita che vada a capo */
+  overflow: hidden;    /* nasconde eventuale testo che esce dal contenitore */
+  text-overflow: ellipsis; /* opzionale: aggiunge "..." se il testo è troppo lungo */
+  margin-top: 10px; /* o 5px, o 0px se vuoi attaccarlo */
+}
+
+main p {
+  font-size: 1rem;
+  margin-bottom: 25px;
+  line-height: 1.4;
+  color: #3b4750;
+}
+
+.activation-form {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group {
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: #2c3e50;
+}
+
+.form-group input[type="password"] {
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  font-size: 1rem;
+  transition: border-color 0.3s ease;
+}
+
+.form-group input[type="password"]:focus {
+  border-color: #005ea5;
+  outline: none;
+}
+
+.form-group.checkbox {
+  flex-direction: row;
+  align-items: center;
+}
+
+.form-group.checkbox input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  margin-right: 12px;
+  cursor: pointer;
+}
+
+.form-group.checkbox label {
+  font-weight: 400;
+  font-size: 0.9rem;
+  color: #55616f;
+}
+
+.form-group.checkbox a {
+  color: #005ea5;
+  text-decoration: none;
+}
+
+.form-group.checkbox a:hover {
+  text-decoration: underline;
+}
+
+.btn-activate {
+  background-color: #005ea5;
+  color: white;
+  border: none;
+  padding: 14px;
+  font-weight: 700;
+  font-size: 1.1rem;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.btn-activate:hover {
+  background-color: #003d73;
+}
+
+.button-row {
+  display: flex;
+  gap: 10px; /* spazio tra i pulsanti */
+  margin-top: 1rem;
+}
+
+.btn-wallet {
+  padding: 10px 16px;
+  background-color: #004080; /* un blu istituzionale */
+  color: white;
+  text-decoration: none;
+  border-radius: 4px;
+  font-weight: bold;
+  transition: background-color 0.3s ease;
+  /* per centrare con margine automatico, serve che sia block o flex */
+  display: block;
+  width: max-content; /* per adattare larghezza al testo */
+}
+.btn-wallet.disabled {
+  cursor: not-allowed;
+  background-color: #ccc;
+}
+.btn-logout:hover {
+  background-color: #002a50;
+}
+
+.flash {
+  padding: 10px;
+  border-radius: 4px;
+  margin-bottom: 0.5em;
+  font-weight: bold;
+}
+
+.flash-container {
+  margin: 0;
+}
+.flash-container p {
+  margin: 0;
+  padding: 12px 20px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 1rem;
+}
+.flash-success {
+  background-color: #d4edda;
+  color: #155724;
+}
+.flash-error {
+  background-color: #f8d7da;
+  color: #721c24;
+  word-break: break-all; /* forza l'a capo anche nelle parole lunghe */
+}
+
+ #overlay {
+     position: fixed;
+     top: 0;
+     left: 0;
+     width: 100vw;
+     height: 100vh;
+     background: rgba(0, 0, 0, 0.5);
+     z-index: 9999;
+     display: flex;
+     align-items: center;
+     justify-content: center;
+   }
+   /* Loader animato */
+   .loader {
+     border: 8px solid #f3f3f3;
+     border-top: 8px solid #3498db;
+     border-radius: 50%;
+     width: 60px;
+     height: 60px;
+     animation: spin 1s linear infinite;
+   }
+   @keyframes spin {
+     0% { transform: rotate(0deg); }
+     100% { transform: rotate(360deg); }
+   }
+   /* Nascondi l'overlay di default */
+   #overlay.hidden {
+     display: none;
+   }
+/* Responsive */
+
+@media (max-width: 480px) {
+  .container {
+    padding: 25px 20px;
+  }
+
+  header h1 {
+    font-size: 1.5rem;
+  }
+}
+

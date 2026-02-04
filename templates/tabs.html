@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <title>Test Tabs</title>
+  <link rel="stylesheet" href="../static/wallet.css" />
+</head>
+<body>
+
+<!-- Popup Modal Moderno -->
+<div id="cred-popup" class="modal show">
+  <div class="cred-popup-content show">
+    <button id="cred-popup-trash" class="cred-popup-trash-btn" onclick="deleteCredential()">🗑️</button>
+    <button id="cred-popup-close" class="cred-popup-close-btn" onclick="closeCredPopup()">❌</button>
+    <div id="cred-popup-title">Titolo popup</div>
+    <div id="cred-popup-body">
+      <!-- Tabs dentro il popup -->
+      <div class="tabs">
+        <div class="tab active" data-tab="graphic" onclick="showTab('graphic')">Grafico</div>
+        <div class="tab" data-tab="json" onclick="showTab('json')">JSON</div>
+        <div class="tab" data-tab="original" onclick="showTab('original')">Originale</div>
+      </div>
+      <div id="graphic" class="tab-content active">
+        <!-- qui puoi mettere il contenuto grafico -->
+      </div>
+      <div id="json" class="tab-content">
+        <pre id="jsonContent">{}</pre>
+      </div>
+      <div id="original" class="tab-content">
+        <p>Contenuto originale...</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function showTab(tabId) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  document.querySelector('.tab[data-tab="'+tabId+'"]').classList.add('active');
+  document.getElementById(tabId).classList.add('active');
+}
+function deleteCredential() {
+  alert("deleteCredential chiamato");
+}
+function closeCredPopup() {
+  alert("closeCredPopup chiamato");
+}
+function syntaxHighlight(json) {
+  if (typeof json != 'string') {
+    json = JSON.stringify(json, undefined, 2);
+  }
+  json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return json.replace(/("(\\u[\da-fA-F]{4}|\\[^u]|[^\\"])*"(?:\s*:)?|\b(true|false|null)\b|\b-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?\b)/g, function (match) {
+    let cls = 'number';
+    if (/^"/.test(match)) {
+      if (/:$/.test(match)) {
+        cls = 'key';
+      } else {
+        cls = 'string';
+      }
+    } else if (/true|false/.test(match)) {
+      cls = 'boolean';
+    } else if (/null/.test(match)) {
+      cls = 'null';
+    }
+    return '<span class="' + cls + '">' + match + '</span>';
+  });
+}
+// Esempio: mostrare un JSON di test
+document.addEventListener("DOMContentLoaded", () => {
+  const exampleJson = {
+    "credential_status_type": "0x00",
+    "credential_hash_alg": "sha-256",
+    "iss": "https://eid-provider.example.org/1-0",
+    "credential_hash": "",
+    "cnf": {
+      "jwk": {
+          "crv": "",
+          "kid": "",
+          "kty": "",
+          "x": "",
+          "y": ""
+      }
+    },
+    "exp": 1753855820,
+    "iat": 1753769420,
+    "jti": ""
+  };
+  document.getElementById("jsonContent").innerHTML = syntaxHighlight(exampleJson);
+});
+</script>
+
+</body>
+</html>

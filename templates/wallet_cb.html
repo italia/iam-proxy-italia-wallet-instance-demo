@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <title>Completato</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='wallet.css') }}">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+  <p style="position: absolute; top: 20px; left: 20px;">Hai completato il processo di autenticazione. Questa finestra si chiuderà.</p>
+  <script>
+    // Manda un messaggio alla pagina principale
+    if (window.opener) {
+      window.opener.postMessage({ event: "wallet_flow_complete" }, "*");
+    }
+    // Chiudi il popup dopo 500ms per dare tempo al messaggio di arrivare
+    setTimeout(() => window.close(), 500);
+  </script>
+</body>
+</html>

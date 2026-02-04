@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8" />
+<title>Person Identification Data</title>
+<link rel="stylesheet" href="../static/wallet.css" />
+<style>
+  .card_container {
+    display: flex;
+    flex-direction: column; /* impila in verticale */
+    align-items: center;     /* centra orizzontalmente */
+    gap: 10px;               /* spazio tra card_0x00 e card */
+    margin-top: 20px;
+  }
+  .card_metadata{
+    color: #000;
+    padding: 4px 4px;
+    width: 100%;
+    text-align: justify;
+    margin-top: 10px;
+  }
+  .card_ {
+    background-color: #cccccc;  /* grigio chiaro */
+    color: #333333;             /* grigio scuro per il testo */              
+    padding: 2px 2px;
+    font-weight: normal;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);           
+    min-width: 150px;
+    text-align: center;
+    letter-spacing: 1px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+    border: 1px solid #222;
+    border-radius: 10px;
+
+    /* Allineamento a destra */
+    display: block;
+    margin-left: auto;
+  }
+  .card_0x00 {
+    background-color: #4caf50; 
+    color: white;              
+    padding: 2px 2px;
+    font-weight: normal;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);           
+    min-width: 150px;
+    text-align: center;
+    letter-spacing: 1px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+    border: 1px solid #222;
+    border-radius: 10px;
+
+    /* Allineamento a destra */
+    display: block;
+    margin-left: auto;
+  }
+  .card_0x01 {
+    background-color: #d93025; 
+    color: white;              
+    padding: 2px 2px;
+    font-weight: normal;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);           
+    min-width: 150px;
+    text-align: center;
+    letter-spacing: 1px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+    border: 1px solid #222;
+    border-radius: 10px;
+
+    /* Allineamento a destra */
+    display: block;
+    margin-left: auto;
+  }
+  .card_0x02 {
+    background-color: #856404; 
+    color: white;              
+    padding: 2px 2px;
+    font-weight: normal;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);           
+    min-width: 150px;
+    text-align: center;
+    letter-spacing: 1px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+    border: 1px solid #222;
+    border-radius: 10px;
+
+    /* Allineamento a destra */
+    display: block;
+    margin-left: auto;
+  }
+
+  .card {
+    position: relative;
+    width: 460px;
+    height: 260px;
+    padding: 14px;
+    border: 1px solid #222;
+    border-radius: 24px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    color: #000;
+    background: linear-gradient(135deg, #d4e7fc 0%, #79b4d2 100%);
+    overflow: hidden;
+  }
+
+  .card::before {
+    content: "PID PID PID PID PID\nPID PID PID PID PID\nPID PID PID PID PID\nPID PID PID PID PID\nPID PID PID PID PID";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    color: rgba(255, 255, 255, 0.15);
+    font-size: 48px;
+    font-weight: 900;
+    letter-spacing: 5px;
+    line-height: 1.5;
+    text-align: center;
+    white-space: pre-wrap;
+    transform: rotate(-45deg);
+    pointer-events: none;
+    user-select: none;
+    z-index: 0;
+  }
+
+  .card > * {
+    position: relative;
+    z-index: 1;
+  }
+
+
+  .card:hover {
+    box-shadow: 0 10px 30px rgba(0,0,0,0.4), 0 0 20px rgba(167, 206, 242, 0.7);
+  }
+
+  .card .header {
+    display: flex;
+    align-items: flex-start; /* allinea in alto */
+    width: 100%;
+  }
+  .card .footer {
+    position: absolute;
+    bottom: 12px;
+    right: 20px;
+    font-size: 0.7em;
+    color: #000;
+  }
+  .card .header .left {
+    width: 15px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .card .header .center {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 0;
+    flex: 1; /* prendi tutto lo spazio disponibile */
+  }
+  .card .header .right {
+    width: 30px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+  }
+  .card .blue-stripe {
+    position: absolute;
+    top: 21px; /* Regola in base alla posizione della scritta */
+    left: 0;
+    width: 100%;
+    height: 38px;
+    background: rgba(0, 102, 204, 0.2); /* azzurro semitrasparente */
+    pointer-events: none; /* la striscia non blocca il testo sotto */
+    z-index: 1;
+  }
+  .card .header .center .title {
+    font-size: 24px;
+    font-weight: bold;
+    color: #000;
+    text-shadow: 1px 1px 0 rgba(255,255,255,0.6); /* luce per risalto */
+    margin-top: 5px;
+    margin-left: 54px;
+    margin-bottom: 10px;
+    letter-spacing: 1px;
+  }
+  .card .header .center .subtitle {
+    font-size: 16px;
+    line-height: 16px;
+    font-weight: bold;
+    letter-spacing: 2px;
+    margin: 0px;
+    padding: 0px;
+    color: #003399;
+    text-transform: uppercase;
+    text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.1);
+  }
+  .card .header .center .subsubtitle {
+    font-size: 11px;
+    line-height: 12px;
+    font-weight: bold;
+    letter-spacing: 2px;
+    margin: 0px;
+    padding: 0px;
+    color: #003399;
+    text-transform: uppercase;
+    text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.1);
+  }
+  .card .header .center .fields {
+    margin-top: 10px;
+    font-weight: normal;
+    width: 100%
+  }
+  .card .header .center .fields .field {
+    display: flex;
+    margin-bottom: 8px;
+    font-size: 14px;
+    width: 100%; /* così occupa tutta la larghezza disponibile nella colonna */
+  }
+  .card .header .center .fields .field .label {
+    width: 130px; /* Fissa la larghezza per allineare */
+    font-weight: bold;
+    text-align: left;
+  }
+  .card .header .center .fields .field .value {
+    margin-left: 2px;
+    font-weight: normal;
+    flex: 1;
+    text-align: left;
+  }
+  .card .header .right .field-with-flag {
+    margin-top: 10px;
+    display: flex;
+    align-items: center;
+    position: relative;
+  }
+  .card .card-badge-down {
+    position: absolute;
+    bottom: 14px;  /* distanza dal fondo della card */
+    right: 20px;   /* distanza dal lato destro */
+    width: auto;   /* dimensione dell’immagine */
+    height: 40px;  /* dimensione dell’immagine */
+    z-index: 10;   /* sopra tutti gli altri elementi della card */
+    pointer-events: none; /* così non blocca click sulla card */
+    opacity: 0.7;  /* rende l'immagine sbiadita */
+  }
+  .card .card-badge-top {
+    position: absolute;
+    top: 16px;  /* distanza dal fondo della card */
+    right: 14px;   /* distanza dal lato destro */
+    width: 70px;   /* dimensione dell’immagine */
+    height: auto;  /* dimensione dell’immagine */
+    z-index: 10;   /* sopra tutti gli altri elementi della card */
+    pointer-events: none; /* così non blocca click sulla card */
+    opacity: 0.5;  /* rende l'immagine sbiadita */
+  }
+  .field-with-flag {
+      position: absolute;
+      top: 22px;
+      left: 28px;
+      width: 36px;
+      height: 24px;
+      flex-shrink: 0;
+  }
+  .field-with-flag .italian-flag-rect {
+      width: 40px;
+      height: 25px;
+      display: flex;
+      border: 1px solid white;
+      box-shadow: 0 2px 2px rgba(0,0,0,0.3);
+      margin-top: 1px;
+  }
+  .field-with-flag .italian-flag-rect .green {
+      background-color: #009246;
+      width: 33.33%;
+      height: 100%;
+  }
+  .field-with-flag .italian-flag-rect .white {
+      background-color: #FFFFFF;
+      width: 33.33%;
+      height: 100%;
+  }
+  .field-with-flag .italian-flag-rect .red {
+      background-color: #CE2B37;
+      width: 33.33%;
+      height: 100%;
+  }
+</style>
+</head>
+<body>
+  <div class="tabs">
+    <div class="tab active" data-tab="graphic" onclick="showTab('graphic')">Grafico</div>
+    <div class="tab" data-tab="json" onclick="showTab('json')">JSON</div>
+    <div class="tab" data-tab="original" onclick="showTab('original')">Originale</div>
+  </div>
+  <div id="graphic" class="tab-content active">
+    <div class="card_container">
+      <div class="card_{{ status }}">Stato&nbsp;{{ statusDecr }}</div>
+      <div class="card">
+        <!--<div class="blue-stripe"></div>-->
+        <div class="header">
+          <div class="left"></div>
+          <div class="center">
+            <div class="title">IT-Wallet ID</div>
+            <div class="fields">
+              <div class="field"><span class="label">Nome:</span><span class="value">{{ claims.given_name }}</span></div>
+              <div class="field"><span class="label">Cognome:</span><span class="value">{{ claims.family_name }}</span></div>
+              <div class="field"><span class="label">Data di nascita:</span><span class="value">{{ claims.birth_date }}</span></div>
+              <div class="field"><span class="label">Luogo di nascita:</span><span class="value">{{ claims.birth_place }}</span></div>
+              <div class="field"><span class="label">Nazionalità:</span><span class="value">{{ claims.nationalities | join(', ') }}</span></div>
+              <div class="field"><span class="label">Codice Fiscale:</span><span class="value">{{ claims.tax_id_code }}</span></div>
+              <div class="field">&nbsp;</div>
+            </div>
+          </div>
+          <div class="right"></div>
+        </div>
+        <div class="field-with-flag">
+            <div class="italian-flag-rect small-flag">
+                <div class="green"></div>
+                <div class="white"></div>
+                <div class="red"></div>
+            </div>
+        </div>
+        <img src="../static/images/italy_map.png" class="card-badge-top" />
+        <img src="../static/images/Emblem_of_Italy.svg" class="card-badge-down" />
+      </div>
+      <div class="card_metadata">{{ metadata }}</div>
+    </div>
+  </div>
+  <div id="json" class="tab-content">{{ claims | tojson }}</div>
+  <div id="original" class="tab-content">{{ data_row }}</div>
+  <div class="tab-actions">
+    <button id="copyBtn" class="copy-button" onclick="copyActiveTabContent()">COPY</button>
+  </div>
+</body>
+</html>

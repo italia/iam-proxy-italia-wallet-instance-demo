@@ -1,0 +1,37 @@
+# Evita di copiare la cartella di configurazione locale
+config/
+
+# Evita virtualenv locali
+venv/
+.venv/
+.env/
+
+# File Python compilati / cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# File temporanei / build
+*.db
+*.sqlite3
+*.log
+*.pot
+*.pyc
+*.pyo
+*.pyd
+*.egg
+*.egg-info
+dist/
+build/
+
+# File nascosti / vari editor
+*.swp
+*.swo
+*.DS_Store
+*.idea/
+.vscode/
+
+# Docker
+Dockerfile.*
+docker-compose*.yml

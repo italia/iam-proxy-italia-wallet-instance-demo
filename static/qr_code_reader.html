@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QR Code Reader</title>
+  <!-- Normalize File -->
+  <link rel="stylesheet" href="/static/css/qr_code/normalize.css">
+  <!-- Css File-->
+  <link rel="stylesheet" href="/static/css/qr_code/main.css">
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="/static/css/qr_code/all.min.css">
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@300;400&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="container">
+    <div class="app">
+      <form action="#">
+        <img src="" alt="">
+        <div class="content">
+          <input type="file" id="file" hidden>
+          <i class="fa-solid fa-cloud-arrow-up"></i>
+          <p>Upload QR Code To Scan</p>
+        </div>
+      </form>
+      <div class="details">
+        <textarea disabled></textarea>
+        <div class="buttons">
+          <button class="close">Close</button>
+          <button class="copy">Copy Text</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script src="/static/js/qr_code/all.min.js"></script>
+  <script src="/static/js/qr_code/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8" />
+<title>European Health Insurance Card</title>
+<link rel="stylesheet" href="../static/wallet.css" />
+<style>
+  .card_container {
+    display: flex;
+    flex-direction: column; /* impila in verticale */
+    align-items: center;     /* centra orizzontalmente */
+    gap: 10px;               /* spazio tra card_0x00 e card */
+    margin-top: 20px;
+  }
+  .card_metadata{
+    color: #000;
+    padding: 4px 4px;
+    width: 100%;
+    text-align: justify;
+    margin-top: 10px;
+  }
+  .card_ {
+    background-color: #cccccc;  /* grigio chiaro */
+    color: #333333;             /* grigio scuro per il testo */              
+    padding: 2px 2px;
+    font-weight: normal;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);           
+    min-width: 150px;
+    text-align: center;
+    letter-spacing: 1px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+    border: 1px solid #222;
+    border-radius: 10px;
+
+    /* Allineamento a destra */
+    display: block;
+    margin-left: auto;
+  }
+  .card_0x00 {
+    background-color: #4caf50; 
+    color: white;              
+    padding: 2px 2px;
+    font-weight: normal;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);           
+    min-width: 150px;
+    text-align: center;
+    letter-spacing: 1px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+    border: 1px solid #222;
+    border-radius: 10px;
+
+    /* Allineamento a destra */
+    display: block;
+    margin-left: auto;
+  }
+  .card_0x01 {
+    background-color: #d93025; 
+    color: white;              
+    padding: 2px 2px;
+    font-weight: normal;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);           
+    min-width: 150px;
+    text-align: center;
+    letter-spacing: 1px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+    border: 1px solid #222;
+    border-radius: 10px;
+
+    /* Allineamento a destra */
+    display: block;
+    margin-left: auto;
+  }
+  .card_0x02 {
+    background-color: #856404; 
+    color: white;              
+    padding: 2px 2px;
+    font-weight: normal;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);           
+    min-width: 150px;
+    text-align: center;
+    letter-spacing: 1px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+    border: 1px solid #222;
+    border-radius: 10px;
+
+    /* Allineamento a destra */
+    display: block;
+    margin-left: auto;
+  }
+
+  .card {
+      width: 460px;
+      height: 260px;
+      padding: 14px;
+      border: 1px solid #000;
+      border-radius: 24px;
+      position: relative;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      color: #000;
+      display: flex;
+
+      background-color: #000;
+      background-image: url("../static/images/Tessera_Sanitaria_Italia-Fronte.jpg");
+      background-repeat: no-repeat;
+      background-size: 100% 100%;
+      background-position: center top; /* 👈 centrato orizzontalmente, in alto verticalmente */
+  }
+
+  .card:hover {
+    box-shadow: 0 10px 30px rgba(0,0,0,0.4), 0 0 20px rgba(167, 206, 242, 0.7);
+  }
+
+  .card .header  {
+    display: flex;
+    align-items: flex-start; /* allinea in alto */
+    width: 100%;
+  }
+  .card .footer  {
+    position: absolute;
+    bottom: 12px;
+    right: 20px;
+    font-size: 0.7em;
+    color: #000;
+  }
+  .card .header .left {
+    width: 90px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    margin-left: -20px;
+  }
+  .card .header .center {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0;
+    flex: 1; /* prendi tutto lo spazio disponibile */
+  }
+  .card .header .right {
+    width: 100px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+  }
+  .card .header .center .title {
+    font-size: 18px;
+    font-weight: bold;
+    color: #000;
+    text-shadow: 2px 2px 2px rgba(0, 0, 0, 0.1);
+    margin-top: 0px;
+    margin-bottom: 0px;
+    letter-spacing: 1px;
+  }
+  .card .header .center .subtitle {
+    font-size: 16px;
+    line-height: 16px;
+    font-weight: bold;
+    letter-spacing: 2px;
+    margin: 0px;
+    padding: 0px;
+    color: #003399;
+    text-transform: uppercase;
+    text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.1);
+  }
+  .card .header .center .subsubtitle {
+    font-size: 11px;
+    line-height: 12px;
+    font-weight: bold;
+    letter-spacing: 2px;
+    margin: 0px;
+    padding: 0px;
+    color: #003399;
+    text-transform: uppercase;
+    text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.1);
+  }
+  .card .header .center .fields {
+    margin-top: 72px;
+    font-weight: normal;
+    width: 100%
+  }
+  .card .header .center .fields .field {
+    display: flex;
+    width: 100%;
+  }
+  .card .header .center .fields .field .label {
+    width: 270px; /* Fissa la larghezza per allineare */
+    text-align: left;
+    font-weight: bold;
+  }
+  .card .header .center .fields .field .value {
+    margin-left: 2px;
+    flex: 1;
+    text-align: left;
+    font-weight: bold;
+  }
+
+  .card_download_link{
+    position: absolute;
+    top: 140px;
+    left: 30px;
+    font-size: 1.2rem;
+    color: #000;
+  }
+
+  .download_link {
+    color: #000;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 1.2rem;
+    position: relative;
+    padding-bottom: 3px;
+    transition: color 0.2s ease-in-out;
+  }
+
+  .download_link::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    height: 2px;
+    width: 0%;
+    background-color: #000;
+    transition: width 0.3s ease-in-out;
+  }
+
+  .download_link:hover {
+    color: #000;
+  }
+
+  .download_link:hover::after {
+    width: 100%;
+  }
+</style>
+</head>
+<body>
+  <div class="tabs">
+    <div class="tab active" data-tab="graphic" onclick="showTab('graphic')">Grafico</div>
+    <div class="tab" data-tab="json" onclick="showTab('json')">JSON</div>
+    <div class="tab" data-tab="original" onclick="showTab('original')">Originale</div>
+  </div>
+  <div id="graphic" class="tab-content active">
+    {% set righe = contentList[0].strip().split('\n') %}
+    <div class="card_container">
+      <div class="card_download_link">
+        <a class="download_link" href="{{ claims.content }}" download="documento.pdf">
+          <img src="{{ url_for('static', filename='images/pdf.svg') }}" alt="PDF Icon" style="width: 24px; height: 24px; vertical-align: middle;" />
+          Scarica il PDF
+        </a>
+      </div>
+      <div class="card_{{ status }}">Stato&nbsp;{{ statusDecr }}</div>
+      <div class="card">
+        <div class="header">
+          <div class="left"></div>
+          <div class="center">
+            <div class="fields">
+                <div class="field"><span class="label">{{ righe[0] if righe | length > 0 else '' }}</span><span class="value">{{ righe[4] if righe | length > 4 else '' }}</span></div>
+                <div class="field" style="margin-top:8px"><span class="label">{{ righe[6] if righe | length > 6 else '' }}</span></div>
+                <div class="field" style="margin-top:2px"><span class="label" style="width:346px">{{ righe[7] if righe | length > 7 else '' }}</span><span class="value">{{ righe[5] if righe | length > 5 else '' }}</span></div>
+                <div class="field" style="margin-top:4px"><span class="label">{{ righe[1] if righe | length > 1 else '' }}</span></div>
+                <div class="field" style="margin-top:4px"><span class="value">{{ righe[2] if righe | length > 2 else '' }}</span></div>
+                <div class="field" style="margin-top:4px"><span class="value">{{ righe[3] if righe | length > 3 else '' }}</span></div>
+            </div>
+          </div>
+          <div class="right"></div>
+        </div>  
+      </div>
+      <div class="card_metadata">
+            {{ metadata }}
+      </div>
+    </div>
+  </div>
+  <div id="json" class="tab-content">{{ claims | tojson }}</div>
+  <div id="original" class="tab-content">{{ data_row }}</div>
+  <div class="tab-actions">
+    <button id="copyBtn" class="copy-button" onclick="copyActiveTabContent()">COPY</button>
+  </div>
+</body>
+</html>

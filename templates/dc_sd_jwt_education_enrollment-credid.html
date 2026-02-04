@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8" />
+<title>Education Enrollment</title>
+<link rel="stylesheet" href="../static/wallet.css" />
+<style>
+  .card_container {
+    display: flex;
+    flex-direction: column; /* impila in verticale */
+    align-items: center;     /* centra orizzontalmente */
+    gap: 10px;               /* spazio tra card_0x00 e card */
+    margin-top: 20px;
+  }
+  .card_metadata{
+    color: #000;
+    padding: 4px 4px;
+    width: 100%;
+    text-align: justify;
+    margin-top: 10px;
+  }
+  .card_ {
+    background-color: #cccccc;  /* grigio chiaro */
+    color: #333333;             /* grigio scuro per il testo */              
+    padding: 2px 2px;
+    font-weight: normal;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);           
+    min-width: 150px;
+    text-align: center;
+    letter-spacing: 1px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+    border: 1px solid #222;
+    border-radius: 10px;
+
+    /* Allineamento a destra */
+    display: block;
+    margin-left: auto;
+  }
+  .card_0x00 {
+    background-color: #4caf50; 
+    color: white;              
+    padding: 2px 2px;
+    font-weight: normal;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);           
+    min-width: 150px;
+    text-align: center;
+    letter-spacing: 1px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+    border: 1px solid #222;
+    border-radius: 10px;
+
+    /* Allineamento a destra */
+    display: block;
+    margin-left: auto;
+  }
+  .card_0x01 {
+    background-color: #d93025; 
+    color: white;              
+    padding: 2px 2px;
+    font-weight: normal;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);           
+    min-width: 150px;
+    text-align: center;
+    letter-spacing: 1px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+    border: 1px solid #222;
+    border-radius: 10px;
+
+    /* Allineamento a destra */
+    display: block;
+    margin-left: auto;
+  }
+  .card_0x02 {
+    background-color: #856404; 
+    color: white;              
+    padding: 2px 2px;
+    font-weight: normal;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);           
+    min-width: 150px;
+    text-align: center;
+    letter-spacing: 1px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+    border: 1px solid #222;
+    border-radius: 10px;
+
+    /* Allineamento a destra */
+    display: block;
+    margin-left: auto;
+  }
+
+  .card {
+      width: 460px;
+      height: 260px;
+      padding: 8px;
+      border: 1px solid #222;
+      border-radius: 24px;
+      position: relative;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      color: white;
+      display: flex;
+      background-color: #20B2AA; /* Verde acqua chiaro */
+
+    background-image:
+        linear-gradient(rgba(255, 255, 255, 0.18) 0%, rgba(235, 235, 235, 0.20) 90%, transparent 90%),
+        linear-gradient(rgba(240, 240, 240, 0.28) 0%, rgba(240, 240, 240, 0.28) 85%, transparent 85%), 
+        linear-gradient(rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0.18) 80%, transparent 80%);
+
+    background-repeat: no-repeat;
+    background-size: 140px 140px, 400px 200px, 220px 200px;
+
+    background-position: 
+        96% 6px,    /* rettangolo alto */
+        35% 90px,   /* rettangolo medio */
+        0% 50px;    /* rettangolo sotto */
+
+    background-blend-mode: lighten;
+  }
+
+  .card:hover {
+    box-shadow: 0 10px 30px rgba(0,0,0,0.4), 0 0 20px rgba(167, 206, 242, 0.7);
+  }
+
+  .card .header {
+    display: flex;
+    align-items: flex-start; /* allinea in alto */
+    width: 100%;
+  }
+  .card .footer {
+    position: absolute;
+    bottom: 12px;
+    right: 20px;
+    font-size: 0.7em;
+    color: #ddd;
+  }
+  .card .header .left {
+    width: 54px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .card .header .left img {
+      width: 100%;
+      height: auto;
+      object-fit: cover;
+      margin-top: -2px;
+  }
+  .card .header .center {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 0 10px;
+    flex: 1; /* prendi tutto lo spazio disponibile */
+  }
+  .card .header .right {
+    width: 5px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+  }
+  .card .header .center .title {
+      font-size: 22px;
+      font-weight: bold;
+      color: #000;
+      text-shadow: 1px 1px 0 rgba(255,255,255,0.6); /* luce per risalto */
+      margin-bottom: 6px;
+      padding-bottom: 4px;
+      letter-spacing: 1px;
+  }
+  .card .header .center .fields {
+    font-weight: normal;
+    margin-left: -50px;
+    width: 420px;
+  }
+  .card .header .center .fields .field {
+    display: flex;
+    margin-bottom: 4px;
+    font-size: 12px;
+    letter-spacing: 2px;
+    background-color: rgba(255,255,255,0.8); /* sfondo chiaro semitrasparente */
+    color: #000; /* testo scuro per leggibilità */
+    padding: 3px 6px;
+    border-radius: 6px;
+  }
+  .card .header .center .fields .field .label {
+    width: 130px; /* Fissa la larghezza per allineare */
+    font-weight: bold;
+    text-align: left;
+  }
+  .card .header .center .fields .field .value {
+    margin-left: 1px;
+    font-weight: normal;
+    flex: 1;
+    text-align: left;
+  }
+.degrees-scroll {
+    display: block;                  /* meglio di inline-block per lo scroll */
+    width: 100%;
+    min-height: 140px;               /* altezza minima */
+    max-height: 140px;               /* altezza massima */
+    overflow-y: auto;                /* scroll verticale sempre quando serve */
+    overflow-x: auto;                /* scroll orizzontale se serve */
+    white-space: normal;             /* permette di andare a capo */
+    box-sizing: border-box;          /* padding incluso nei 100px */
+    padding: 4px;                    /* spazio interno */
+    
+    /* Barra di scorrimento personalizzata */
+    scrollbar-width: thin;           
+    scrollbar-color: #888 #f0f0f0;   
+
+    color: #000; /* testo scuro per leggibilità */
+    border-radius: 4px;
+}
+
+.degrees-scroll::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+.degrees-scroll::-webkit-scrollbar-thumb {
+    background-color: #888;
+    border-radius: 4px;
+}
+.degrees-scroll::-webkit-scrollbar-track {
+    background-color: #f0f0f0;
+}
+
+.degree-item {
+    display: flex;
+    flex-direction: column; /* label sopra, value sotto */
+    margin-bottom: 4px; /* spazio tra voci */
+    padding-bottom: 2px;
+    border-bottom: 1px solid rgba(0,0,0,0.1); /* separatore leggero */
+}
+
+.degree-label {
+    font-size: 9px;
+    font-weight: normal;
+}
+
+.degree-value {
+    font-size: 12px;
+    font-weight: bold;
+}
+.degree-link {
+  display: inline-block;
+  margin-right: 4px;
+  padding: 1px 4px;
+  color: #004f4f;               /* verde scuro acceso */
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 4px;
+  font-weight: 500;
+  transition: background 0.2s, color 0.2s;
+  text-decoration: none;
+}
+
+.degree-link:hover {
+  background: rgba(255, 255, 255, 0.9);
+  color: #003737;
+}
+
+.degree-link.active {
+  background: #004f4f;
+  color: white;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+</style>
+</head>
+<body>
+  <div class="tabs">
+    <div class="tab active" data-tab="graphic" onclick="showTab('graphic')">Grafico</div>
+    <div class="tab" data-tab="json" onclick="showTab('json')">JSON</div>
+    <div class="tab" data-tab="original" onclick="showTab('original')">Originale</div>
+  </div>
+  <div id="graphic" class="tab-content active">
+    <div class="card_container">
+      <div class="card_{{ status }}">Stato&nbsp;{{ statusDecr }}</div>
+      <div class="card">
+        <div class="header">
+          <div class="left">
+            <img src="../static/images/laurea1.png" alt="Laurea" />
+          </div>
+          <div class="center">
+            <div class="title">ISCRIZIONI UNIVERSITARIE</div>
+            <div class="fields">
+              <div class="field">
+                <span class="label">Codice Fiscale:</span>
+                <span class="value">{{ claims.tax_id_code if claims.tax_id_code else "-" }}</span>
+              </div>
+              <div class="field">
+                <span class="label">Iscrizioni:</span>
+                <span class="value">
+                    {% for degree in claims.education_enrollments | from_json %}
+                        <a href="#"
+                          class="degree-link{% if loop.first %} active{% endif %}"
+                          data-degree="{{ loop.index0 }}"
+                          onclick="showDegree('{{ loop.index0 }}'); return false;">
+                          #{{ loop.index }}
+                        </a>
+                    {% endfor %}
+                </span>
+              </div>
+              <div class="field">
+                {% for enrollment in claims.education_enrollments | from_json %}
+                  <div class="value degrees-scroll degree-details" {% if not loop.first %} style="display: none;" {% endif %} data-degree="{{ loop.index0 }}">
+                    <div class="degree-item">
+                      <span class="degree-label">Titolo:</span>
+                      <span class="degree-value">{{ enrollment.programme_type_name if enrollment.programme_type_name else "-" }}</span>
+                    </div>
+                    <div class="degree-item">
+                      <span class="degree-label">Istituto:</span>
+                      <span class="degree-value">{{ enrollment.institute_name if enrollment.institute_name else "-" }}</span>
+                    </div>
+                    <div class="degree-item">
+                      <span class="degree-label">Nome corso di laurea:</span>
+                      <span class="degree-value">{{ enrollment.degree_course_name if enrollment.degree_course_name else "-" }}</span>
+                    </div>
+                    <div class="degree-item">
+                      <span class="degree-label">Codice classe di laurea:</span>
+                      <span class="degree-value">{{ enrollment.degree_class if enrollment.degree_class else "-" }}</span>
+                    </div>
+                    <div class="degree-item">
+                      <span class="degree-label">Nome classe di laurea:</span>
+                      <span class="degree-value">{{ enrollment.degree_class_name if enrollment.degree_class_name else "-" }}</span>
+                    </div>
+                    <div class="degree-item">
+                      <span class="degree-label">Anno accademico:</span>
+                      <span class="degree-value">{{ enrollment.academic_year if enrollment.academic_year else "-" }}</span>
+                    </div>
+                    <div class="degree-item">
+                      <span class="degree-label">Anno corso di laurea:</span>
+                      <span class="degree-value">{{ enrollment.degree_course_year if enrollment.degree_course_year else "-" }}</span>
+                    </div>
+                </div>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+          <div class="right">&nbsp;</div>
+        </div>
+      </div>
+      <div class="card_metadata">{{ metadata }}</div>
+    </div>
+  </div>
+  <div id="json" class="tab-content">{{ claims | tojson }}</div>
+  <div id="original" class="tab-content">{{ data_row }}</div>
+  <div class="tab-actions">
+    <button id="copyBtn" class="copy-button" onclick="copyActiveTabContent()">COPY</button>
+  </div>
+</body>
+</html>

@@ -1,0 +1,27 @@
+services:
+  web:
+    container_name: my-wallet
+    image: my-wallet:1.0.0
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./config:/app/config:ro
+    environment:
+      - FLASK_ENV=development
+
+    # Scenario 1: build da Dockerfile
+    build:
+      context: .
+      dockerfile: Dockerfile
+    profiles: ["build"]
+
+  web_registry:
+    container_name: my-wallet
+    image: myregistry.example.com/myuser/my-wallet:1.0.0
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./config:/app/config:ro
+    environment:
+      - FLASK_ENV=production
+    profiles: ["registry"]
