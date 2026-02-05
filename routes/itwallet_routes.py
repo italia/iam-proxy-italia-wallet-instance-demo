@@ -27,16 +27,19 @@ logger = logging.getLogger(__name__)
 
 itwallet_routes = Blueprint("itwallet_routes", __name__)
 
+
 # Esempio di middleware per impostare la correlation_id per ogni request
 @itwallet_routes.before_request
 def set_correlation_id():
     g.correlation_id = request.headers.get("X-Correlation-ID", "default-id")
+
 
 @itwallet_routes.after_request
 def add_charset_to_json(response):
     if response.content_type.startswith("application/json"):
         response.headers["Content-Type"] = "application/json; charset=utf-8"
     return response
+
 
 @itwallet_routes.route("/itwallet/reset", methods=["GET"])
 def wallet_reset():
@@ -71,6 +74,7 @@ def wallet_reset():
         logger.error(f"❌ {e}")
         return jsonify({"success": False, "data": {"error": f"{e}"}}), 500
 
+
 @itwallet_routes.route("/itwallet/cb", methods=["GET"])
 def wallet_callback():
     # Converte request.args in lista ordinata di tuple
@@ -87,6 +91,7 @@ def wallet_callback():
     session["query_params"] = dict(params_list)
 
     return render_template("wallet_cb.html")
+
 
 @itwallet_routes.route("/itwallet/init", methods=["GET"])
 def initItWallet():
@@ -120,7 +125,9 @@ def initItWallet():
         country = country.upper()
 
         if country not in EU_COUNTRIES:
-            raise ValueError(f"Parametro 'country' valorizzato con il paese '{country}' non riconosciuto come membro UE")
+            raise ValueError(
+                f"Parametro 'country' valorizzato con il paese '{country}' non riconosciuto come membro UE"
+            )
 
         # Recupera parametro obbligatorio 'country' dalla query string
         idp = request.args.get("idp")
@@ -148,6 +155,7 @@ def initItWallet():
     except Exception as e:
         logger.error(f"❌ {e}")
         return jsonify({"success": False, "data": {"error": f"{e}"}}), 500
+
 
 @itwallet_routes.route("/itwallet/init/complete", methods=["GET"])
 def completedInitItWallet():
@@ -184,6 +192,7 @@ def completedInitItWallet():
         logger.error(f"❌ {e}")
         return jsonify({"success": False, "data": {"error": f"{e}"}}), 500
 
+
 @itwallet_routes.route("/itwallet/credentialSupported", methods=["GET"])
 def credentialSupported():
     """
@@ -205,7 +214,9 @@ def credentialSupported():
 
     try:
         # Recupera credendenziali supportate dal wallet
-        wallet_credentialSupported = extract_claim(current_app.config,"metadata.credential_flow.credential_configurations_supported")
+        wallet_credentialSupported = extract_claim(
+            current_app.config, "metadata.credential_flow.credential_configurations_supported"
+        )
         if not wallet_credentialSupported:
             raise ValueError("Nessuna tipologia credendenziale configurata")
 
@@ -220,16 +231,15 @@ def credentialSupported():
         # Genera lista di dizionari
         result = []
         for credential_configurations_id in wallet_credentialSupported_list:
-            result.append({
-                "id": credential_configurations_id,
-                "label": credential_configurations_id,
-                "icon": guess_credential_configuration_icon(credential_configurations_id)
-            })
+            result.append(
+                {
+                    "id": credential_configurations_id,
+                    "label": credential_configurations_id,
+                    "icon": guess_credential_configuration_icon(credential_configurations_id),
+                }
+            )
 
-        return jsonify({
-            "success": True,
-            "data": result
-        }), 200
+        return jsonify({"success": True, "data": result}), 200
 
     except ValueError as ve:
         logger.error(f"❌ {ve}")
@@ -237,6 +247,7 @@ def credentialSupported():
     except Exception as e:
         logger.error(f"❌ {e}")
         return jsonify({"success": False, "data": {"error": f"{e}"}}), 500
+
 
 @itwallet_routes.route("/itwallet/objectTypesInMemory", methods=["GET"])
 def objectTypesInMemory():
@@ -263,14 +274,12 @@ def objectTypesInMemory():
 
         logger.info(f"✅ Tipologie di oggetti presenti nella memoria del Wallet:  {objectTypesInMemory}")
 
-        return jsonify({
-            "success": True,
-            "data": objectTypesInMemory
-        }), 200
+        return jsonify({"success": True, "data": objectTypesInMemory}), 200
 
     except Exception as e:
         logger.error(f"❌ {e}")
         return jsonify({"success": False, "data": {"error": f"{e}"}}), 500
+
 
 @itwallet_routes.route("/itwallet/viewObjectTypeInMemory", methods=["POST"])
 def viewObjectTypeInMemory():
@@ -308,14 +317,12 @@ def viewObjectTypeInMemory():
         logger.info(f"✅ Recuperato oggetto di tipo {objectTypeValue} dalla memoria del Wallet")
         logger.debug(json.dumps(result, indent=2, ensure_ascii=False))
 
-        return jsonify({
-            "success": True,
-            "data": result
-        }), 200
+        return jsonify({"success": True, "data": result}), 200
 
     except Exception as e:
         logger.error(f"❌ {e}")
         return jsonify({"success": False, "data": {"error": f"{e}"}}), 500
+
 
 @itwallet_routes.route("/itwallet/onboardedRelyingParties", methods=["GET"])
 def onboardedRelyingParties():
@@ -351,16 +358,9 @@ def onboardedRelyingParties():
             # Genera lista di dizionari
             result = []
             for rp in onboardedRelyingParties:
-                result.append({
-                    "id": rp,
-                    "label": rp,
-                    "icon": "🏛️"
-                })
+                result.append({"id": rp, "label": rp, "icon": "🏛️"})
 
-            return jsonify({
-                "success": True,
-                "data": result
-            }), 200
+            return jsonify({"success": True, "data": result}), 200
 
         else:
             return jsonify(result), 500
@@ -370,6 +370,7 @@ def onboardedRelyingParties():
     except Exception as e:
         logger.error(f"❌ {e}")
         return jsonify({"success": False, "data": {"error": f"{e}"}}), 500
+
 
 @itwallet_routes.route("/itwallet/deleteCredential", methods=["POST"])
 def deleteCredentialItWallet():
@@ -418,6 +419,7 @@ def deleteCredentialItWallet():
         logger.error(f"❌ {e}")
         return jsonify({"success": False, "data": {"error": f"{e}"}}), 500
 
+
 @itwallet_routes.route("/itwallet/addCredential", methods=["POST"])
 def addCredentialItWallet():
     """
@@ -461,6 +463,7 @@ def addCredentialItWallet():
         logger.error(f"❌ {e}")
         return jsonify({"success": False, "data": {"error": f"{e}"}}), 500
 
+
 @itwallet_routes.route("/itwallet/addCredential/complete", methods=["POST"])
 def completedAddCredentialItWallet():
     """
@@ -493,8 +496,9 @@ def completedAddCredentialItWallet():
             raise ValueError("La richiesta non presenta il parametro 'credentialsPresenting'")
 
         if not isinstance(credentials_presenting, list):
-            raise ValueError("Il calore del parametro 'credentialsPresenting' fornito nella richiesta presenta un formato non valido")
-
+            raise ValueError(
+                "Il calore del parametro 'credentialsPresenting' fornito nella richiesta presenta un formato non valido"
+            )
 
         service = ItWalletService(session)
         result = service.complete_add_credential_wallet(credentials_presenting)
@@ -508,6 +512,7 @@ def completedAddCredentialItWallet():
     except Exception as e:
         logger.error(f"❌ {e}")
         return jsonify({"success": False, "data": {"error": f"{e}"}}), 500
+
 
 @itwallet_routes.route("/itwallet/loginToRelyingParty", methods=["POST"])
 def loginToRelyingParty():
@@ -550,18 +555,24 @@ def loginToRelyingParty():
 
                 clientId = estrai_parametro_query_string(qrCodeContent, "client_id")
                 if not clientId:
-                    raise ValueError("L'URL specificata nel QR Code non presenta il parametro 'client_id' in query string")
+                    raise ValueError(
+                        "L'URL specificata nel QR Code non presenta il parametro 'client_id' in query string"
+                    )
 
                 if clientId != relyingPartyId:
-                    raise ValueError(f"L'URL specificata nel QR Code presenta il parametro 'client_id' in query string il cui valore non è valido: atteso '{relyingPartyId}', trovato '{clientId}'")
+                    raise ValueError(
+                        f"L'URL specificata nel QR Code presenta il parametro 'client_id' in query string il cui valore non è valido: atteso '{relyingPartyId}', trovato '{clientId}'"
+                    )
 
                 requestUri = estrai_parametro_query_string(qrCodeContent, "request_uri")
                 if not requestUri:
-                    raise ValueError("L'URL specificata nel QR Code non presenta il parametro 'request_uri' in query string")
+                    raise ValueError(
+                        "L'URL specificata nel QR Code non presenta il parametro 'request_uri' in query string"
+                    )
 
                 requestUriMethod = estrai_parametro_query_string(qrCodeContent, "request_uri_method")
                 if not requestUriMethod:
-                    requestUriMethod="get"
+                    requestUriMethod = "get"
 
                 state = estrai_parametro_query_string(qrCodeContent, "state")
                 if not requestUri:
@@ -584,6 +595,7 @@ def loginToRelyingParty():
     except Exception as e:
         logger.error(f"❌ {e}")
         return jsonify({"success": False, "data": {"error": f"{e}"}}), 500
+
 
 @itwallet_routes.route("/itwallet/loginToVerifier/complete", methods=["POST"])
 def completedLoginToVerifier():
@@ -613,7 +625,9 @@ def completedLoginToVerifier():
             raise ValueError("La richiesta non presenta il parametro 'credentialsPresenting'")
 
         if not isinstance(credentials_presenting, list):
-            raise ValueError("Il calore del parametro 'credentialsPresenting' fornito nella richiesta presenta un formato non valido")
+            raise ValueError(
+                "Il calore del parametro 'credentialsPresenting' fornito nella richiesta presenta un formato non valido"
+            )
 
         service = ItWalletService(session)
         result = service.complete_loginToVerifier(credentials_presenting)
@@ -627,6 +641,7 @@ def completedLoginToVerifier():
     except Exception as e:
         logger.error(f"❌ {e}")
         return jsonify({"success": False, "data": {"error": f"{e}"}}), 500
+
 
 @itwallet_routes.route("/itwallet/template/<credentialType>", methods=["GET"])
 def credentialTypeTemplate(credentialType):
@@ -666,7 +681,7 @@ def credentialTypeTemplate(credentialType):
             if contentList and len(contentList) > 0:
                 logger.debug("✅ Il PDF contiene almeno una pagina con contenuto.")
                 for i, pagina in enumerate(contentList, start=1):
-                    logger.debug(f"📄 Pagina {i}:\n{pagina}\n{'-'*40}")
+                    logger.debug(f"📄 Pagina {i}:\n{pagina}\n{'-' * 40}")
 
         dt_iat_local_formatted = dt_exp_local_formatted = None
         metadata = ""
@@ -677,8 +692,8 @@ def credentialTypeTemplate(credentialType):
             issuing_authority = name_space.get("issuing_authority")
 
             validity_info = claims.get("mso", {}).get("validityInfo", {})
-            iat = validity_info.get("validFrom") #stringa in formato ISO 8601 con timezone UTC
-            exp = validity_info.get("validUntil") #stringa in formato ISO 8601 con timezone UTC
+            iat = validity_info.get("validFrom")  # stringa in formato ISO 8601 con timezone UTC
+            exp = validity_info.get("validUntil")  # stringa in formato ISO 8601 con timezone UTC
 
             try:
                 # Parsing della stringa in oggetto datetime con timezone UTC
@@ -700,8 +715,8 @@ def credentialTypeTemplate(credentialType):
         elif key.startswith(SD_JWT_PREFIX):
             issuing_country = claims.get("issuing_country")
             issuing_authority = claims.get("issuing_authority")
-            iat = claims.get("iat") #int in formato unix time stamp con timezone UTC
-            exp = claims.get("exp") #int in formato unix time stamp con timezone UTC
+            iat = claims.get("iat")  # int in formato unix time stamp con timezone UTC
+            exp = claims.get("exp")  # int in formato unix time stamp con timezone UTC
 
             try:
                 dt_iat_utc = datetime.fromtimestamp(int(iat))
@@ -728,7 +743,15 @@ def credentialTypeTemplate(credentialType):
         logger.info(f"ℹ️  Il metadata della credenziale {key} è: {metadata}")
 
         try:
-            templateContent = render_template(credentialType+".html", data_row=data_row, claims=claims, metadata=metadata, status=status, statusDecr=statusDecr, contentList=contentList)
+            templateContent = render_template(
+                credentialType + ".html",
+                data_row=data_row,
+                claims=claims,
+                metadata=metadata,
+                status=status,
+                statusDecr=statusDecr,
+                contentList=contentList,
+            )
             return templateContent
         except Exception as e:
             logger.error(f"❌ {e}")
@@ -737,12 +760,10 @@ def credentialTypeTemplate(credentialType):
         logger.error(f"❌ Nessuna credenziale di tipo {credentialType} trovata nella memoria")
         return f"Nessuna credenziale di tipo {credentialType} trovata nel wallet", 400
 
+
 def _clear_session():
     # Salva le chiavi da preservare
-    preserved = {
-        "session_id": session.get("session_id"),
-        "pin_authenticated": session.get("pin_authenticated")
-    }
+    preserved = {"session_id": session.get("session_id"), "pin_authenticated": session.get("pin_authenticated")}
 
     # Pulisce la sessione
     session.clear()

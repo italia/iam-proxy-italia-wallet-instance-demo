@@ -12,13 +12,14 @@ from utils.utils import base64url_decode
 
 logger = logging.getLogger(__name__)
 
+
 def issue_sd_jwt(
     vct: str,
     issuer_private_jwk_dict: dict,
     claims: dict,
     selectively_disclosable_claims: list[str],
     extra_header_parameters: dict,
-    holder_public_jwk_dict: dict = None
+    holder_public_jwk_dict: dict = None,
 ) -> str:
     """
     Crea una credenziale SD-JWT con disclosure selettiva.
@@ -60,7 +61,9 @@ def issue_sd_jwt(
         alg_map = {"P-256": "ES256", "P-384": "ES384", "P-521": "ES512"}
         alg = alg_map.get(crv)
         if not alg:
-            raise ValueError(f"La chiave pubblica JWK dell'holder per il key binding presenta una curva non supportata: {crv}")
+            raise ValueError(
+                f"La chiave pubblica JWK dell'holder per il key binding presenta una curva non supportata: {crv}"
+            )
         logger.debug(f"🔑 La chiave pubblica dell'holder per il key binding presenta la curva {crv}")
 
         # Usa from_json per creare l'oggetto JWK
@@ -86,7 +89,7 @@ def issue_sd_jwt(
         holder_key=holder_public_jwk,  # solo JWK pubblica, se si vuole key binding
         sign_alg=alg,
         extra_header_parameters=extra_header_parameters,
-        serialization_format="compact"
+        serialization_format="compact",
     )
 
     # La credenziale è già creata nel costruttore
@@ -95,10 +98,8 @@ def issue_sd_jwt(
     logger.debug(f"✅ SD-JWT generato con successo per '{vct}'")
     return sd_jwt
 
-def decode_and_verify_sd_jwt(
-        sd_jwt_compact: str,
-        jwks: dict,
-        disclosures=None) -> dict:
+
+def decode_and_verify_sd_jwt(sd_jwt_compact: str, jwks: dict, disclosures=None) -> dict:
     """
     Legge un SD-JWT da una stringa in input e lo valida.
     Ritorna il payload decodificato se valido con le disclosure rivelate, altrimenti solleva ValueError.
@@ -113,7 +114,7 @@ def decode_and_verify_sd_jwt(
         logger.debug(sd_jwt_compact)
 
         # Decodifica header e payload
-        header_b64, payload_b64, signature_b64 = sd_jwt_compact.split('.')
+        header_b64, payload_b64, signature_b64 = sd_jwt_compact.split(".")
         header_json = base64url_decode(header_b64).decode()
         payload_json = base64url_decode(payload_b64).decode()
         header = json.loads(header_json)
@@ -164,13 +165,15 @@ def decode_and_verify_sd_jwt(
         logger.error(f"❌ La credenziale rilasciata non è valida: {str(e)}")
         raise ValueError(f"La credenziale rilasciata non è valida: {e}")
 
+
 def present_sd_jwt(
-        vct: str,
-        sd_jwt_compact: str,
-        aud: str,
-        nonce: str,
-        claims_to_reveal: list[str],
-        holder_private_jwk_dict: dict = None) -> str:
+    vct: str,
+    sd_jwt_compact: str,
+    aud: str,
+    nonce: str,
+    claims_to_reveal: list[str],
+    holder_private_jwk_dict: dict = None,
+) -> str:
     """
     Crea una presentazione SD-JWT selettiva con Key Binding JWT.
 
@@ -195,7 +198,9 @@ def present_sd_jwt(
         alg_map = {"P-256": "ES256", "P-384": "ES384", "P-521": "ES512"}
         alg = alg_map.get(crv)
         if not alg:
-            raise ValueError(f"La chiave privata JWK dell'holder per il key binding presenta una curva non supportata: {crv}")
+            raise ValueError(
+                f"La chiave privata JWK dell'holder per il key binding presenta una curva non supportata: {crv}"
+            )
         logger.debug(f"🔑 La chiave privata JWK dell'holder per il key binding presenta la curva {crv}")
 
         # Usa from_json per creare l'oggetto JWK
@@ -228,6 +233,7 @@ def present_sd_jwt(
     logger.debug(f"✅ Presentazione generata per la credenziale {vct}!")
     return presentation
 
+
 def paths_to_nested_dict(paths: list[str]) -> dict:
     root = {}
     for path in paths:
@@ -238,11 +244,13 @@ def paths_to_nested_dict(paths: list[str]) -> dict:
         d[parts[-1]] = True
     return root
 
+
 def _decode_disclosure(disclosure_b64: str):
     if disclosure_b64:
         decoded = base64url_decode(disclosure_b64)
         return json.loads(decoded.decode("utf-8"))
     return ""
+
 
 def _decode_jws_payload(jws_token: str) -> dict:
     # JWS formato: header.payload.signature
@@ -253,11 +261,13 @@ def _decode_jws_payload(jws_token: str) -> dict:
     payload_bytes = base64url_decode(payload_b64)
     return json.loads(payload_bytes.decode("utf-8"))
 
+
 def _split_sd_jwt_presentation(sd_jwt_str):
     parts = sd_jwt_str.strip().split("~")
     sd_jwt = parts[0]
     disclosures = parts[1:]
     return sd_jwt, disclosures
+
 
 def _make_issuer_key_callback(jwk_dict: dict):
     """

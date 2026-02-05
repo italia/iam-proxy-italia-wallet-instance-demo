@@ -25,6 +25,7 @@ from utils.utils import base64url_encode, priv_ec_key_obj_to_jwk, pub_ec_key_obj
 logger = logging.getLogger(__name__)
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
+
 def request_as_par(
     url: str,
     wallet_attestation_jwt: str,
@@ -34,7 +35,7 @@ def request_as_par(
     max_retries: int = 3,
     retry_delay: float = 1.0,
     proxies: dict = None,
-    no_proxy_domains: list[str] = None
+    no_proxy_domains: list[str] = None,
 ) -> dict:
     """
     Invia una richiesta POST /as/par con retry in caso di errore di connessione.
@@ -70,13 +71,10 @@ def request_as_par(
         "Content-Type": "application/x-www-form-urlencoded",
         "Accept": "application/json; charset=utf-8",
         "OAuth-Client-Attestation": wallet_attestation_jwt,
-        "OAuth-Client-Attestation-PoP": wallet_attestation_dpop_jwt
+        "OAuth-Client-Attestation-PoP": wallet_attestation_dpop_jwt,
     }
 
-    data = {
-        "client_id": client_id,
-        "request": request_object_jwt
-    }
+    data = {"client_id": client_id, "request": request_object_jwt}
 
     logger.info(f">>>> Invio POST a {url} (use_proxy={use_proxy})")
     logger.info("📦 Header:")
@@ -110,7 +108,9 @@ def request_as_par(
                         raise ValueError(f"Risposta ricevuta da {url} non valida: {ve}")
                 else:
                     logger.error(f"❌ Risposta non valida: Content-Type non è application/json, ma {content_type}")
-                    raise RuntimeError(f"Risposta ricevuta da {url} non valida: Content-Type non è application/json, ma {content_type}")
+                    raise RuntimeError(
+                        f"Risposta ricevuta da {url} non valida: Content-Type non è application/json, ma {content_type}"
+                    )
 
             else:
                 try:
@@ -122,10 +122,14 @@ def request_as_par(
                     error_str = f"{err} - {desc}".strip(" -")
                 except ValueError:
                     # non è JSON → prendo così com'è
-                    error_str = ' '.join(response.text.split())
+                    error_str = " ".join(response.text.split())
 
-                logger.error(f"❌ Errore ritornato dall'endpoint {url}: {error_str} (HTTP Status code: {response.status_code})")
-                raise RuntimeError(f"Errore ritornato dall'endpoint {url}: {error_str} (HTTP Status code: {response.status_code})")
+                logger.error(
+                    f"❌ Errore ritornato dall'endpoint {url}: {error_str} (HTTP Status code: {response.status_code})"
+                )
+                raise RuntimeError(
+                    f"Errore ritornato dall'endpoint {url}: {error_str} (HTTP Status code: {response.status_code})"
+                )
 
         except requests.ConnectionError as ce:
             logger.error(f"❌ Tentativo {attempt} - Errore di connessione: {ce}")
@@ -133,7 +137,9 @@ def request_as_par(
                 time.sleep(retry_delay)
             else:
                 logger.error("<<<< ❌ Numero massimo di tentativi raggiunto, abortisco.")
-                raise ConnectionError(f"Impossibile stabilire la connessione verso {url} dopo ripetuti tentativi") from ce
+                raise ConnectionError(
+                    f"Impossibile stabilire la connessione verso {url} dopo ripetuti tentativi"
+                ) from ce
         except requests.RequestException as re:
             logger.error(f"<<<< ❌ Restituito in risposta: {re}")
             raise
@@ -144,13 +150,14 @@ def request_as_par(
             logger.error(f"<<<< ❌ Restituito in risposta: {e}")
             raise
 
+
 def request_authorize(
     url: str,
     query_string: str,
     max_retries: int = 3,
     retry_delay: float = 1.0,
     proxies: dict = None,
-    no_proxy_domains: list[str] = None
+    no_proxy_domains: list[str] = None,
 ) -> str:
     """
     Invia una richiesta GET /authorize con retry in caso di errore di connessione.
@@ -166,7 +173,7 @@ def request_authorize(
         Il JWT rappresentnte l'entity statement.
         In caso di errore, rilancia un'eccezione.
     """
-    url = url+query_string
+    url = url + query_string
 
     parsed = urlparse(url)
     host = parsed.hostname
@@ -206,17 +213,23 @@ def request_authorize(
                     error_str = f"{err} - {desc}".strip(" -")
                 except ValueError:
                     # non è JSON → prendo così com'è
-                    error_str = ' '.join(response.text.split())
+                    error_str = " ".join(response.text.split())
 
-                logger.error(f"❌ Errore ritornato dall'endpoint {url}: {error_str} (HTTP Status code: {response.status_code})")
-                raise RuntimeError(f"Errore ritornato dall'endpoint {url}: {error_str} (HTTP Status code: {response.status_code})")
+                logger.error(
+                    f"❌ Errore ritornato dall'endpoint {url}: {error_str} (HTTP Status code: {response.status_code})"
+                )
+                raise RuntimeError(
+                    f"Errore ritornato dall'endpoint {url}: {error_str} (HTTP Status code: {response.status_code})"
+                )
         except requests.ConnectionError as ce:
             logger.error(f"❌ Tentativo {attempt} - Errore di connessione: {ce}")
             if attempt < max_retries:
                 time.sleep(retry_delay)
             else:
                 logger.error("<<<< ❌ Numero massimo di tentativi raggiunto, abortisco.")
-                raise ConnectionError(f"Impossibile stabilire la connessione verso {url} dopo ripetuti tentativi") from ce
+                raise ConnectionError(
+                    f"Impossibile stabilire la connessione verso {url} dopo ripetuti tentativi"
+                ) from ce
         except requests.RequestException as re:
             # Altri errori di richiesta, rilancio subito
             logger.error(f"<<<< ❌ Restituito in risposta: {re}")
@@ -227,6 +240,7 @@ def request_authorize(
         except Exception as e:
             logger.error(f"<<<< ❌ Restituito in risposta: {e}")
             raise
+
 
 def request_token(
     url: str,
@@ -240,7 +254,7 @@ def request_token(
     max_retries: int = 3,
     retry_delay: float = 1.0,
     proxies: dict = None,
-    no_proxy_domains: list[str] = None
+    no_proxy_domains: list[str] = None,
 ) -> dict:
     """
     Invia una richiesta POST /token con retry in caso di errore di connessione.
@@ -281,15 +295,10 @@ def request_token(
         "Accept": "application/json; charset=utf-8",
         "OAuth-Client-Attestation": wallet_attestation_jwt,
         "OAuth-Client-Attestation-PoP": wallet_attestation_dpop_jwt,
-        "DPoP": dpop_proof_jwt
+        "DPoP": dpop_proof_jwt,
     }
 
-    data = {
-        "grant_type": grant_type,
-        "code": code,
-        "redirect_uri": redirect_uri,
-        "code_verifier": code_verifier
-    }
+    data = {"grant_type": grant_type, "code": code, "redirect_uri": redirect_uri, "code_verifier": code_verifier}
 
     logger.info(f">>>> Invio POST a {url} (use_proxy={use_proxy})")
     logger.info("📦 Header:")
@@ -323,7 +332,9 @@ def request_token(
                         raise ValueError(f"Risposta ricevuta da {url} non valida: {ve}")
                 else:
                     logger.error(f"❌ Risposta non valida: Content-Type non è application/json, ma {content_type}")
-                    raise RuntimeError(f"Risposta ricevuta da {url} non valida: Content-Type non è application/json, ma {content_type}")
+                    raise RuntimeError(
+                        f"Risposta ricevuta da {url} non valida: Content-Type non è application/json, ma {content_type}"
+                    )
             else:
                 try:
                     # provo a fare parsing JSON
@@ -334,10 +345,14 @@ def request_token(
                     error_str = f"{err} - {desc}".strip(" -")
                 except ValueError:
                     # non è JSON → prendo così com'è
-                    error_str = ' '.join(response.text.split())
+                    error_str = " ".join(response.text.split())
 
-                logger.error(f"❌ Errore ritornato dall'endpoint {url}: {error_str} (HTTP Status code: {response.status_code})")
-                raise RuntimeError(f"Errore ritornato dall'endpoint {url}: {error_str} (HTTP Status code: {response.status_code})")
+                logger.error(
+                    f"❌ Errore ritornato dall'endpoint {url}: {error_str} (HTTP Status code: {response.status_code})"
+                )
+                raise RuntimeError(
+                    f"Errore ritornato dall'endpoint {url}: {error_str} (HTTP Status code: {response.status_code})"
+                )
 
         except requests.ConnectionError as ce:
             logger.error(f"❌ Tentativo {attempt} - Errore di connessione: {ce}")
@@ -345,7 +360,9 @@ def request_token(
                 time.sleep(retry_delay)
             else:
                 logger.error("<<<< ❌ Numero massimo di tentativi raggiunto, abortisco.")
-                raise ConnectionError(f"Impossibile stabilire la connessione verso {url} dopo ripetuti tentativi") from ce
+                raise ConnectionError(
+                    f"Impossibile stabilire la connessione verso {url} dopo ripetuti tentativi"
+                ) from ce
         except requests.RequestException as re:
             logger.error(f"<<<< ❌ Restituito in risposta: {re}")
             raise
@@ -356,6 +373,7 @@ def request_token(
             logger.error(f"<<<< ❌ Restituito in risposta: {e}")
             raise
 
+
 def request_credential(
     url: str,
     credential_id: str,
@@ -365,7 +383,7 @@ def request_credential(
     max_retries: int = 3,
     retry_delay: float = 1.0,
     proxies: dict = None,
-    no_proxy_domains: list[str] = None
+    no_proxy_domains: list[str] = None,
 ) -> dict:
     """
     Invia una richiesta POST /credential con retry in caso di errore di connessione.
@@ -402,16 +420,10 @@ def request_credential(
         "Content-Type": "application/json; charset=utf-8",
         "Accept": "application/json; charset=UTF-8",
         "Authorization": f"DPoP {access_token}",
-        "DPoP": dpop_proof_jwt
+        "DPoP": dpop_proof_jwt,
     }
 
-    data = {
-        "credential_identifier": credential_id,
-        "proof": {
-            "proof_type": "jwt",
-            "jwt": proof_jwt
-        }
-    }
+    data = {"credential_identifier": credential_id, "proof": {"proof_type": "jwt", "jwt": proof_jwt}}
 
     logger.info(f">>>> Invio POST a {url} (use_proxy={use_proxy})")
     logger.info("📦 Header:")
@@ -445,7 +457,9 @@ def request_credential(
                         raise ValueError(f"Risposta ricevuta da {url} non valida: {ve}")
                 else:
                     logger.error(f"❌ Risposta non valida: Content-Type non è application/json, ma {content_type}")
-                    raise RuntimeError(f"Risposta ricevuta da {url} non valida: Content-Type non è application/json, ma {content_type}")
+                    raise RuntimeError(
+                        f"Risposta ricevuta da {url} non valida: Content-Type non è application/json, ma {content_type}"
+                    )
 
             else:
                 try:
@@ -457,17 +471,23 @@ def request_credential(
                     error_str = f"{err} - {desc}".strip(" -")
                 except ValueError:
                     # non è JSON → prendo così com'è
-                    error_str = ' '.join(response.text.split())
+                    error_str = " ".join(response.text.split())
 
-                logger.error(f"❌ Errore ritornato dall'endpoint {url}: {error_str} (HTTP Status code: {response.status_code})")
-                raise RuntimeError(f"Errore ritornato dall'endpoint {url}: {error_str} (HTTP Status code: {response.status_code})")
+                logger.error(
+                    f"❌ Errore ritornato dall'endpoint {url}: {error_str} (HTTP Status code: {response.status_code})"
+                )
+                raise RuntimeError(
+                    f"Errore ritornato dall'endpoint {url}: {error_str} (HTTP Status code: {response.status_code})"
+                )
         except requests.ConnectionError as ce:
             logger.error(f"❌ Tentativo {attempt} - Errore di connessione: {ce}")
             if attempt < max_retries:
                 time.sleep(retry_delay)
             else:
                 logger.error("<<<< ❌ Numero massimo di tentativi raggiunto, abortisco.")
-                raise ConnectionError(f"Impossibile stabilire la connessione verso {url} dopo ripetuti tentativi") from ce
+                raise ConnectionError(
+                    f"Impossibile stabilire la connessione verso {url} dopo ripetuti tentativi"
+                ) from ce
         except requests.RequestException as re:
             # Altri errori di richiesta, rilancio subito
             logger.error(f"<<<< ❌ Restituito in risposta: {re}")
@@ -479,12 +499,9 @@ def request_credential(
             logger.error(f"<<<< ❌ Restituito in risposta: {e}")
             raise
 
+
 def request_nonce(
-    url: str,
-    max_retries: int = 3,
-    retry_delay: float = 1.0,
-    proxies: dict = None,
-    no_proxy_domains: list[str] = None
+    url: str, max_retries: int = 3, retry_delay: float = 1.0, proxies: dict = None, no_proxy_domains: list[str] = None
 ) -> str:
     """
     Invia una richiesta POST /nonce con retry in caso di errore di connessione.
@@ -558,7 +575,9 @@ def request_nonce(
                         raise ValueError(f"Risposta ricevuta da {url} non valida: {ve}")
                 else:
                     logger.error(f"❌ Risposta non valida: Content-Type non è application/json, ma {content_type}")
-                    raise RuntimeError(f"Risposta ricevuta da {url} non valida: Content-Type non è application/json, ma {content_type}")
+                    raise RuntimeError(
+                        f"Risposta ricevuta da {url} non valida: Content-Type non è application/json, ma {content_type}"
+                    )
             else:
                 try:
                     # provo a fare parsing JSON
@@ -569,17 +588,23 @@ def request_nonce(
                     error_str = f"{err} - {desc}".strip(" -")
                 except ValueError:
                     # non è JSON → prendo così com'è
-                    error_str = ' '.join(response.text.split())
+                    error_str = " ".join(response.text.split())
 
-                logger.error(f"❌ Errore ritornato dall'endpoint {url}: {error_str} (HTTP Status code: {response.status_code})")
-                raise RuntimeError(f"Errore ritornato dall'endpoint {url}: {error_str} (HTTP Status code: {response.status_code})")
+                logger.error(
+                    f"❌ Errore ritornato dall'endpoint {url}: {error_str} (HTTP Status code: {response.status_code})"
+                )
+                raise RuntimeError(
+                    f"Errore ritornato dall'endpoint {url}: {error_str} (HTTP Status code: {response.status_code})"
+                )
         except requests.ConnectionError as ce:
             logger.error(f"❌ Tentativo {attempt} - Errore di connessione: {ce}")
             if attempt < max_retries:
                 time.sleep(retry_delay)
             else:
                 logger.error("<<<< ❌ Numero massimo di tentativi raggiunto, abortisco.")
-                raise ConnectionError(f"Impossibile stabilire la connessione verso {url} dopo ripetuti tentativi") from ce
+                raise ConnectionError(
+                    f"Impossibile stabilire la connessione verso {url} dopo ripetuti tentativi"
+                ) from ce
         except requests.RequestException as re:
             # Altri errori di richiesta, rilancio subito
             logger.error(f"<<<< ❌ Restituito in risposta: {re}")
@@ -591,13 +616,14 @@ def request_nonce(
             logger.error(f"<<<< ❌ Restituito in risposta: {e}")
             raise
 
+
 def request_request_uri(
     url: str,
     query_string: str,
     max_retries: int = 3,
     retry_delay: float = 1.0,
     proxies: dict = None,
-    no_proxy_domains: list[str] = None
+    no_proxy_domains: list[str] = None,
 ) -> str:
     """
     Invio request uri request ad un Relying Party per trasmettere via GET una richiesta di login.
@@ -611,7 +637,7 @@ def request_request_uri(
     Returns:
         Dizionario JSON della risposta, o eccezione in caso di errore.
     """
-    url = url+query_string
+    url = url + query_string
 
     parsed = urlparse(url)
     host = parsed.hostname
@@ -644,8 +670,12 @@ def request_request_uri(
                     logger.info(jwt_text)
                     return jwt_text
                 else:
-                    logger.error(f"❌ Risposta non valida: Content-Type non è application/oauth-authz-req+jwt, ma {content_type}")
-                    raise RuntimeError(f"Risposta ricevuta da {url} non valida: Content-Type non è application/oauth-authz-req+jwt, ma {content_type}")
+                    logger.error(
+                        f"❌ Risposta non valida: Content-Type non è application/oauth-authz-req+jwt, ma {content_type}"
+                    )
+                    raise RuntimeError(
+                        f"Risposta ricevuta da {url} non valida: Content-Type non è application/oauth-authz-req+jwt, ma {content_type}"
+                    )
             else:
                 try:
                     # provo a fare parsing JSON
@@ -656,10 +686,14 @@ def request_request_uri(
                     error_str = f"{err} - {desc}".strip(" -")
                 except ValueError:
                     # non è JSON → prendo così com'è
-                    error_str = ' '.join(response.text.split())
+                    error_str = " ".join(response.text.split())
 
-                logger.error(f"❌ Errore ritornato dall'endpoint {url}: {error_str} (HTTP Status code: {response.status_code})")
-                raise RuntimeError(f"Errore ritornato dall'endpoint {url}: {error_str} (HTTP Status code: {response.status_code})")
+                logger.error(
+                    f"❌ Errore ritornato dall'endpoint {url}: {error_str} (HTTP Status code: {response.status_code})"
+                )
+                raise RuntimeError(
+                    f"Errore ritornato dall'endpoint {url}: {error_str} (HTTP Status code: {response.status_code})"
+                )
 
         except requests.ConnectionError as ce:
             logger.error(f"❌ Tentativo {attempt} - Errore di connessione: {ce}")
@@ -667,7 +701,9 @@ def request_request_uri(
                 time.sleep(retry_delay)
             else:
                 logger.error("<<<< ❌ Numero massimo di tentativi raggiunto, abortisco.")
-                raise ConnectionError(f"Impossibile stabilire la connessione verso {url} dopo ripetuti tentativi") from ce
+                raise ConnectionError(
+                    f"Impossibile stabilire la connessione verso {url} dopo ripetuti tentativi"
+                ) from ce
         except requests.RequestException as re:
             logger.error(f"<<<< ❌ Restituito in risposta: {re}")
             raise
@@ -678,6 +714,7 @@ def request_request_uri(
             logger.error(f"<<<< ❌ Restituito in risposta: {e}")
             raise
 
+
 def request_response_uri(
     url: str,
     response_uri_request_jwt: str,
@@ -685,7 +722,7 @@ def request_response_uri(
     max_retries: int = 3,
     retry_delay: float = 1.0,
     proxies: dict = None,
-    no_proxy_domains: list[str] = None
+    no_proxy_domains: list[str] = None,
 ) -> dict:
     """
     Invio response uri request ad un Relying Party per trasmettere via POST le presentazioni delle credenziali richieste e
@@ -716,15 +753,9 @@ def request_response_uri(
                     use_proxy = False
                     break
 
-    headers = {
-        "Content-Type": "application/x-www-form-urlencoded",
-        "Accept": "application/json; charset=utf-8"
-    }
+    headers = {"Content-Type": "application/x-www-form-urlencoded", "Accept": "application/json; charset=utf-8"}
 
-    data = {
-        "response": response_uri_request_jwt,
-        "state": state
-    }
+    data = {"response": response_uri_request_jwt, "state": state}
 
     logger.info(f">>>> Invio POST a {url} (use_proxy={use_proxy})")
     logger.info("📦 Header:")
@@ -758,7 +789,9 @@ def request_response_uri(
                         raise ValueError(f"Risposta ricevuta da {url} non valida: {ve}")
                 else:
                     logger.error(f"❌ Risposta non valida: Content-Type non è application/json, ma {content_type}")
-                    raise RuntimeError(f"Risposta ricevuta da {url} non valida: Content-Type non è application/json, ma {content_type}")
+                    raise RuntimeError(
+                        f"Risposta ricevuta da {url} non valida: Content-Type non è application/json, ma {content_type}"
+                    )
 
             else:
                 try:
@@ -770,10 +803,14 @@ def request_response_uri(
                     error_str = f"{err} - {desc}".strip(" -")
                 except ValueError:
                     # non è JSON → prendo così com'è
-                    error_str = ' '.join(response.text.split())
+                    error_str = " ".join(response.text.split())
 
-                logger.error(f"❌ Errore ritornato dall'endpoint {url}: {error_str} (HTTP Status code: {response.status_code})")
-                raise RuntimeError(f"Errore ritornato dall'endpoint {url}: {error_str} (HTTP Status code: {response.status_code})")
+                logger.error(
+                    f"❌ Errore ritornato dall'endpoint {url}: {error_str} (HTTP Status code: {response.status_code})"
+                )
+                raise RuntimeError(
+                    f"Errore ritornato dall'endpoint {url}: {error_str} (HTTP Status code: {response.status_code})"
+                )
 
         except requests.ConnectionError as ce:
             logger.error(f"❌ Tentativo {attempt} - Errore di connessione: {ce}")
@@ -781,7 +818,9 @@ def request_response_uri(
                 time.sleep(retry_delay)
             else:
                 logger.error("<<<< ❌ Numero massimo di tentativi raggiunto, abortisco.")
-                raise ConnectionError(f"Impossibile stabilire la connessione verso {url} dopo ripetuti tentativi") from ce
+                raise ConnectionError(
+                    f"Impossibile stabilire la connessione verso {url} dopo ripetuti tentativi"
+                ) from ce
         except requests.RequestException as re:
             logger.error(f"<<<< ❌ Restituito in risposta: {re}")
             raise
@@ -792,12 +831,9 @@ def request_response_uri(
             logger.error(f"<<<< ❌ Restituito in risposta: {e}")
             raise
 
+
 def request_presentation_callback(
-    url: str,
-    max_retries: int = 3,
-    retry_delay: float = 1.0,
-    proxies: dict = None,
-    no_proxy_domains: list[str] = None
+    url: str, max_retries: int = 3, retry_delay: float = 1.0, proxies: dict = None, no_proxy_domains: list[str] = None
 ) -> str:
     """
     Invia una richiesta GET alla callback URL fornita in fase di presentazione,
@@ -841,7 +877,9 @@ def request_presentation_callback(
 
             logger.info(f"📍 Risposta: {resp.status_code}")
             logger.info(f"📍 Headers: {resp.headers}")
-            logger.info(f"📍 Body: {resp.text[:500]}{'...' if len(resp.text) > 500 else ''}") # Limita a 500 caratteri per il log
+            logger.info(
+                f"📍 Body: {resp.text[:500]}{'...' if len(resp.text) > 500 else ''}"
+            )  # Limita a 500 caratteri per il log
 
             if 300 <= resp.status_code < 400 and "Location" in resp.headers:
                 redirect_url = resp.headers["Location"]
@@ -852,7 +890,7 @@ def request_presentation_callback(
                 fake_resp.encoding = "utf-8"
                 fake_resp.headers["Content-Type"] = "text/plain; charset=utf-8"
                 fake_resp.status_code = 200
-                fake_resp._content = redirect_url.encode('utf-8')  # serve bytes
+                fake_resp._content = redirect_url.encode("utf-8")  # serve bytes
                 response = fake_resp
             else:
                 response = resp
@@ -872,10 +910,14 @@ def request_presentation_callback(
                     error_str = f"{err} - {desc}".strip(" -")
                 except ValueError:
                     # non è JSON → prendo così com'è
-                    error_str = ' '.join(response.text.split())
+                    error_str = " ".join(response.text.split())
 
-                logger.error(f"❌ Errore ritornato dall'endpoint {url}: {error_str} (HTTP Status code: {response.status_code})")
-                raise RuntimeError(f"Errore ritornato dall'endpoint {url}: {error_str} (HTTP Status code: {response.status_code})")
+                logger.error(
+                    f"❌ Errore ritornato dall'endpoint {url}: {error_str} (HTTP Status code: {response.status_code})"
+                )
+                raise RuntimeError(
+                    f"Errore ritornato dall'endpoint {url}: {error_str} (HTTP Status code: {response.status_code})"
+                )
 
         except requests.ConnectionError as ce:
             logger.error(f"❌ Tentativo {attempt} - Errore di connessione: {ce}")
@@ -883,7 +925,9 @@ def request_presentation_callback(
                 time.sleep(retry_delay)
             else:
                 logger.error("<<<< ❌ Numero massimo di tentativi raggiunto, abortisco.")
-                raise ConnectionError(f"Impossibile stabilire la connessione verso {url} dopo ripetuti tentativi") from ce
+                raise ConnectionError(
+                    f"Impossibile stabilire la connessione verso {url} dopo ripetuti tentativi"
+                ) from ce
         except requests.RequestException as re:
             logger.error(f"<<<< ❌ Restituito in risposta: {re}")
             raise
@@ -894,13 +938,14 @@ def request_presentation_callback(
             logger.error(f"<<<< ❌ Restituito in risposta: {e}")
             raise
 
+
 def request_status(
     url: str,
     status_assertion_requests: list[str],
     max_retries: int = 3,
     retry_delay: float = 1.0,
     proxies: dict = None,
-    no_proxy_domains: list[str] = None
+    no_proxy_domains: list[str] = None,
 ) -> dict:
     """
     Invia una richiesta POST /status con retry in caso di errore di connessione
@@ -922,9 +967,7 @@ def request_status(
         "Accept": "application/json; charset=UTF-8",
     }
 
-    data = {
-        "status_assertion_requests": status_assertion_requests
-    }
+    data = {"status_assertion_requests": status_assertion_requests}
 
     parsed = urlparse(url)
     host = parsed.hostname
@@ -972,7 +1015,9 @@ def request_status(
                         raise ValueError(f"Risposta ricevuta da {url} non valida: {ve}")
                 else:
                     logger.error(f"❌ Risposta non valida: Content-Type non è application/json, ma {content_type}")
-                    raise RuntimeError(f"Risposta ricevuta da {url} non valida: Content-Type non è application/json, ma {content_type}")
+                    raise RuntimeError(
+                        f"Risposta ricevuta da {url} non valida: Content-Type non è application/json, ma {content_type}"
+                    )
             else:
                 try:
                     # provo a fare parsing JSON
@@ -983,17 +1028,23 @@ def request_status(
                     error_str = f"{err} - {desc}".strip(" -")
                 except ValueError:
                     # non è JSON → prendo così com'è
-                    error_str = ' '.join(response.text.split())
+                    error_str = " ".join(response.text.split())
 
-                logger.error(f"❌ Errore ritornato dall'endpoint {url}: {error_str} (HTTP Status code: {response.status_code})")
-                raise RuntimeError(f"Errore ritornato dall'endpoint {url}: {error_str} (HTTP Status code: {response.status_code})")
+                logger.error(
+                    f"❌ Errore ritornato dall'endpoint {url}: {error_str} (HTTP Status code: {response.status_code})"
+                )
+                raise RuntimeError(
+                    f"Errore ritornato dall'endpoint {url}: {error_str} (HTTP Status code: {response.status_code})"
+                )
         except requests.ConnectionError as ce:
             logger.error(f"❌ Tentativo {attempt} - Errore di connessione: {ce}")
             if attempt < max_retries:
                 time.sleep(retry_delay)
             else:
                 logger.error("<<<< ❌ Numero massimo di tentativi raggiunto, abortisco.")
-                raise ConnectionError(f"Impossibile stabilire la connessione verso {url} dopo ripetuti tentativi") from ce
+                raise ConnectionError(
+                    f"Impossibile stabilire la connessione verso {url} dopo ripetuti tentativi"
+                ) from ce
         except requests.RequestException as re:
             # Altri errori di richiesta, rilancio subito
             logger.error(f"<<<< ❌ Restituito in risposta: {re}")
@@ -1005,6 +1056,7 @@ def request_status(
             logger.error(f"<<<< ❌ Restituito in risposta: {e}")
             raise
 
+
 def get_status_description(status):
     if status == CREDENTIAL_VALID:
         return "Valido"
@@ -1015,10 +1067,9 @@ def get_status_description(status):
     else:
         return "Indefinito"
 
+
 def generate_wallet_attestation_pop_jwt(
-    private_key: EllipticCurvePrivateKey,
-    audience: str,
-    lifetime: int = 300
+    private_key: EllipticCurvePrivateKey, audience: str, lifetime: int = 300
 ) -> str:
     """
     Genera un client attestation pop JWT firmato con chiave EC nel rispetto
@@ -1032,14 +1083,13 @@ def generate_wallet_attestation_pop_jwt(
     Returns:
         Stringa JWT rappresentante il client attestation pop JWT
     """
-     # Estrae chiave pubblica da quella privata
+    # Estrae chiave pubblica da quella privata
     public_key = private_key.public_key()
 
     # Converti la chiave pubblica in formato JWK
-    public_jwk  = jwk.JWK.from_pem(
+    public_jwk = jwk.JWK.from_pem(
         public_key.public_bytes(
-            encoding=serialization.Encoding.PEM,
-            format=serialization.PublicFormat.SubjectPublicKeyInfo
+            encoding=serialization.Encoding.PEM, format=serialization.PublicFormat.SubjectPublicKeyInfo
         )
     )
 
@@ -1056,42 +1106,28 @@ def generate_wallet_attestation_pop_jwt(
     # Crea il payload JWT
     now = int(time.time())
 
-    payload = {
-        "iss": kid,
-        "aud": audience,
-        "iat": now,
-        "exp": now + int(lifetime),
-        "jti": str(uuid.uuid4())
-    }
+    payload = {"iss": kid, "aud": audience, "iat": now, "exp": now + int(lifetime), "jti": str(uuid.uuid4())}
 
-    headers = {
-        "typ": "oauth-client-attestation-pop+jwt",
-        "alg": alg,
-        "kid": kid
-    }
+    headers = {"typ": "oauth-client-attestation-pop+jwt", "alg": alg, "kid": kid}
 
     # Serializza la chiave privata per PyJWT
     private_pem = private_key.private_bytes(
         encoding=serialization.Encoding.PEM,
         format=serialization.PrivateFormat.PKCS8,
-        encryption_algorithm=serialization.NoEncryption()
+        encryption_algorithm=serialization.NoEncryption(),
     )
 
-    pop_jwt = jwt.encode(
-        payload,
-        key=private_pem,
-        algorithm=alg,
-        headers=headers
-    )
+    pop_jwt = jwt.encode(payload, key=private_pem, algorithm=alg, headers=headers)
 
     return pop_jwt
+
 
 def generate_wallet_attestation_jwt(
     issuer_private_key: EllipticCurvePrivateKey,
     client_public_key: EllipticCurvePublicKey,
     issuer: str,
     aal: str,
-    lifetime: int = 86400
+    lifetime: int = 86400,
 ) -> str:
     """
     Genera un client attestation JWT firmato con chiave EC nel rispetto
@@ -1108,7 +1144,7 @@ def generate_wallet_attestation_jwt(
         Stringa rappresentante il client attestation SD-JWT
     """
     # Converti la chiave privata dell'issuer in formato JWK
-    issuer_private_jwk  = priv_ec_key_obj_to_jwk(issuer_private_key)
+    issuer_private_jwk = priv_ec_key_obj_to_jwk(issuer_private_key)
 
     # Determina l'algoritmo di firma in base alla curva della chiave privata dell'issuer in formato JWK
     crv = issuer_private_jwk.get("crv")
@@ -1119,11 +1155,11 @@ def generate_wallet_attestation_jwt(
 
     # Estrai la chiave pubblica di firma da quella privata, convertila in formato JWK ed estrai il thumbprint come KID (RFC 7638)
     issuer_public_key = issuer_private_key.public_key()
-    issuer_public_jwk  = pub_ec_key_obj_to_jwk(issuer_public_key)
+    issuer_public_jwk = pub_ec_key_obj_to_jwk(issuer_public_key)
     issuer_public_jwk_kid = issuer_public_jwk.thumbprint()
 
     # Converti la chiave pubblica dell'app mobile a cui deve essere collegata l'attestazione in formato JWK ed estrai il thumbprint come KID (RFC 7638)
-    cnf_public_jwk  = pub_ec_key_obj_to_jwk(client_public_key)
+    cnf_public_jwk = pub_ec_key_obj_to_jwk(client_public_key)
     cnf_public_jwk_kid = cnf_public_jwk.thumbprint()
 
     # Controlla l'algoritmo di firma della chiave pubblica dell'app mobile a cui deve essere collegata l'attestazionein
@@ -1135,40 +1171,30 @@ def generate_wallet_attestation_jwt(
 
     now = int(time.time())
 
-    headers = {
-        "typ": "oauth-client-attestation+jwt",
-        "alg": alg,
-        "kid": issuer_public_jwk_kid
-    }
+    headers = {"typ": "oauth-client-attestation+jwt", "alg": alg, "kid": issuer_public_jwk_kid}
 
     payload = {
         "iss": issuer,
         "sub": cnf_public_jwk_kid,
         "wallet_name": "IT Wallet",
-        "wallet_link": issuer +"/wallet/detail_info.html",
+        "wallet_link": issuer + "/wallet/detail_info.html",
         "aal": aal,
         "iat": now,
         "exp": now + int(lifetime),
-        "cnf": {
-            "jwk": cnf_public_jwk
-        }
+        "cnf": {"jwk": cnf_public_jwk},
     }
 
     # Serializza chiave privata in PEM
     private_pem = issuer_private_key.private_bytes(
         encoding=serialization.Encoding.PEM,
         format=serialization.PrivateFormat.PKCS8,
-        encryption_algorithm=serialization.NoEncryption()
+        encryption_algorithm=serialization.NoEncryption(),
     )
 
-    signed_jwt = jwt.encode(
-        payload,
-        key=private_pem,
-        algorithm=alg,
-        headers=headers
-    )
+    signed_jwt = jwt.encode(payload, key=private_pem, algorithm=alg, headers=headers)
 
     return signed_jwt
+
 
 def generate_wallet_attestation_sd_jwt(
     vct: str,
@@ -1176,7 +1202,7 @@ def generate_wallet_attestation_sd_jwt(
     client_public_key: EllipticCurvePublicKey,
     issuer: str,
     aal: str,
-    lifetime: int = 86400
+    lifetime: int = 86400,
 ) -> str:
     """
     Genera un client attestation SD-JWT firmato con chiave EC nel rispetto
@@ -1195,7 +1221,7 @@ def generate_wallet_attestation_sd_jwt(
     """
 
     # Converti la chiave privata dell'issuer in formato JWK
-    issuer_private_jwk  = priv_ec_key_obj_to_jwk(issuer_private_key)
+    issuer_private_jwk = priv_ec_key_obj_to_jwk(issuer_private_key)
     issuer_private_jwk_dict = issuer_private_jwk.export(as_dict=True)
 
     # Determina l'algoritmo di firma in base alla curva della chiave privata dell'issuer in formato JWK
@@ -1207,11 +1233,11 @@ def generate_wallet_attestation_sd_jwt(
 
     # Estrai la chiave pubblica di firma da quella privata, convertila in formato JWK ed estrai il thumbprint come KID (RFC 7638)
     issuer_public_key = issuer_private_key.public_key()
-    issuer_public_jwk  = pub_ec_key_obj_to_jwk(issuer_public_key)
+    issuer_public_jwk = pub_ec_key_obj_to_jwk(issuer_public_key)
     issuer_public_jwk_kid = issuer_public_jwk.thumbprint()
 
     # Converti la chiave pubblica dell'app mobile a cui deve essere collegata l'attestazione in formato JWK ed estrai il thumbprint come KID (RFC 7638)
-    cnf_public_jwk  = pub_ec_key_obj_to_jwk(client_public_key)
+    cnf_public_jwk = pub_ec_key_obj_to_jwk(client_public_key)
     cnf_public_jwk_kid = cnf_public_jwk.thumbprint()
 
     # Controlla l'algoritmo di firma della chiave pubblica dell'app mobile a cui deve essere collegata l'attestazionein
@@ -1223,23 +1249,18 @@ def generate_wallet_attestation_sd_jwt(
 
     now = int(time.time())
 
-    headers = {
-        "typ": "dc+sd-jwt",
-        "kid": issuer_public_jwk_kid
-    }
+    headers = {"typ": "dc+sd-jwt", "kid": issuer_public_jwk_kid}
 
     claims = {
         "iss": issuer,
         "sub": cnf_public_jwk_kid,
         "vct": vct,
         "wallet_name": "IT Wallet",
-        "wallet_link": issuer +"/wallet/detail_info.html",
+        "wallet_link": issuer + "/wallet/detail_info.html",
         "aal": aal,
         "iat": now,
         "exp": now + int(lifetime),
-        "cnf": {
-            "jwk": cnf_public_jwk
-        }
+        "cnf": {"jwk": cnf_public_jwk},
     }
 
     # Claim che devono essere rivelati selettivamente
@@ -1252,10 +1273,11 @@ def generate_wallet_attestation_sd_jwt(
         claims=claims,
         selectively_disclosable_claims=selectively_disclosable_claims,
         extra_header_parameters=headers,
-        holder_public_jwk_dict=cnf_public_jwk
+        holder_public_jwk_dict=cnf_public_jwk,
     )
 
     return sd_jwt
+
 
 def generate_request_object_jwt(
     issuer_private_key: EllipticCurvePrivateKey,
@@ -1268,7 +1290,7 @@ def generate_request_object_jwt(
     redirect_uri: str,
     scope: str = None,
     authorization_details: list = None,
-    lifetime: int = 3600
+    lifetime: int = 3600,
 ) -> str:
     """
     Genera un Request Object JWT firmato con chiave EC.
@@ -1293,10 +1315,9 @@ def generate_request_object_jwt(
     issuer_public_key = issuer_private_key.public_key()
 
     # Converti la chiave pubblica in formato JWK
-    public_jwk  = jwk.JWK.from_pem(
+    public_jwk = jwk.JWK.from_pem(
         issuer_public_key.public_bytes(
-            encoding=serialization.Encoding.PEM,
-            format=serialization.PublicFormat.SubjectPublicKeyInfo
+            encoding=serialization.Encoding.PEM, format=serialization.PublicFormat.SubjectPublicKeyInfo
         )
     )
 
@@ -1325,7 +1346,7 @@ def generate_request_object_jwt(
         "redirect_uri": redirect_uri,
         "iat": now,
         "exp": now + int(lifetime),
-        "jti": str(uuid.uuid4())
+        "jti": str(uuid.uuid4()),
     }
 
     if scope:
@@ -1336,34 +1357,26 @@ def generate_request_object_jwt(
 
     # Crea header JWT
 
-    headers = {
-        "typ": "jwt",
-        "alg": alg,
-        "kid": kid
-    }
+    headers = {"typ": "jwt", "alg": alg, "kid": kid}
 
     # Serializza la chiave privata per firmare con PyJWT
     private_pem = issuer_private_key.private_bytes(
         encoding=serialization.Encoding.PEM,
         format=serialization.PrivateFormat.PKCS8,
-        encryption_algorithm=serialization.NoEncryption()
+        encryption_algorithm=serialization.NoEncryption(),
     )
 
     # Firma il JWT
-    jwt_token = jwt.encode(
-        payload,
-        key=private_pem,
-        algorithm=alg,
-        headers=headers
-    )
+    jwt_token = jwt.encode(payload, key=private_pem, algorithm=alg, headers=headers)
 
     return jwt_token
+
 
 def generate_dpop_jwt(
     issuer_private_key: EllipticCurvePrivateKey,
     http_method: str,
     http_url: str,
-    access_token: str = None  # parametro opzionale
+    access_token: str = None,  # parametro opzionale
 ) -> str:
     """
     Genera un DPoP proof JWT firmato con chiave EC.
@@ -1382,10 +1395,9 @@ def generate_dpop_jwt(
     issuer_public_key = issuer_private_key.public_key()
 
     # Converti la chiave pubblica in formato JWK
-    public_jwk  = jwk.JWK.from_pem(
+    public_jwk = jwk.JWK.from_pem(
         issuer_public_key.public_bytes(
-            encoding=serialization.Encoding.PEM,
-            format=serialization.PublicFormat.SubjectPublicKeyInfo
+            encoding=serialization.Encoding.PEM, format=serialization.PublicFormat.SubjectPublicKeyInfo
         )
     )
 
@@ -1398,12 +1410,7 @@ def generate_dpop_jwt(
 
     now = int(time.time())
 
-    payload = {
-        "htu": http_url,
-        "htm": http_method.upper(),
-        "iat": now,
-        "jti": str(uuid.uuid4())
-    }
+    payload = {"htu": http_url, "htm": http_method.upper(), "iat": now, "jti": str(uuid.uuid4())}
 
     # Aggiunta della claim 'ath' se l'access token è fornito
     if access_token:
@@ -1411,27 +1418,19 @@ def generate_dpop_jwt(
         thumbprint = hashlib.sha256(token_bytes).digest()
         payload["ath"] = base64url_encode(thumbprint)
 
-    headers = {
-        "typ": "dpop+jwt",
-        "alg": alg,
-        "jwk": json.loads(public_jwk.export(private_key=False))
-    }
+    headers = {"typ": "dpop+jwt", "alg": alg, "jwk": json.loads(public_jwk.export(private_key=False))}
 
     # Serializza la chiave privata per PyJWT
     private_pem = issuer_private_key.private_bytes(
         encoding=serialization.Encoding.PEM,
         format=serialization.PrivateFormat.PKCS8,
-        encryption_algorithm=serialization.NoEncryption()
+        encryption_algorithm=serialization.NoEncryption(),
     )
 
-    dpop_jwt = jwt.encode(
-        payload,
-        key=private_pem,
-        algorithm=alg,
-        headers=headers
-    )
+    dpop_jwt = jwt.encode(payload, key=private_pem, algorithm=alg, headers=headers)
 
     return dpop_jwt
+
 
 def generate_dpop_bound_access_token(
     issuer_private_key: EllipticCurvePrivateKey,
@@ -1439,7 +1438,7 @@ def generate_dpop_bound_access_token(
     issuer: str,
     subject: str,
     audience: str,
-    lifetime: int = 3600
+    lifetime: int = 3600,
 ) -> str:
     """
     Genera un access token JWT firmato e legato a una DPoP key tramite 'cnf.jkt',
@@ -1462,8 +1461,7 @@ def generate_dpop_bound_access_token(
     # Converti la chiave pubblica dell'issuer in formato JWK
     issuer_public_jwk = jwk.JWK.from_pem(
         issuer_public_key.public_bytes(
-            encoding=serialization.Encoding.PEM,
-            format=serialization.PublicFormat.SubjectPublicKeyInfo
+            encoding=serialization.Encoding.PEM, format=serialization.PublicFormat.SubjectPublicKeyInfo
         )
     )
 
@@ -1480,8 +1478,7 @@ def generate_dpop_bound_access_token(
     # Converti la chiave pubblica in formato JWK
     cnf_public_jwk = jwk.JWK.from_pem(
         cnf_public_key.public_bytes(
-            encoding=serialization.Encoding.PEM,
-            format=serialization.PublicFormat.SubjectPublicKeyInfo
+            encoding=serialization.Encoding.PEM, format=serialization.PublicFormat.SubjectPublicKeyInfo
         )
     )
 
@@ -1490,11 +1487,7 @@ def generate_dpop_bound_access_token(
 
     now = int(time.time())
 
-    headers = {
-        "typ": "at+jwt",
-        "alg": alg,
-        "kid": issuer_public_jwk_kid
-    }
+    headers = {"typ": "at+jwt", "alg": alg, "kid": issuer_public_jwk_kid}
 
     payload = {
         "iss": issuer,
@@ -1503,32 +1496,22 @@ def generate_dpop_bound_access_token(
         "client_id": cnf_public_jwk_kid,
         "iat": now,
         "exp": now + int(lifetime),
-        "cnf": {
-            "jkt": cnf_public_jwk_kid
-        }
+        "cnf": {"jkt": cnf_public_jwk_kid},
     }
 
     # Serializza chiave privata in PEM
     private_pem = issuer_private_key.private_bytes(
         encoding=serialization.Encoding.PEM,
         format=serialization.PrivateFormat.PKCS8,
-        encryption_algorithm=serialization.NoEncryption()
+        encryption_algorithm=serialization.NoEncryption(),
     )
 
-    token = jwt.encode(
-        payload,
-        key=private_pem,
-        algorithm=alg,
-        headers=headers
-    )
+    token = jwt.encode(payload, key=private_pem, algorithm=alg, headers=headers)
 
     return token
 
-def generate_proof_jwt(
-    issuer_private_key: EllipticCurvePrivateKey,
-    audience: str,
-    nonce: str
-) -> str:
+
+def generate_proof_jwt(issuer_private_key: EllipticCurvePrivateKey, audience: str, nonce: str) -> str:
     """
     Genera un JWT proof firmato con una chiave privata EC
     Il JWT include la chiave pubblica JWK in header.
@@ -1539,8 +1522,7 @@ def generate_proof_jwt(
     # Converti la chiave pubblica in formato JWK
     public_jwk = jwk.JWK.from_pem(
         public_key.public_bytes(
-            encoding=serialization.Encoding.PEM,
-            format=serialization.PublicFormat.SubjectPublicKeyInfo
+            encoding=serialization.Encoding.PEM, format=serialization.PublicFormat.SubjectPublicKeyInfo
         )
     )
 
@@ -1557,41 +1539,23 @@ def generate_proof_jwt(
     now = int(time.time())
     exp = now + 300  # 5 minuti
 
-    payload = {
-        "iss": kid,
-        "aud": audience,
-        "iat": now,
-        "exp": exp,
-        "nonce": nonce
-    }
+    payload = {"iss": kid, "aud": audience, "iat": now, "exp": exp, "nonce": nonce}
 
-    headers = {
-        "typ": "openid4vci-proof+jwt",
-        "alg": alg,
-        "jwk": json.loads(public_jwk.export(private_key=False))
-    }
+    headers = {"typ": "openid4vci-proof+jwt", "alg": alg, "jwk": json.loads(public_jwk.export(private_key=False))}
 
     # Firma e genera JWT
     private_pem = issuer_private_key.private_bytes(
         encoding=serialization.Encoding.PEM,
         format=serialization.PrivateFormat.PKCS8,
-        encryption_algorithm=serialization.NoEncryption()
+        encryption_algorithm=serialization.NoEncryption(),
     )
 
-    proof_jwt = jwt.encode(
-        payload,
-        key=private_pem,
-        algorithm=alg,
-        headers=headers
-    )
+    proof_jwt = jwt.encode(payload, key=private_pem, algorithm=alg, headers=headers)
 
     return proof_jwt
 
-def generate_response_uri_request_jws(
-    private_key: EllipticCurvePrivateKey,
-    vp_token: dict,
-    state: str
-) -> str:
+
+def generate_response_uri_request_jws(private_key: EllipticCurvePrivateKey, vp_token: dict, state: str) -> str:
     """
     Genera un JWT firmato (JWS) reppresentante una response uri request nel rispetto
     della specifica https://italia.github.io/eid-wallet-it-docs/versione-corrente/en/remote-flow.html#authorization-response
@@ -1614,8 +1578,7 @@ def generate_response_uri_request_jws(
     # Converti la chiave pubblica in formato JWK
     public_jwk = jwk.JWK.from_pem(
         public_key.public_bytes(
-            encoding=serialization.Encoding.PEM,
-            format=serialization.PublicFormat.SubjectPublicKeyInfo
+            encoding=serialization.Encoding.PEM, format=serialization.PublicFormat.SubjectPublicKeyInfo
         )
     )
 
@@ -1630,32 +1593,21 @@ def generate_response_uri_request_jws(
         raise ValueError(f"Curva non supportata: {crv}")
 
     # Crea il payload JWT
-    payload = {
-        "vp_token": vp_token,
-        "state": state
-    }
+    payload = {"vp_token": vp_token, "state": state}
 
-    headers = {
-        "typ": "jwt",
-        "alg": alg,
-        "kid": kid
-    }
+    headers = {"typ": "jwt", "alg": alg, "kid": kid}
 
     # Serializza la chiave privata per PyJWT
     private_pem = private_key.private_bytes(
         encoding=serialization.Encoding.PEM,
         format=serialization.PrivateFormat.PKCS8,
-        encryption_algorithm=serialization.NoEncryption()
+        encryption_algorithm=serialization.NoEncryption(),
     )
 
-    response_uri_request_jws = jwt.encode(
-        payload,
-        key=private_pem,
-        algorithm=alg,
-        headers=headers
-    )
+    response_uri_request_jws = jwt.encode(payload, key=private_pem, algorithm=alg, headers=headers)
 
     return response_uri_request_jws
+
 
 def generate_response_uri_request_jwe(
     enc_key_json_str: str,
@@ -1702,13 +1654,17 @@ def generate_response_uri_request_jwe(
         key_encryption_alg_map = {"P-256": "ECDH-ES", "P-384": "ECDH-ES", "P-521": "ECDH-ES"}
         key_encryption_alg = key_encryption_alg_map.get(crv)
         if not key_encryption_alg:
-            logger.error(f"❌ La chiave per cifrare il JWE presenta nel claim 'crv' il valore '{crv}' che non è supportato dal wallet")
+            logger.error(
+                f"❌ La chiave per cifrare il JWE presenta nel claim 'crv' il valore '{crv}' che non è supportato dal wallet"
+            )
             return None
     elif kty == "RSA":
         content_encryption_alg = "A256CBC-HS512"
         key_encryption_alg = "RSA-OAEP-256"
     else:
-        logger.error(f"❌ La chiave per cifrare il JWE presenta nel claim 'kty' il valore '{kty}' che non è supportata dal wallet")
+        logger.error(
+            f"❌ La chiave per cifrare il JWE presenta nel claim 'kty' il valore '{kty}' che non è supportata dal wallet"
+        )
         return None
 
     logger.debug(f"🔑 Algoritmo di cifratura chiave: {key_encryption_alg}")
@@ -1722,28 +1678,22 @@ def generate_response_uri_request_jwe(
 
     # Prepara l'header protetto
     protected_header = {
-        "alg": key_encryption_alg,      # ✅ Algoritmo di cifratura della chiave
+        "alg": key_encryption_alg,  # ✅ Algoritmo di cifratura della chiave
         "enc": content_encryption_alg,  # ✅ Algoritmo di cifratura del contenuto
         "kid": kid,
-        #"cty": "application/json"       # il payload non è un JWT, se era JWT allora cty: "JWT"
+        # "cty": "application/json"       # il payload non è un JWT, se era JWT allora cty: "JWT"
     }
 
     # Crea il payload JWE
-    payload = {
-        "vp_token": vp_token,
-        "state": state
-    }
+    payload = {"vp_token": vp_token, "state": state}
 
     logger.debug(f"🔓 Payload JWT prima della cifratura:\n{json.dumps(payload, indent=2)}")
 
     # Payload JWT claims
-    jwe_payload = json.dumps(payload, separators=(',', ':'))
+    jwe_payload = json.dumps(payload, separators=(",", ":"))
 
     # ✅ Cifra come JWE
-    jwetoken = jwe.JWE(
-        plaintext=jwe_payload.encode('utf-8'),
-        protected=protected_header
-    )
+    jwetoken = jwe.JWE(plaintext=jwe_payload.encode("utf-8"), protected=protected_header)
     jwetoken.add_recipient(pub_key)
 
     # Serializza in formato compatto
@@ -1755,12 +1705,13 @@ def generate_response_uri_request_jwe(
 
     return response_uri_request_jwe
 
+
 def generate_status_assertion_request_object_jwt(
     issuer_private_key: EllipticCurvePrivateKey,
     audience: str,
     credential_hash: str,
     credential_hash_alg: str,
-    lifetime: int = 3600
+    lifetime: int = 3600,
 ) -> str:
     """
     Genera un Request Object JWT firmato con chiave EC da usare per richiedere la status assertion di una credenziale
@@ -1781,8 +1732,7 @@ def generate_status_assertion_request_object_jwt(
     # Converti la chiave pubblica in formato JWK
     public_jwk = jwk.JWK.from_pem(
         issuer_public_key.public_bytes(
-            encoding=serialization.Encoding.PEM,
-            format=serialization.PublicFormat.SubjectPublicKeyInfo
+            encoding=serialization.Encoding.PEM, format=serialization.PublicFormat.SubjectPublicKeyInfo
         )
     )
 
@@ -1806,30 +1756,21 @@ def generate_status_assertion_request_object_jwt(
         "exp": now + int(lifetime),
         "jti": str(uuid.uuid4()),
         "credential_hash": credential_hash,
-        "credential_hash_alg": credential_hash_alg
+        "credential_hash_alg": credential_hash_alg,
     }
 
     # Crea header JWT
 
-    headers = {
-        "typ": "status-assertion-request+jwt",
-        "alg": alg,
-        "kid": kid
-    }
+    headers = {"typ": "status-assertion-request+jwt", "alg": alg, "kid": kid}
 
     # Serializza la chiave privata per firmare con PyJWT
     private_pem = issuer_private_key.private_bytes(
         encoding=serialization.Encoding.PEM,
         format=serialization.PrivateFormat.PKCS8,
-        encryption_algorithm=serialization.NoEncryption()
+        encryption_algorithm=serialization.NoEncryption(),
     )
 
     # Firma il JWT
-    jwt_token = jwt.encode(
-        payload,
-        key=private_pem,
-        algorithm=alg,
-        headers=headers
-    )
+    jwt_token = jwt.encode(payload, key=private_pem, algorithm=alg, headers=headers)
 
     return jwt_token

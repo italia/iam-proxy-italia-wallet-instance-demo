@@ -9,13 +9,14 @@ from cryptography.hazmat.primitives.asymmetric import ec
 
 logger = logging.getLogger(__name__)
 
+
 def oid_fed_list(
     base_url: str,
     query_string: str,
     max_retries: int = 3,
     retry_delay: float = 1.0,
     proxies: dict = None,
-    no_proxy_domains: list[str] = None
+    no_proxy_domains: list[str] = None,
 ) -> list[str]:
     """
     Invia una richiesta GET /list con retry in caso di errore di connessione.
@@ -30,7 +31,7 @@ def oid_fed_list(
         Una lista di stringhe (federation entity identifier) ottenute da un JSON array.
         In caso di errore, rilancia un'eccezione.
     """
-    url = base_url.rstrip("/") + "/list" +query_string
+    url = base_url.rstrip("/") + "/list" + query_string
     parsed = urlparse(url)
     host = parsed.hostname
 
@@ -88,7 +89,9 @@ def oid_fed_list(
                 time.sleep(retry_delay)
             else:
                 logger.error("❌ Numero massimo di tentativi raggiunto, abortisco.")
-                raise ConnectionError(f"Impossibile stabilire la connessione verso {url} dopo ripetuti tentativi") from ce
+                raise ConnectionError(
+                    f"Impossibile stabilire la connessione verso {url} dopo ripetuti tentativi"
+                ) from ce
         except requests.RequestException as re:
             # Altri errori di richiesta, rilancio subito
             logger.error(f"❌ Internal error: {re}")
@@ -106,12 +109,13 @@ def oid_fed_list(
     else:
         raise RuntimeError("Richiesta fallita, ma senza eccezioni di rete.")
 
+
 def oid_fed_fetch_openid_configuration(
     base_url: str,
     max_retries: int = 3,
     retry_delay: float = 1.0,
     proxies: dict = None,
-    no_proxy_domains: list[str] = None
+    no_proxy_domains: list[str] = None,
 ) -> str:
     """
     Invia una richiesta GET /.well-known/openid-federation con retry in caso di errore di connessione.
@@ -179,7 +183,9 @@ def oid_fed_fetch_openid_configuration(
                 time.sleep(retry_delay)
             else:
                 logger.error("❌ Numero massimo di tentativi raggiunto, abortisco.")
-                raise ConnectionError(f"Impossibile stabilire la connessione verso {url} dopo ripetuti tentativi") from ce
+                raise ConnectionError(
+                    f"Impossibile stabilire la connessione verso {url} dopo ripetuti tentativi"
+                ) from ce
         except requests.RequestException as re:
             # Altri errori di richiesta, rilancio subito
             logger.error(f"❌ Internal error: {re}")

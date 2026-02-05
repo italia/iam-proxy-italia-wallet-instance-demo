@@ -10,6 +10,7 @@ from utils.utils import base64url_decode, base64url_encode, pem_public_key_from_
 
 logger = logging.getLogger(__name__)
 
+
 def der_signature_to_rs(der_sig: bytes, key_size=256):
     """
     Converte una firma DER in firma R+S concatenati (RFC 7515).
@@ -17,8 +18,8 @@ def der_signature_to_rs(der_sig: bytes, key_size=256):
     """
     r, s = decode_dss_signature(der_sig)
     num_bytes = (key_size + 7) // 8
-    r_bytes = r.to_bytes(num_bytes, byteorder='big')
-    s_bytes = s.to_bytes(num_bytes, byteorder='big')
+    r_bytes = r.to_bytes(num_bytes, byteorder="big")
+    s_bytes = s.to_bytes(num_bytes, byteorder="big")
     return r_bytes + s_bytes
 
 
@@ -68,6 +69,7 @@ def verify_with_keys(main_key, other_keys, kid, try_verify):
     logger.error(f"🚫 {error_msg}")
     raise ValueError(error_msg)
 
+
 def decode_and_verify_jwt(signed_jwt: str, jwks: dict = None):
     """
     Legge un JWT firmato, lo valida e lo decodifica.
@@ -79,11 +81,11 @@ def decode_and_verify_jwt(signed_jwt: str, jwks: dict = None):
         logger.debug(f"🔐 JWT firmato in input da validare e decodificare: {signed_jwt}")
 
         # Decodifica header e payload senza verificare la firma
-        parts = signed_jwt.split('.')
+        parts = signed_jwt.split(".")
         if len(parts) != 3:
             raise ValueError("Formato JWT non valido: dovrebbe avere 3 parti separate da punti")
 
-        header_b64, payload_b64, signature_b64 = signed_jwt.split('.')
+        header_b64, payload_b64, signature_b64 = signed_jwt.split(".")
         header_json = base64url_decode(header_b64).decode()
         payload_json = base64url_decode(payload_b64).decode()
         header = json.loads(header_json)
@@ -105,22 +107,14 @@ def decode_and_verify_jwt(signed_jwt: str, jwks: dict = None):
 
                 # Prendi l'algoritmo di firma dall'header
                 alg = header.get("alg")
-                alg_to_crv = {
-                    "ES256": "P-256",
-                    "ES384": "P-384",
-                    "ES512": "P-521"
-                }
+                alg_to_crv = {"ES256": "P-256", "ES384": "P-384", "ES512": "P-521"}
 
                 crv = alg_to_crv.get(alg)
 
                 if not crv:
                     raise ValueError(f"Impossibile determinare la curva dall'alg header del jwt: {alg}")
 
-                key_size = {
-                    "P-256": 256,
-                    "P-384": 384,
-                    "P-521": 521
-                }.get(crv)
+                key_size = {"P-256": 256, "P-384": 384, "P-521": 521}.get(crv)
 
                 if not key_size:
                     raise ValueError(f"Curva specificata nell'alg header del jwt non è supportata: {crv}")
@@ -141,7 +135,7 @@ def decode_and_verify_jwt(signed_jwt: str, jwks: dict = None):
             logger.debug("ℹ️  La firma non sembra in formato DER, proseguo senza conversione")
 
         # Se jwks non fornito o vuoto, cerco nel claim 'jwks' del payload
-        if not jwks or not jwks.get('keys'):
+        if not jwks or not jwks.get("keys"):
             logger.debug("ℹ️  JWKS non fornito o vuoto: provo a leggerlo dal payload del jwt (claim 'jwks')")
             jwks_from_payload = payload.get("jwks")
             if jwks_from_payload and isinstance(jwks_from_payload, dict):
@@ -150,7 +144,7 @@ def decode_and_verify_jwt(signed_jwt: str, jwks: dict = None):
             else:
                 raise ValueError("Nessun JWKS fornito o presente nel payload del JWT")
 
-        jwks_keys = jwks.get('keys', [])
+        jwks_keys = jwks.get("keys", [])
         if not jwks_keys:
             raise ValueError("JWKS non contiene chiavi JWK")
 
@@ -161,7 +155,9 @@ def decode_and_verify_jwt(signed_jwt: str, jwks: dict = None):
             main_key = jwks_keys[0] if jwks_keys else None
             other_keys = jwks_keys[1:] if len(jwks_keys) > 1 else []
         else:
-            logger.debug(f"ℹ️  Nell'header del JWT il 'kid' è pari a {kid}, prendo nel JWKS come chiave principale quella che ha questo kid")
+            logger.debug(
+                f"ℹ️  Nell'header del JWT il 'kid' è pari a {kid}, prendo nel JWKS come chiave principale quella che ha questo kid"
+            )
             logger.debug(f"🗝️  KID disponibili nel JWKS: {[k.get('kid') for k in jwks_keys]}")
             main_key = next((k for k in jwks_keys if k.get("kid") == kid), None)
             other_keys = [k for k in jwks_keys if k.get("kid") != kid]
@@ -182,18 +178,22 @@ def decode_and_verify_jwt(signed_jwt: str, jwks: dict = None):
             alg = alg_map.get(crv)
 
             if not alg:
-                logger.error(f"❌ Chiave con kid={current_kid} usata per validare il JWT presenta la curva '{crv}' che non è supportata dal wallet")
-                raise ValueError(f"La chiave con kid={current_kid} usata per validare il JWT presenta la curva '{crv}' che non è supportata dal wallet")
+                logger.error(
+                    f"❌ Chiave con kid={current_kid} usata per validare il JWT presenta la curva '{crv}' che non è supportata dal wallet"
+                )
+                raise ValueError(
+                    f"La chiave con kid={current_kid} usata per validare il JWT presenta la curva '{crv}' che non è supportata dal wallet"
+                )
 
             public_key_pem = pem_public_key_from_jwk_dict(jwk)
 
             # jwt.decode solleva eccezioni se il JWT non è valido
             payload = jwt.decode(
-                signed_jwt,        # il JWT da verificare
-                public_key_pem,    # la chiave per la validazione della firma
+                signed_jwt,  # il JWT da verificare
+                public_key_pem,  # la chiave per la validazione della firma
                 algorithms=[alg],
                 options={"verify_exp": True, "verify_aud": False},  # controlla la scadenza ma non l'audience
-                leeway=120  # 2 minuti di tolleranza
+                leeway=120,  # 2 minuti di tolleranza
             )
 
             logger.debug(f"✅ JWT verificato con successo usando la chiave kid={current_kid}")
@@ -211,6 +211,7 @@ def decode_and_verify_jwt(signed_jwt: str, jwks: dict = None):
         logger.error(f"❌ Errore interno durante la decodifica/verifica del JWT: {e}")
         raise
 
+
 def extract_key_for_enc(jwks: dict) -> str:
     """
     Estrae la prima chiave JWK trovata in jwks con 'use' == 'enc' e se non la trova, prende la prima senza il claim 'use'
@@ -218,7 +219,7 @@ def extract_key_for_enc(jwks: dict) -> str:
     logger.debug(f"📦 JWKS in input: {json.dumps(jwks, indent=2)}")
 
     # Trova la chiave EC
-    keys = jwks.get('keys', [])
+    keys = jwks.get("keys", [])
     if not keys:
         logger.debug("❌ JWKS non contiene chiavi")
         return None
@@ -250,6 +251,7 @@ def extract_key_for_enc(jwks: dict) -> str:
 
     return enc_key_string
 
+
 def is_jwt(token: str) -> bool:
     """
     Verifica se una stringa ha il formato di un JWT (3 parti separate da punti, base64url-like).
@@ -257,8 +259,9 @@ def is_jwt(token: str) -> bool:
     :param token: La stringa da verificare.
     :return: True se la stringa ha il formato di un JWT, False altrimenti.
     """
-    jwt_pattern = re.compile(r'^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$')
+    jwt_pattern = re.compile(r"^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$")
     return bool(jwt_pattern.match(token))
+
 
 def jwk_private_to_public(jwk: dict) -> dict:
     """
@@ -278,12 +281,7 @@ def jwk_private_to_public(jwk: dict) -> dict:
         raise ValueError("Il JWK non contiene tutti i campi pubblici necessari (crv, x, y)")
 
     # Copia solo i campi pubblici
-    pub_jwk = {
-        "kty": "EC",
-        "crv": jwk["crv"],
-        "x": jwk["x"],
-        "y": jwk["y"]
-    }
+    pub_jwk = {"kty": "EC", "crv": jwk["crv"], "x": jwk["x"], "y": jwk["y"]}
 
     # Se ci sono "kid", "use", "alg", li manteniamo
     for optional in ("kid", "use", "alg"):
@@ -291,6 +289,7 @@ def jwk_private_to_public(jwk: dict) -> dict:
             pub_jwk[optional] = jwk[optional]
 
     return pub_jwk
+
 
 def jwk_to_jwks(jwk: Union[dict, str]) -> str:
     """
@@ -310,12 +309,9 @@ def jwk_to_jwks(jwk: Union[dict, str]) -> str:
             raise ValueError("Il JWK fornito non è una stringa JSON valida") from e
 
     # Controllo minimo sul JWK
-    if not isinstance(jwk, dict) or 'kty' not in jwk:
+    if not isinstance(jwk, dict) or "kty" not in jwk:
         raise ValueError("Input non valido: deve essere un JWK con almeno il campo 'kty'")
 
-    jwks = {
-        "keys": [jwk]
-    }
+    jwks = {"keys": [jwk]}
 
     return json.dumps(jwks, indent=2)
-

@@ -13,5 +13,3 @@ results = decode(image)
 # Stampa il risultato
 for result in results:
     print("QR Code:", result.data.decode())
-
-

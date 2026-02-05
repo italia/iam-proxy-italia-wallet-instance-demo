@@ -6,6 +6,7 @@ import jmespath
 
 logger = logging.getLogger(__name__)
 
+
 class CredentialStore:
     def __init__(self):
         self._store = {}
@@ -16,10 +17,7 @@ class CredentialStore:
         Salva un dizionario strutturato come valore.
         """
 
-        entry = {
-            "data_row": data_row,
-            "vct": vct
-        }
+        entry = {"data_row": data_row, "vct": vct}
 
         if claims is not None:
             entry["claims"] = claims
@@ -138,6 +136,7 @@ class CredentialStore:
             self._store[key]["status"] = new_status
             return True
         return False
+
 
 class EntityConfigurationStore:
     def __init__(self):
@@ -293,6 +292,7 @@ class AppState:
             return self.ec_store.all()
         else:
             return []
+
 
 # Creazione istanza globale dello stato
 app_state = AppState()

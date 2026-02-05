@@ -10,9 +10,11 @@ logger = logging.getLogger(__name__)
 
 wallet_routes = Blueprint("wallet_routes", __name__)
 
+
 @wallet_routes.route("/wallet/activate", methods=["GET"])
 def show_activation():
     return render_template("wallet_activation.html")
+
 
 @wallet_routes.route("/wallet/activate", methods=["POST"])
 def activate_wallet():
@@ -27,6 +29,7 @@ def activate_wallet():
     flash("Wallet attivato correttamente!", "success")
 
     return redirect(url_for("wallet_routes.wallet_access"))
+
 
 @wallet_routes.route("/wallet/access", methods=["GET", "POST"])
 def wallet_access():
@@ -67,7 +70,14 @@ def wallet_home():
     if not session.get("pin_authenticated"):
         return redirect(url_for("wallet_routes.wallet_access"))
 
-    return render_template("wallet_home.html",session_id=session_id, selected_country=selected_country, wallet_initialized=wallet_initialized, credential_keys=credential_keys)
+    return render_template(
+        "wallet_home.html",
+        session_id=session_id,
+        selected_country=selected_country,
+        wallet_initialized=wallet_initialized,
+        credential_keys=credential_keys,
+    )
+
 
 @wallet_routes.route("/wallet/logout", methods=["GET"])
 def logout():
@@ -77,5 +87,5 @@ def logout():
     # Svuota la sessione
     session.clear()
 
-    #flash("Logout effettuato con successo.", "success")
+    # flash("Logout effettuato con successo.", "success")
     return redirect(url_for("wallet_routes.wallet_access"))
