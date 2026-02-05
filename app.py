@@ -1,13 +1,15 @@
 import json
-import os
-import sys
 import logging
 import logging.config
+import os
+import sys
+
 from flask import Flask, g, has_app_context
-from constants import CONFIG_DIR, JWT_PREFIX, MSO_MDOC_PREFIX, SD_JWT_PREFIX
+
+from constants import JWT_PREFIX, MSO_MDOC_PREFIX, SD_JWT_PREFIX
+from routes.itwallet_routes import itwallet_routes
 from routes.main_routes import main_routes
 from routes.wallet_routes import wallet_routes
-from routes.itwallet_routes import itwallet_routes
 
 # Configura la codifica stdout
 sys.stdout.reconfigure(encoding='utf-8')
@@ -35,7 +37,7 @@ def from_json_filter(value):
     except (TypeError, json.JSONDecodeError) as e:
         logging.getLogger(__name__).error(f"Errore parsing JSON nel filtro: {e}, valore: {value}")
         return []
-    
+
 @app.template_filter('split')
 def split_string(value, delimiter):
     """Dividi una stringa in base a un delimitatore."""
@@ -46,7 +48,7 @@ def format_credenziale(value):
     """Ritorna il formato della credenziale in base al suo credential_id."""
     if not value:
         return "sconosciuto"
-    
+
     valueLower = value.lower()
 
     if valueLower.startswith(JWT_PREFIX.lower()):
@@ -65,10 +67,10 @@ def tag_credenziale(value):
         - Controlla il primo caratteree, se è speciale (non lettera o numero), lo rimuove.
         - Se ce ne sono almeno 3, restituisce i primi 3 caratteri maiuscoli.
         - Altrimenti, restituisce i primi 3 caratteri della stringa originale in maiuscolo."""
-    
+
     if not value:
         return "N/A"
-    
+
     valueLower = value.lower()
     valueWithoutPrefix = value
 
@@ -79,7 +81,7 @@ def tag_credenziale(value):
         if valueLower.startswith(prefix.lower()):
             valueWithoutPrefix = value[len(prefix):]
             break
-    
+
     # Rimuovi primo carattere se speciale
     if valueWithoutPrefix and not valueWithoutPrefix[0].isalnum():
         valueWithoutPrefix = valueWithoutPrefix[1:]
@@ -90,19 +92,19 @@ def tag_credenziale(value):
     if len(uppercase_chars) >= 3:
         return uppercase_chars[:3]
     else:
-        # Cerca underscore non all'inizio          
+        # Cerca underscore non all'inizio
         if "_" in valueWithoutPrefix[1:]:  # underscore non all'inizio
             parts = valueWithoutPrefix.split("_", 1) # Estrae parte dopo underscore
             if parts[1]:  # esiste qualcosa dopo l'underscore
                 return parts[0][:3].upper() + "-" + parts[1][:1].upper() #limita a tre caratteri prima dell’underscore e accoda la prima lettera dopo l’underscore rendendola maiuscola.
-        
+
         return valueWithoutPrefix.upper()[:3]
 
 # Definizione del filtro per correlation_id
 class CorrelationIdFilter(logging.Filter):
     """ Il filtro CorrelationIdFilter prende la correlation_id dalla request corrente di Flask tramite g.correlation_id.
         g è un oggetto globale di Flask valido solo per la richiesta corrente.
-        Prima che arrivi ogni richiesta, il middleware @app.before_request imposta g.correlation_id con il valore 
+        Prima che arrivi ogni richiesta, il middleware @app.before_request imposta g.correlation_id con il valore
         dell'header HTTP X-Correlation-ID. Se la request non ha quell'header, mette "N/A"."""
     def filter(self, record):
         # Prova a leggere la correlation_id dalla request, altrimenti None
@@ -118,7 +120,7 @@ try:
     with open(config_path) as f:
         config_data = json.load(f)
         app.config.update(config_data)
-    
+
     # Configura logging se presente nella config
     if 'logging' in config_data:
         logging.config.dictConfig(config_data['logging'])

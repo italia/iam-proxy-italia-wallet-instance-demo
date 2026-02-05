@@ -1,12 +1,12 @@
 import logging
 
-logger = logging.getLogger(__name__)
-
-from flask import Blueprint, jsonify, render_template, redirect, url_for, request, session, flash
-from state import app_state
 import bcrypt
+from flask import Blueprint, flash, jsonify, redirect, render_template, request, session, url_for
 
+from state import app_state
 from utils.utils import generate_nonce
+
+logger = logging.getLogger(__name__)
 
 wallet_routes = Blueprint("wallet_routes", __name__)
 
@@ -15,7 +15,7 @@ def show_activation():
     return render_template("wallet_activation.html")
 
 @wallet_routes.route("/wallet/activate", methods=["POST"])
-def activate_wallet():   
+def activate_wallet():
     pin = request.form.get("pin")
     confirm = request.form.get("confirm_pin")
     if pin != confirm or not pin.isdigit() or not (4 <= len(pin) <= 8):
@@ -32,10 +32,10 @@ def activate_wallet():
 def wallet_access():
     if request.method == "POST":
         pin_attempt = request.form.get("pin_attempt", "")
-        
+
         if not pin_attempt:
             return render_template("wallet_access.html")
-        
+
         if app_state.stored_hashed_pin and bcrypt.checkpw(pin_attempt.encode(), app_state.stored_hashed_pin):
             # Salvataggio in sessione pin_authenticated=True
             session["pin_authenticated"] = True
@@ -60,10 +60,10 @@ def wallet_home():
     selected_country = app_state.selected_country
     wallet_initialized = app_state.wallet_initialized
     credential_store = app_state.credential_store
-    
+
     # Ottieni tutte le chiavi delle credenziali
     credential_keys = credential_store.keys()
-    
+
     if not session.get("pin_authenticated"):
         return redirect(url_for("wallet_routes.wallet_access"))
 
@@ -76,6 +76,6 @@ def logout():
 
     # Svuota la sessione
     session.clear()
-    
+
     #flash("Logout effettuato con successo.", "success")
     return redirect(url_for("wallet_routes.wallet_access"))

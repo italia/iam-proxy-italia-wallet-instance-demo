@@ -1,5 +1,6 @@
-import json
 import base64
+import json
+
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes
@@ -16,7 +17,7 @@ OID_MAP = {
 def certificate_der_to_json(der_bytes: bytes) -> str:
     """
     Converte un certificato X.509 in formato DER in un JSON leggibile.
-    
+
     :param der_bytes: bytes del certificato in formato DER
     :return: stringa JSON con le informazioni principali
     """

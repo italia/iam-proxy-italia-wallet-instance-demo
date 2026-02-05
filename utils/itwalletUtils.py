@@ -1,31 +1,29 @@
-import logging
-from typing import Tuple
-logger = logging.getLogger(__name__)
-
-from utils.sdJwtUtils import issue_sd_jwt
+import hashlib
 import json
+import logging
+import time
+import uuid
+from typing import Tuple
+from urllib.parse import urlparse
+
 import jwt
 import requests
-import time
 import urllib3
-import uuid
-import hashlib
-
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-
-from flask import current_app
-from urllib.parse import urlparse
-from jwcrypto import jwk, jwe
 from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePrivateKey
-from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePublicKey
-from utils.utils import base64url_encode, priv_ec_key_obj_to_jwk, pub_ec_key_obj_to_jwk
+from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePrivateKey, EllipticCurvePublicKey
+from flask import current_app
+from jwcrypto import jwe, jwk
 
 from constants import (
-    CREDENTIAL_VALID,
     CREDENTIAL_INVALID,
     CREDENTIAL_SUSPENDED,
+    CREDENTIAL_VALID,
 )
+from utils.sdJwtUtils import issue_sd_jwt
+from utils.utils import base64url_encode, priv_ec_key_obj_to_jwk, pub_ec_key_obj_to_jwk
+
+logger = logging.getLogger(__name__)
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 def request_as_par(
     url: str,
@@ -53,21 +51,21 @@ def request_as_par(
     Returns:
         Dizionario JSON della risposta, o eccezione in caso di errore.
     """
-    
+
     parsed = urlparse(url)
     host = parsed.hostname
-    
+
     use_proxy = False
-    
+
     if proxies:
         use_proxy = True
-        
+
         if no_proxy_domains:
             for domain in no_proxy_domains:
                 if host == domain or host.endswith(f".{domain}"):
                     use_proxy = False
                     break
-                       
+
     headers = {
         "Content-Type": "application/x-www-form-urlencoded",
         "Accept": "application/json; charset=utf-8",
@@ -92,12 +90,12 @@ def request_as_par(
                 response = requests.post(url, headers=headers, data=data, verify=False, proxies=proxies)
             else:
                 response = requests.post(url, headers=headers, data=data, verify=False)
-                
+
             if response.ok:
                 content_type = response.headers.get("Content-Type", "")
 
                 if not content_type:
-                    logger.error(f"❌ Risposta non valida: Content-Type non indicato")
+                    logger.error("❌ Risposta non valida: Content-Type non indicato")
                     raise RuntimeError(f"Risposta ricevuta da {url} non valida: Content-Type non indicato")
 
                 if "application/json" in content_type:
@@ -125,7 +123,7 @@ def request_as_par(
                 except ValueError:
                     # non è JSON → prendo così com'è
                     error_str = ' '.join(response.text.split())
-    
+
                 logger.error(f"❌ Errore ritornato dall'endpoint {url}: {error_str} (HTTP Status code: {response.status_code})")
                 raise RuntimeError(f"Errore ritornato dall'endpoint {url}: {error_str} (HTTP Status code: {response.status_code})")
 
@@ -167,17 +165,17 @@ def request_authorize(
     Returns:
         Il JWT rappresentnte l'entity statement.
         In caso di errore, rilancia un'eccezione.
-    """      
+    """
     url = url+query_string
-    
+
     parsed = urlparse(url)
     host = parsed.hostname
-    
+
     use_proxy = False
-    
+
     if proxies:
         use_proxy = True
-        
+
         if no_proxy_domains:
             for domain in no_proxy_domains:
                 if host == domain or host.endswith(f".{domain}"):
@@ -185,16 +183,16 @@ def request_authorize(
                     break
 
     logger.info(f">>>> Invio GET {url} (use_proxy={use_proxy})")
-    
+
     for attempt in range(1, max_retries + 1):
         try:
             if use_proxy:
                 response = requests.get(url, verify=False, proxies=proxies)
             else:
                 response = requests.get(url, verify=False)
-                
-            if response.ok: 
-                response_authorize = response.text.strip()                    
+
+            if response.ok:
+                response_authorize = response.text.strip()
                 logger.info("✅ Risposta:")
                 logger.info(response_authorize)
                 return response_authorize
@@ -209,7 +207,7 @@ def request_authorize(
                 except ValueError:
                     # non è JSON → prendo così com'è
                     error_str = ' '.join(response.text.split())
-    
+
                 logger.error(f"❌ Errore ritornato dall'endpoint {url}: {error_str} (HTTP Status code: {response.status_code})")
                 raise RuntimeError(f"Errore ritornato dall'endpoint {url}: {error_str} (HTTP Status code: {response.status_code})")
         except requests.ConnectionError as ce:
@@ -238,7 +236,7 @@ def request_token(
     grant_type: str,
     code: str,
     redirect_uri: str,
-    code_verifier: str,   
+    code_verifier: str,
     max_retries: int = 3,
     retry_delay: float = 1.0,
     proxies: dict = None,
@@ -255,7 +253,7 @@ def request_token(
         dpop_proof_jwt: DPoP JWT firmato da inserire nell'header DPoP
         grant_type: tipologia di grant richiesto (es. authorization_code)
         code: authorization code resttuito nell'Authentication Response al termine del processo di autorizzazione iniziato con la par request
-        redirect_uri: deve coincidere con il redirect_uri definito nel Request Object della par request 
+        redirect_uri: deve coincidere con il redirect_uri definito nel Request Object della par request
         code_verifier: il code verifier PKCE,
         max_retries: Numero massimo di tentativi in caso di errore di connessione
         retry_delay: Secondi di attesa tra un tentativo e l'altro
@@ -263,15 +261,15 @@ def request_token(
     Returns:
         Dizionario JSON della risposta, o eccezione in caso di errore.
     """
-    
+
     parsed = urlparse(url)
     host = parsed.hostname
-    
+
     use_proxy = False
-    
+
     if proxies:
         use_proxy = True
-        
+
         if no_proxy_domains:
             for domain in no_proxy_domains:
                 if host == domain or host.endswith(f".{domain}"):
@@ -305,14 +303,14 @@ def request_token(
                 response = requests.post(url, headers=headers, data=data, verify=False, proxies=proxies)
             else:
                 response = requests.post(url, headers=headers, data=data, verify=False)
-                
+
             if response.ok:
                 content_type = response.headers.get("Content-Type", "")
 
                 if not content_type:
-                    logger.error(f"❌ Risposta non valida: Content-Type non indicato")
+                    logger.error("❌ Risposta non valida: Content-Type non indicato")
                     raise RuntimeError(f"Risposta ricevuta da {url} non valida: Content-Type non indicato")
-            
+
                 if "application/json" in content_type:
                     try:
                         json_response = response.json()
@@ -337,7 +335,7 @@ def request_token(
                 except ValueError:
                     # non è JSON → prendo così com'è
                     error_str = ' '.join(response.text.split())
-    
+
                 logger.error(f"❌ Errore ritornato dall'endpoint {url}: {error_str} (HTTP Status code: {response.status_code})")
                 raise RuntimeError(f"Errore ritornato dall'endpoint {url}: {error_str} (HTTP Status code: {response.status_code})")
 
@@ -385,15 +383,15 @@ def request_credential(
     Returns:
         Dizionario JSON della risposta, o eccezione in caso di errore.
     """
-    
+
     parsed = urlparse(url)
     host = parsed.hostname
-    
+
     use_proxy = False
-    
+
     if proxies:
         use_proxy = True
-        
+
         if no_proxy_domains:
             for domain in no_proxy_domains:
                 if host == domain or host.endswith(f".{domain}"):
@@ -427,12 +425,12 @@ def request_credential(
                 response = requests.post(url, headers=headers, json=data, verify=False, proxies=proxies)
             else:
                 response = requests.post(url, headers=headers, json=data, verify=False)
-                
-            if response.ok:          
+
+            if response.ok:
                 content_type = response.headers.get("Content-Type", "")
 
                 if not content_type:
-                    logger.error(f"❌ Risposta non valida: Content-Type non indicato")
+                    logger.error("❌ Risposta non valida: Content-Type non indicato")
                     raise RuntimeError(f"Risposta ricevuta da {url} non valida: Content-Type non indicato")
 
                 if "application/json" in content_type:
@@ -448,7 +446,7 @@ def request_credential(
                 else:
                     logger.error(f"❌ Risposta non valida: Content-Type non è application/json, ma {content_type}")
                     raise RuntimeError(f"Risposta ricevuta da {url} non valida: Content-Type non è application/json, ma {content_type}")
-            
+
             else:
                 try:
                     # provo a fare parsing JSON
@@ -460,7 +458,7 @@ def request_credential(
                 except ValueError:
                     # non è JSON → prendo così com'è
                     error_str = ' '.join(response.text.split())
-    
+
                 logger.error(f"❌ Errore ritornato dall'endpoint {url}: {error_str} (HTTP Status code: {response.status_code})")
                 raise RuntimeError(f"Errore ritornato dall'endpoint {url}: {error_str} (HTTP Status code: {response.status_code})")
         except requests.ConnectionError as ce:
@@ -501,21 +499,21 @@ def request_nonce(
         Il valore di c_nonce estratto dalla risposta JSON in caso di successo.
         In caso di errore, rilancia un'eccezione.
     """
-    
+
     parsed = urlparse(url)
     host = parsed.hostname
-    
+
     use_proxy = False
-    
+
     if proxies:
         use_proxy = True
-        
+
         if no_proxy_domains:
             for domain in no_proxy_domains:
                 if host == domain or host.endswith(f".{domain}"):
                     use_proxy = False
                     break
-                
+
     headers = {
         "Content-Type": "application/json; charset=utf-8",
         "Accept": "application/json; charset=UTF-8",
@@ -524,19 +522,19 @@ def request_nonce(
     logger.info(f">>>> Invio POST a {url} (use_proxy={use_proxy})")
     logger.info("📦 Header:")
     logger.info(json.dumps(headers, indent=2))
-    
+
     for attempt in range(1, max_retries + 1):
         try:
             if use_proxy:
                 response = requests.post(url, headers=headers, verify=False, proxies=proxies)
             else:
                 response = requests.post(url, headers=headers, verify=False)
-                
-            if response.ok:              
+
+            if response.ok:
                 content_type = response.headers.get("Content-Type", "")
 
                 if not content_type:
-                    logger.error(f"❌ Risposta non valida: Content-Type non indicato")
+                    logger.error("❌ Risposta non valida: Content-Type non indicato")
                     raise RuntimeError(f"Risposta ricevuta da {url} non valida: Content-Type non indicato")
 
                 if "application/json" in content_type:
@@ -572,7 +570,7 @@ def request_nonce(
                 except ValueError:
                     # non è JSON → prendo così com'è
                     error_str = ' '.join(response.text.split())
-    
+
                 logger.error(f"❌ Errore ritornato dall'endpoint {url}: {error_str} (HTTP Status code: {response.status_code})")
                 raise RuntimeError(f"Errore ritornato dall'endpoint {url}: {error_str} (HTTP Status code: {response.status_code})")
         except requests.ConnectionError as ce:
@@ -614,15 +612,15 @@ def request_request_uri(
         Dizionario JSON della risposta, o eccezione in caso di errore.
     """
     url = url+query_string
-    
+
     parsed = urlparse(url)
     host = parsed.hostname
-    
+
     use_proxy = False
-    
+
     if proxies:
         use_proxy = True
-        
+
         if no_proxy_domains:
             for domain in no_proxy_domains:
                 if host == domain or host.endswith(f".{domain}"):
@@ -637,7 +635,7 @@ def request_request_uri(
                 response = requests.get(url, verify=False, proxies=proxies)
             else:
                 response = requests.get(url, verify=False)
-                
+
             if response.ok:
                 content_type = response.headers.get("Content-Type", "")
                 if "application/oauth-authz-req+jwt" in content_type:
@@ -659,7 +657,7 @@ def request_request_uri(
                 except ValueError:
                     # non è JSON → prendo così com'è
                     error_str = ' '.join(response.text.split())
-    
+
                 logger.error(f"❌ Errore ritornato dall'endpoint {url}: {error_str} (HTTP Status code: {response.status_code})")
                 raise RuntimeError(f"Errore ritornato dall'endpoint {url}: {error_str} (HTTP Status code: {response.status_code})")
 
@@ -690,7 +688,7 @@ def request_response_uri(
     no_proxy_domains: list[str] = None
 ) -> dict:
     """
-    Invio response uri request ad un Relying Party per trasmettere via POST le presentazioni delle credenziali richieste e 
+    Invio response uri request ad un Relying Party per trasmettere via POST le presentazioni delle credenziali richieste e
     lo state precedentemente fornito dal Relying Party nella richiesta di presentazione delle credenziali
     Spec di riferimento: https://italia.github.io/eid-wallet-it-docs/versione-corrente/en/remote-flow.html#authorization-response
 
@@ -703,15 +701,15 @@ def request_response_uri(
     Returns:
         Dizionario JSON della risposta, o eccezione in caso di errore.
     """
-    
+
     parsed = urlparse(url)
     host = parsed.hostname
-    
+
     use_proxy = False
-    
+
     if proxies:
         use_proxy = True
-        
+
         if no_proxy_domains:
             for domain in no_proxy_domains:
                 if host == domain or host.endswith(f".{domain}"):
@@ -740,12 +738,12 @@ def request_response_uri(
                 response = requests.post(url, headers=headers, data=data, verify=False, proxies=proxies)
             else:
                 response = requests.post(url, headers=headers, data=data, verify=False)
-                
+
             if response.ok:
                 content_type = response.headers.get("Content-Type", "")
 
                 if not content_type:
-                    logger.error(f"❌ Risposta non valida: Content-Type non indicato")
+                    logger.error("❌ Risposta non valida: Content-Type non indicato")
                     raise RuntimeError(f"Risposta ricevuta da {url} non valida: Content-Type non indicato")
 
                 if "application/json" in content_type:
@@ -773,7 +771,7 @@ def request_response_uri(
                 except ValueError:
                     # non è JSON → prendo così com'è
                     error_str = ' '.join(response.text.split())
-    
+
                 logger.error(f"❌ Errore ritornato dall'endpoint {url}: {error_str} (HTTP Status code: {response.status_code})")
                 raise RuntimeError(f"Errore ritornato dall'endpoint {url}: {error_str} (HTTP Status code: {response.status_code})")
 
@@ -803,7 +801,7 @@ def request_presentation_callback(
 ) -> str:
     """
     Invia una richiesta GET alla callback URL fornita in fase di presentazione,
-    
+
     Args:
         url: Callback URL da contattare
         max_retries: Numero massimo di tentativi in caso di errore di connessione
@@ -848,7 +846,7 @@ def request_presentation_callback(
             if 300 <= resp.status_code < 400 and "Location" in resp.headers:
                 redirect_url = resp.headers["Location"]
                 logger.info(f"➡️  Redirect verso: {redirect_url}")
-                
+
                 # Creo una "risposta finta" con status 200 e contenuto = redirect_url
                 fake_resp = requests.Response()
                 fake_resp.encoding = "utf-8"
@@ -875,7 +873,7 @@ def request_presentation_callback(
                 except ValueError:
                     # non è JSON → prendo così com'è
                     error_str = ' '.join(response.text.split())
-    
+
                 logger.error(f"❌ Errore ritornato dall'endpoint {url}: {error_str} (HTTP Status code: {response.status_code})")
                 raise RuntimeError(f"Errore ritornato dall'endpoint {url}: {error_str} (HTTP Status code: {response.status_code})")
 
@@ -906,7 +904,7 @@ def request_status(
 ) -> dict:
     """
     Invia una richiesta POST /status con retry in caso di errore di connessione
-    per richiedere la status assertion di una credenziale nel rispetto della 
+    per richiedere la status assertion di una credenziale nel rispetto della
     spec: https://italia.github.io/eid-wallet-it-docs/versione-corrente/en/credential-revocation.html#http-status-assertion-request
 
     Args:
@@ -918,24 +916,24 @@ def request_status(
     Returns:
         Status Assertion object in caso di successo.
         In caso di errore, rilancia un'eccezione.
-    """      
+    """
     headers = {
         "Content-Type": "application/json; charset=utf-8",
         "Accept": "application/json; charset=UTF-8",
     }
-    
+
     data = {
         "status_assertion_requests": status_assertion_requests
     }
-    
+
     parsed = urlparse(url)
     host = parsed.hostname
-    
+
     use_proxy = False
-    
+
     if proxies:
         use_proxy = True
-        
+
         if no_proxy_domains:
             for domain in no_proxy_domains:
                 if host == domain or host.endswith(f".{domain}"):
@@ -947,19 +945,19 @@ def request_status(
     logger.info(json.dumps(headers, indent=2))
     logger.info("📦 Payload:")
     logger.info(json.dumps(data, indent=2))
-    
+
     for attempt in range(1, max_retries + 1):
         try:
             if use_proxy:
                 response = requests.get(url, headers=headers, json=data, verify=False, proxies=proxies)
             else:
                 response = requests.post(url, headers=headers, json=data, verify=False)
-                
-            if response.ok:              
+
+            if response.ok:
                 content_type = response.headers.get("Content-Type", "")
 
                 if not content_type:
-                    logger.error(f"❌ Risposta non valida: Content-Type non indicato")
+                    logger.error("❌ Risposta non valida: Content-Type non indicato")
                     raise RuntimeError(f"Risposta ricevuta da {url} non valida: Content-Type non indicato")
 
                 if "application/json" in content_type:
@@ -986,7 +984,7 @@ def request_status(
                 except ValueError:
                     # non è JSON → prendo così com'è
                     error_str = ' '.join(response.text.split())
-    
+
                 logger.error(f"❌ Errore ritornato dall'endpoint {url}: {error_str} (HTTP Status code: {response.status_code})")
                 raise RuntimeError(f"Errore ritornato dall'endpoint {url}: {error_str} (HTTP Status code: {response.status_code})")
         except requests.ConnectionError as ce:
@@ -1044,7 +1042,7 @@ def generate_wallet_attestation_pop_jwt(
             format=serialization.PublicFormat.SubjectPublicKeyInfo
         )
     )
-    
+
     # Estrai il thumbprint come KID (RFC 7638)
     kid = public_jwk.thumbprint()
 
@@ -1054,10 +1052,10 @@ def generate_wallet_attestation_pop_jwt(
     alg = alg_map.get(crv)
     if not alg:
         raise ValueError(f"Curva non supportata: {crv}")
-    
-    # Crea il payload JWT  
+
+    # Crea il payload JWT
     now = int(time.time())
-    
+
     payload = {
         "iss": kid,
         "aud": audience,
@@ -1098,7 +1096,7 @@ def generate_wallet_attestation_jwt(
     """
     Genera un client attestation JWT firmato con chiave EC nel rispetto
     delle specifiche https://italia.github.io/eid-wallet-it-docs/versione-corrente/en/wallet-provider-endpoint.html#wallet-attestation-jwt
-    
+
     Args:
         issuer_private_key: Chiave privata EC del wallet provider usata per la firma del JWT,
         client_public_key: Chiave pubblica EC dell'app mobile a cui deve essere collegata l'attestazione,
@@ -1111,7 +1109,7 @@ def generate_wallet_attestation_jwt(
     """
     # Converti la chiave privata dell'issuer in formato JWK
     issuer_private_jwk  = priv_ec_key_obj_to_jwk(issuer_private_key)
-    
+
     # Determina l'algoritmo di firma in base alla curva della chiave privata dell'issuer in formato JWK
     crv = issuer_private_jwk.get("crv")
     alg_map = {"P-256": "ES256", "P-384": "ES384", "P-521": "ES512"}
@@ -1123,7 +1121,7 @@ def generate_wallet_attestation_jwt(
     issuer_public_key = issuer_private_key.public_key()
     issuer_public_jwk  = pub_ec_key_obj_to_jwk(issuer_public_key)
     issuer_public_jwk_kid = issuer_public_jwk.thumbprint()
-    
+
     # Converti la chiave pubblica dell'app mobile a cui deve essere collegata l'attestazione in formato JWK ed estrai il thumbprint come KID (RFC 7638)
     cnf_public_jwk  = pub_ec_key_obj_to_jwk(client_public_key)
     cnf_public_jwk_kid = cnf_public_jwk.thumbprint()
@@ -1134,15 +1132,15 @@ def generate_wallet_attestation_jwt(
     cnf_alg = cnf_alg_map.get(crv)
     if not cnf_alg:
         raise ValueError(f"Curva della chiave pubblica del wallet non supportata: {cnf_crv}")
-    
+
     now = int(time.time())
-    
+
     headers = {
         "typ": "oauth-client-attestation+jwt",
         "alg": alg,
         "kid": issuer_public_jwk_kid
     }
-    
+
     payload = {
         "iss": issuer,
         "sub": cnf_public_jwk_kid,
@@ -1183,7 +1181,7 @@ def generate_wallet_attestation_sd_jwt(
     """
     Genera un client attestation SD-JWT firmato con chiave EC nel rispetto
     delle specifiche https://italia.github.io/eid-wallet-it-docs/versione-corrente/en/wallet-provider-endpoint.html#wallet-attestation-sd-jwt
-    
+
     Args:
         vct: id della tipologia di attestazione
         issuer_private_key: Chiave privata EC del wallet provider usata per la firma dell'attestazione JWT,
@@ -1199,7 +1197,7 @@ def generate_wallet_attestation_sd_jwt(
     # Converti la chiave privata dell'issuer in formato JWK
     issuer_private_jwk  = priv_ec_key_obj_to_jwk(issuer_private_key)
     issuer_private_jwk_dict = issuer_private_jwk.export(as_dict=True)
-    
+
     # Determina l'algoritmo di firma in base alla curva della chiave privata dell'issuer in formato JWK
     crv = issuer_private_jwk.get("crv")
     alg_map = {"P-256": "ES256", "P-384": "ES384", "P-521": "ES512"}
@@ -1211,7 +1209,7 @@ def generate_wallet_attestation_sd_jwt(
     issuer_public_key = issuer_private_key.public_key()
     issuer_public_jwk  = pub_ec_key_obj_to_jwk(issuer_public_key)
     issuer_public_jwk_kid = issuer_public_jwk.thumbprint()
-    
+
     # Converti la chiave pubblica dell'app mobile a cui deve essere collegata l'attestazione in formato JWK ed estrai il thumbprint come KID (RFC 7638)
     cnf_public_jwk  = pub_ec_key_obj_to_jwk(client_public_key)
     cnf_public_jwk_kid = cnf_public_jwk.thumbprint()
@@ -1224,12 +1222,12 @@ def generate_wallet_attestation_sd_jwt(
         raise ValueError(f"Curva della chiave pubblica del wallet non supportata: {cnf_crv}")
 
     now = int(time.time())
-    
+
     headers = {
         "typ": "dc+sd-jwt",
         "kid": issuer_public_jwk_kid
     }
-    
+
     claims = {
         "iss": issuer,
         "sub": cnf_public_jwk_kid,
@@ -1301,17 +1299,17 @@ def generate_request_object_jwt(
             format=serialization.PublicFormat.SubjectPublicKeyInfo
         )
     )
-    
+
     # Estrai il thumbprint come KID (RFC 7638)
     kid = public_jwk.thumbprint()
-    
+
     # Determina l'algoritmo in base alla curva
     crv = public_jwk.get("crv")
     alg_map = {"P-256": "ES256", "P-384": "ES384", "P-521": "ES512"}
     alg = alg_map.get(crv)
     if not alg:
         raise ValueError(f"Curva non supportata: {crv}")
-    
+
     # Crea il payload JWT
     now = int(time.time())
 
@@ -1329,13 +1327,13 @@ def generate_request_object_jwt(
         "exp": now + int(lifetime),
         "jti": str(uuid.uuid4())
     }
-    
+
     if scope:
         payload["scope"] = scope
-    
+
     if authorization_details:
         payload["authorization_details"] = authorization_details
-    
+
     # Crea header JWT
 
     headers = {
@@ -1378,7 +1376,7 @@ def generate_dpop_jwt(
         access_token: (Opzionale) Access token associato, per calcolare il claim 'ath'.
 
     Returns:
-        Stringa rappresentante il DPoP proof JWT genrato e 
+        Stringa rappresentante il DPoP proof JWT genrato e
     """
     # Estrae chiave pubblica da quella privata
     issuer_public_key = issuer_private_key.public_key()
@@ -1390,14 +1388,14 @@ def generate_dpop_jwt(
             format=serialization.PublicFormat.SubjectPublicKeyInfo
         )
     )
-    
+
     # Determina l'algoritmo in base alla curva
     crv = public_jwk.get("crv")
     alg_map = {"P-256": "ES256", "P-384": "ES384", "P-521": "ES512"}
     alg = alg_map.get(crv)
     if not alg:
         raise ValueError(f"Curva non supportata: {crv}")
-    
+
     now = int(time.time())
 
     payload = {
@@ -1406,7 +1404,7 @@ def generate_dpop_jwt(
         "iat": now,
         "jti": str(uuid.uuid4())
     }
-    
+
     # Aggiunta della claim 'ath' se l'access token è fornito
     if access_token:
         token_bytes = access_token.encode("ascii")
@@ -1446,7 +1444,7 @@ def generate_dpop_bound_access_token(
     """
     Genera un access token JWT firmato e legato a una DPoP key tramite 'cnf.jkt',
     con supporto a curve parametrizzate.
-    
+
     Args:
     issuer_private_key: Chiave privata EC usata per la firma dell'access token,
     cnf_public_key: Chiave pubblica EC a cui deve essere vincolato l'access token (quella corrispondente a quella privata usata per firmare il DPoP),
@@ -1460,7 +1458,7 @@ def generate_dpop_bound_access_token(
     """
     # Estrae chiave pubblica da quella privata
     issuer_public_key = issuer_private_key.public_key()
-    
+
     # Converti la chiave pubblica dell'issuer in formato JWK
     issuer_public_jwk = jwk.JWK.from_pem(
         issuer_public_key.public_bytes(
@@ -1468,10 +1466,10 @@ def generate_dpop_bound_access_token(
             format=serialization.PublicFormat.SubjectPublicKeyInfo
         )
     )
-    
+
     # Estrai il thumbprint come KID (RFC 7638)
     issuer_public_jwk_kid = issuer_public_jwk.thumbprint()
-    
+
     # Determina l'algoritmo in base alla curva
     crv = issuer_public_jwk.get("crv")
     alg_map = {"P-256": "ES256", "P-384": "ES384", "P-521": "ES512"}
@@ -1486,18 +1484,18 @@ def generate_dpop_bound_access_token(
             format=serialization.PublicFormat.SubjectPublicKeyInfo
         )
     )
-    
+
     # Estrai il thumbprint come KID (RFC 7638)
     cnf_public_jwk_kid = cnf_public_jwk.thumbprint()
 
     now = int(time.time())
-    
+
     headers = {
         "typ": "at+jwt",
         "alg": alg,
         "kid": issuer_public_jwk_kid
     }
-    
+
     payload = {
         "iss": issuer,
         "sub": subject,
@@ -1545,14 +1543,14 @@ def generate_proof_jwt(
             format=serialization.PublicFormat.SubjectPublicKeyInfo
         )
     )
-    
+
     # Determina l'algoritmo in base alla curva
     crv = public_jwk.get("crv")
     alg_map = {"P-256": "ES256", "P-384": "ES384", "P-521": "ES512"}
     alg = alg_map.get(crv)
     if not alg:
         raise ValueError(f"Curva non supportata: {crv}")
-    
+
     # Estrai il thumbprint come KID (RFC 7638)
     kid = public_jwk.thumbprint()
 
@@ -1606,10 +1604,10 @@ def generate_response_uri_request_jws(
     Returns:
         Stringa rappresentante il JWS
     """
-    
+
     if not isinstance(vp_token, dict):
         raise ValueError("vp_token deve essere un dizionario valido")
-    
+
     # Estrae chiave pubblica da quella privata
     public_key = private_key.public_key()
 
@@ -1620,7 +1618,7 @@ def generate_response_uri_request_jws(
             format=serialization.PublicFormat.SubjectPublicKeyInfo
         )
     )
-    
+
     # Estrai il thumbprint come KID (RFC 7638)
     kid = public_jwk.thumbprint()
 
@@ -1630,10 +1628,8 @@ def generate_response_uri_request_jws(
     alg = alg_map.get(crv)
     if not alg:
         raise ValueError(f"Curva non supportata: {crv}")
-    
-    # Crea il payload JWT  
-    now = int(time.time())
-    
+
+    # Crea il payload JWT
     payload = {
         "vp_token": vp_token,
         "state": state
@@ -1678,43 +1674,43 @@ def generate_response_uri_request_jwe(
     Returns:
         Stringa rappresentante il JWE
     """
-    
+
     enc_key = json.loads(enc_key_json_str)
-    
+
     kid = enc_key.get("kid")
     kty = enc_key.get("kty")
-    
+
     if not kid:
-        logger.error(f"❌ La chiave per cifrare il JWE non presenta il claim 'kid'")
+        logger.error("❌ La chiave per cifrare il JWE non presenta il claim 'kid'")
         return None
-    
+
     if not kty:
-        logger.error(f"❌ La chiave per cifrare il JWE non presenta il claim 'kty'")
+        logger.error("❌ La chiave per cifrare il JWE non presenta il claim 'kty'")
         return None
-    
+
     logger.debug(f"🗝️  Chiave per cifrare il JWE (kid={kid}, kty={kty}):")
     logger.debug(json.dumps(enc_key, indent=2))
-    
+
     # Seleziona algoritmi in base a kty
     if kty == "EC":
         crv = enc_key.get("crv")
         if not crv:
-            logger.error(f"❌ La chiave per cifrare il JWE non presenta il claim 'crv'")
+            logger.error("❌ La chiave per cifrare il JWE non presenta il claim 'crv'")
             return None
-        
+
         content_encryption_alg = "A256GCM"
         key_encryption_alg_map = {"P-256": "ECDH-ES", "P-384": "ECDH-ES", "P-521": "ECDH-ES"}
         key_encryption_alg = key_encryption_alg_map.get(crv)
         if not key_encryption_alg:
             logger.error(f"❌ La chiave per cifrare il JWE presenta nel claim 'crv' il valore '{crv}' che non è supportato dal wallet")
             return None
-    elif kty == "RSA":      
+    elif kty == "RSA":
         content_encryption_alg = "A256CBC-HS512"
         key_encryption_alg = "RSA-OAEP-256"
     else:
         logger.error(f"❌ La chiave per cifrare il JWE presenta nel claim 'kty' il valore '{kty}' che non è supportata dal wallet")
         return None
-    
+
     logger.debug(f"🔑 Algoritmo di cifratura chiave: {key_encryption_alg}")
     logger.debug(f"🛡  Algoritmo di cifratura contenuto: {content_encryption_alg}")
 
@@ -1722,8 +1718,8 @@ def generate_response_uri_request_jwe(
     pub_key = jwk.JWK.from_json(enc_key_json_str)
 
     if pub_key:
-        logger.debug(f"🔑 Creato ogetto jwk.JWK che rappresenta chiave JWK per cifrare il JWE")
-    
+        logger.debug("🔑 Creato ogetto jwk.JWK che rappresenta chiave JWK per cifrare il JWE")
+
     # Prepara l'header protetto
     protected_header = {
         "alg": key_encryption_alg,      # ✅ Algoritmo di cifratura della chiave
@@ -1731,27 +1727,25 @@ def generate_response_uri_request_jwe(
         "kid": kid,
         #"cty": "application/json"       # il payload non è un JWT, se era JWT allora cty: "JWT"
     }
-    
-    # Crea il payload JWE  
-    now = int(time.time())
-    
+
+    # Crea il payload JWE
     payload = {
         "vp_token": vp_token,
         "state": state
     }
 
     logger.debug(f"🔓 Payload JWT prima della cifratura:\n{json.dumps(payload, indent=2)}")
-    
-    # Payload JWT claims 
+
+    # Payload JWT claims
     jwe_payload = json.dumps(payload, separators=(',', ':'))
-    
+
     # ✅ Cifra come JWE
     jwetoken = jwe.JWE(
         plaintext=jwe_payload.encode('utf-8'),
-        protected=protected_header 
+        protected=protected_header
     )
     jwetoken.add_recipient(pub_key)
-    
+
     # Serializza in formato compatto
     encrypted = jwetoken.serialize(compact=True)
 
@@ -1791,17 +1785,17 @@ def generate_status_assertion_request_object_jwt(
             format=serialization.PublicFormat.SubjectPublicKeyInfo
         )
     )
-    
+
     # Estrai il thumbprint come KID (RFC 7638)
     kid = public_jwk.thumbprint()
-    
+
     # Determina l'algoritmo in base alla curva
     crv = public_jwk.get("crv")
     alg_map = {"P-256": "ES256", "P-384": "ES384", "P-521": "ES512"}
     alg = alg_map.get(crv)
     if not alg:
         raise ValueError(f"Curva non supportata: {crv}")
-    
+
     # Crea il payload JWT
     now = int(time.time())
 
@@ -1814,7 +1808,7 @@ def generate_status_assertion_request_object_jwt(
         "credential_hash": credential_hash,
         "credential_hash_alg": credential_hash_alg
     }
-    
+
     # Crea header JWT
 
     headers = {

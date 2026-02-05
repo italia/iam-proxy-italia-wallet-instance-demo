@@ -1,5 +1,7 @@
 import os
-from flask import Blueprint, current_app, render_template, send_from_directory, session, redirect, url_for
+
+from flask import Blueprint, current_app, redirect, render_template, send_from_directory, session, url_for
+
 from state import app_state
 
 main_routes = Blueprint("main_routes", __name__)
@@ -18,7 +20,7 @@ def page_not_found(e):
 
 @main_routes.app_errorhandler(500)
 def internal_error(e):
-    return render_template("500.html"), 
+    return render_template("500.html"),
 
 @main_routes.route("/.well-known/appspecific/com.chrome.devtools.json")
 def devtools_config():

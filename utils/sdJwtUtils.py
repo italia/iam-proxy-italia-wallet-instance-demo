@@ -1,18 +1,16 @@
-import logging
-logger = logging.getLogger(__name__)
-
 import json
+import logging
 
-from jwcrypto import jwk
-from sd_jwt.verifier import SDJWTVerifier
-from sd_jwt.issuer import SDJWTIssuer, SDObj
-from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePrivateKey
 from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePrivateKey
+from jwcrypto import jwk
 from sd_jwt.holder import SDJWTHolder
+from sd_jwt.issuer import SDJWTIssuer, SDObj
+from sd_jwt.verifier import SDJWTVerifier
 
-from utils.utils import (
-    base64url_decode
-)
+from utils.utils import base64url_decode
+
+logger = logging.getLogger(__name__)
 
 def issue_sd_jwt(
     vct: str,
@@ -78,7 +76,7 @@ def issue_sd_jwt(
 
     logger.debug("🧾 Claims disponibili:")
     logger.debug(json.dumps(claims, indent=2))
-        
+
     logger.debug(f"📤 Claim richiesti per la selective disclosure: {selectively_disclosable_claims}")
 
     # Crea l'oggetto SDJWTIssuer con il formato di serializzazione richiesto
@@ -96,10 +94,10 @@ def issue_sd_jwt(
 
     logger.debug(f"✅ SD-JWT generato con successo per '{vct}'")
     return sd_jwt
-    
+
 def decode_and_verify_sd_jwt(
-        sd_jwt_compact: str, 
-        jwks: dict, 
+        sd_jwt_compact: str,
+        jwks: dict,
         disclosures=None) -> dict:
     """
     Legge un SD-JWT da una stringa in input e lo valida.
@@ -167,10 +165,10 @@ def decode_and_verify_sd_jwt(
         raise ValueError(f"La credenziale rilasciata non è valida: {e}")
 
 def present_sd_jwt(
-        vct: str, 
-        sd_jwt_compact: str, 
-        aud: str, 
-        nonce: str, 
+        vct: str,
+        sd_jwt_compact: str,
+        aud: str,
+        nonce: str,
         claims_to_reveal: list[str],
         holder_private_jwk_dict: dict = None) -> str:
     """
@@ -204,7 +202,7 @@ def present_sd_jwt(
         holder_public_jwk = jwk.JWK.from_json(json.dumps(holder_private_jwk_dict))
 
     holder = SDJWTHolder(sd_jwt_compact)
-    
+
     sd_jwt, disclosures = _split_sd_jwt_presentation(sd_jwt_compact)
 
     payload = _decode_jws_payload(sd_jwt)
@@ -215,9 +213,9 @@ def present_sd_jwt(
     for d in disclosures:
         disclosure = _decode_disclosure(d)
         logger.debug(disclosure)
-        
+
     logger.debug(f"📤 Claim richiesti per la presentazione: {claims_to_reveal}")
-    
+
     holder.create_presentation(
         claims_to_disclose=claims_to_reveal,
         nonce=nonce,
@@ -225,7 +223,7 @@ def present_sd_jwt(
         holder_key=holder_public_jwk,
         sign_alg=alg,
     )
-    
+
     presentation = holder.sd_jwt_presentation
     logger.debug(f"✅ Presentazione generata per la credenziale {vct}!")
     return presentation
@@ -271,5 +269,5 @@ def _make_issuer_key_callback(jwk_dict: dict):
 
     def get_issuer_key(issuer: str, headers: dict) -> jwk.JWK:
         return jwk_obj  # ✅ restituisce direttamente oggetto JWK
-    
+
     return get_issuer_key

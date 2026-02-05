@@ -1,28 +1,27 @@
 import base64
 import binascii
-from datetime import datetime, timezone
 import hashlib
 import io
 import json
 import secrets
 import string
+from datetime import datetime, timezone
 from typing import Tuple, Union
 from urllib.parse import parse_qs, urlparse
 
 import fitz
 import jmespath
-from jwcrypto import jwk
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives.asymmetric.ec import (
-    EllipticCurvePrivateKey,
-    EllipticCurvePrivateNumbers,
-    EllipticCurvePublicKey,
     SECP256R1,
     SECP384R1,
     SECP521R1,
+    EllipticCurvePrivateKey,
+    EllipticCurvePrivateNumbers,
+    EllipticCurvePublicKey,
 )
 from cryptography.hazmat.primitives.serialization import (
     Encoding,
@@ -31,8 +30,10 @@ from cryptography.hazmat.primitives.serialization import (
     load_pem_private_key,
     load_pem_public_key,
 )
+from jwcrypto import jwk
 
 from constants import CONTENT_PDF_BASE_64_PREFIX
+
 
 def base64url_encode(data: bytes) -> str:
     return base64.urlsafe_b64encode(data).rstrip(b'=').decode('utf-8')
@@ -47,7 +48,7 @@ def pem_private_key_from_jwk_dict(jwk_dict: dict) -> bytes:
     """
     # Filtro solo i campi standard
     filtered = {k: jwk_dict[k] for k in ["kty", "crv", "x", "y", "d"] if k in jwk_dict}
-    
+
     jwk_obj = jwk.JWK(**filtered)
 
     pem = jwk_obj.export_to_pem(private_key=True, password=None)
@@ -59,9 +60,9 @@ def pem_public_key_from_jwk_dict(jwk_dict: dict) -> bytes:
     """
     # Filtro solo i campi standard
     filtered = {k: jwk_dict[k] for k in ["kty", "crv", "x", "y"] if k in jwk_dict}
-    
+
     jwk_obj = jwk.JWK(**filtered)
-    
+
     pem = jwk_obj.export_to_pem(private_key=False, password=None)
     return pem  # formato bytes
 
@@ -172,7 +173,7 @@ def pub_ec_key_obj_to_jwk(pub_ec_key: EllipticCurvePublicKey) -> jwk.JWK:
             format=serialization.PublicFormat.SubjectPublicKeyInfo
         )
     )
-    
+
     return pub_jwk
 
 def priv_ec_key_obj_to_jwk(priv_ec_key: EllipticCurvePrivateKey) -> jwk.JWK:
@@ -332,7 +333,7 @@ def has_claim(entity: dict, jmes_query: str) -> bool:
 
     Returns:
         bool: True se il valore esiste ed è non nullo, False altrimenti.
-    
+
     Esempi:
         has_claim(entity, "metadata.openid_credential_verifier.client_id")  # True
         has_claim(entity, "metadata.federation_entity.contacts[0]")         # True
@@ -369,7 +370,7 @@ def extract_claim(entity: dict, jmes_query: str):
         return jmespath.search(jmes_query, entity)
     except Exception:
         return None
-    
+
 def estrai_testo_from_pdf(path: str) -> str:
     doc = fitz.open(path)
     full_text = ""
@@ -382,14 +383,14 @@ def estrai_testo_from_dati_pdf_base64(data_uri: str) -> list[str]:
         b64_data = data_uri.split(",", 1)[1]
     else:
         raise ValueError(f"La stringa non contiene un prefisso valido ({CONTENT_PDF_BASE_64_PREFIX})")
-    
+
     # Correggi la lunghezza per il base64 (padding con '=')
     missing_padding = len(b64_data) % 4
     if missing_padding:
         b64_data += '=' * (4 - missing_padding)
-        
+
     pdf_bytes = base64.b64decode(b64_data)
-    
+
     testi_per_pagina = []
     with fitz.open(stream=pdf_bytes, filetype="pdf") as doc:
         for page in doc:
@@ -402,14 +403,14 @@ def check_required_claims(claims: dict, expected_claims: set) -> None:
     """
     Verifica che tutte le chiavi attese siano presenti nel dict claims.
     Solleva ValueError se mancano dei claim.
-    
+
     :param claims: dict contenente i claims.
     :param expected_claims: set di chiavi attese.
     """
     missing = expected_claims - claims.keys()
     if missing:
         raise ValueError(f"Mancano i seguenti claim obbligatori: {', '.join(sorted(missing))}")
-    
+
 def is_hex(s: str) -> bool:
     try:
         int(s, 16)
@@ -426,7 +427,7 @@ def is_base64(s: str) -> bool:
         return base64.b64encode(decoded).decode('ascii') == sb.rstrip('=')
     except Exception:
         return False
-    
+
 def hex_to_base64(hex_str: str) -> str:
     # rimuovi spazi/newline
     h = hex_str.strip()
@@ -438,7 +439,7 @@ def to_datetime(value):
         return value
     try:
         return datetime.fromtimestamp(value, tz=timezone.utc)
-    except Exception as e:
+    except Exception:
         raise ValueError("Errore in to_utc_datetime: {e}")
 
 
