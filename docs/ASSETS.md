@@ -10,20 +10,20 @@ This document lists icons and images used in the project and their licenses. **W
 
 ## Icons and images in use
 
-| Asset | Location | Source / license | Notes |
-|-------|----------|------------------|--------|
-| **trash** (delete) | `static/images/trash-delete-icon.svg` | Bootstrap Icons (MIT) | Replaces previous SVG Repo asset. |
-| **memory / storage** | `static/images/memory.svg` | Bootstrap Icons – `device-hdd` (MIT) | Icon for “Memoria” / storage. |
-| **credential card** | `static/images/card-violet.svg` | Bootstrap Icons – `card-heading` (MIT) | Violet fill for credential card style. |
-| **PDF** | `static/images/pdf.svg` | Bootstrap Icons – `file-earmark-pdf` (MIT) | Replaces previous SVG Repo asset. |
-| **QR code** | `static/images/qr-code-icon.svg` | Bootstrap Icons – `qr-code` (MIT) | Import QR action. |
-| **Wallet logo** | `static/images/wallet_logo.svg` | Generic digital wallet icon (Bootstrap Icons wallet2, MIT) | Favicon and header logo. |
-| **Country flags** | `static/images/flags/4x3/*.svg` | EU + 27 member states only (eu, at, be, bg, hr, cy, cz, dk, de, ee, es, fi, fr, gr, hu, ie, it, lv, lt, lu, mt, nl, pl, pt, ro, sk, si, se) | Used for country selector. |
-| **Tessera Sanitaria (card front)** | `static/images/Tessera_Sanitaria_Italia-Fronte.svg` | Project SVG (stylized card illustration) | Replaces JPG; demo only, not an official document. |
-| **Emblem of Italy** | `static/images/Emblem_of_Italy.svg` | Official emblem (public domain / government) | Italian government symbol. |
-| **Medal / certificate** | `static/images/medal.svg` | Bootstrap Icons – `award` (MIT) | Certificate icon. |
-| **Laurea (education)** | `static/images/laurea1.svg`, `laurea2.svg` | Bootstrap Icons – `mortarboard` (MIT) | Education credentials. |
-| **Italy map** | `static/images/italy_map.svg` | Project SVG (simplified outline) | PID card badge. |
+| Asset | Location | Source / license                                                                                                                                                                   | Notes |
+|-------|----------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------|
+| **trash** (delete) | `static/images/trash-delete-icon.svg` | Bootstrap Icons (MIT)                                                                                                                                                              | Replaces previous SVG Repo asset. |
+| **memory / storage** | `static/images/memory.svg` | Bootstrap Icons – `device-hdd` (MIT)                                                                                                                                               | Icon for “Memoria” / storage. |
+| **credential card** | `static/images/card-violet.svg` | Bootstrap Icons – `card-heading` (MIT)                                                                                                                                             | Violet fill for credential card style. |
+| **PDF** | `static/images/pdf.svg` | Bootstrap Icons – `file-earmark-pdf` (MIT)                                                                                                                                         | Replaces previous SVG Repo asset. |
+| **QR code** | `static/images/qr-code-icon.svg` | Bootstrap Icons – `qr-code` (MIT)                                                                                                                                                  | Import QR action. |
+| **Wallet logo** | `static/images/wallet_logo.svg` | Generic digital wallet icon (Bootstrap Icons wallet2, MIT)                                                                                                                         | Favicon and header logo. |
+| **Country flags** | `static/images/flags/4x3/*.svg` | Public Domain via Wikimedia Commons -  EU + 27 member states only (eu, at, be, bg, hr, cy, cz, dk, de, ee, es, fi, fr, gr, hu, ie, it, lv, lt, lu, mt, nl, pl, pt, ro, sk, si, se) | Used for country selector. |
+| **Tessera Sanitaria (card front)** | `static/images/Tessera_Sanitaria_Italia-Fronte.svg` | Project SVG (stylized card illustration)                                                                                                                                           | Replaces JPG; demo only, not an official document. |
+| **Emblem of Italy** | `static/images/Emblem_of_Italy.svg` | Official emblem (public domain / government)                                                                                                                                       | Italian government symbol. |
+| **Medal / certificate** | `static/images/medal.svg` | Bootstrap Icons – `award` (MIT)                                                                                                                                                    | Certificate icon. |
+| **Laurea (education)** | `static/images/laurea1.svg`, `laurea2.svg` | Bootstrap Icons – `mortarboard` (MIT)                                                                                                                                              | Education credentials. |
+| **Italy map** | `static/images/italy_map.svg` | Project SVG (simplified outline)                                                                                                                                                   | PID card badge. |
 
 **Country flags:** Only the EU flag and the 27 countries in the wallet dropdown are kept in `static/images/flags/4x3/` (eu, at, be, bg, hr, cy, cz, dk, de, ee, es, fi, fr, gr, hu, ie, it, lv, lt, lu, mt, nl, pl, pt, ro, sk, si, se). Unreferenced flag SVGs and other unused icons have been removed.
 
