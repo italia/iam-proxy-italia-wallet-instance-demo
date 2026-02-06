@@ -10,6 +10,7 @@ from constants import JWT_PREFIX, MSO_MDOC_PREFIX, SD_JWT_PREFIX
 from routes.itwallet_routes import itwallet_routes
 from routes.main_routes import main_routes
 from routes.wallet_routes import wallet_routes
+from utils.utils import remove_str_prefix
 
 # Configura la codifica stdout
 sys.stdout.reconfigure(encoding="utf-8")
@@ -75,16 +76,9 @@ def tag_credenziale(value):
     if not value:
         return "N/A"
 
-    valueLower = value.lower()
-    valueWithoutPrefix = value
-
-    # Prefissi possibili
+    # Rimozione prefissi credenziali
     prefixes = [JWT_PREFIX, SD_JWT_PREFIX, MSO_MDOC_PREFIX]
-
-    for prefix in prefixes:
-        if valueLower.startswith(prefix.lower()):
-            valueWithoutPrefix = value[len(prefix) :]
-            break
+    valueWithoutPrefix = remove_str_prefix(value, prefixes)
 
     # Rimuovi primo carattere se speciale
     if valueWithoutPrefix and not valueWithoutPrefix[0].isalnum():

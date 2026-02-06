@@ -646,119 +646,128 @@ def completedLoginToVerifier():
 @itwallet_routes.route("/itwallet/template/<credentialType>", methods=["GET"])
 def credentialTypeTemplate(credentialType):
     _clear_session()
-
     logger.info(f"➡️  Ricevuta request GET /itwallet/template/{credentialType}")
 
-    result = app_state.credential_store.find_by_prefix_with_key(credentialType)
-
-    if result:
-        key, value = result
-        logger.info(f"✅ Recuperata dalla memoria credenziale con chiave {key}")
-
-        vct = value.get("vct", "")
-        logger.info(f"ℹ️  Il vct della credenziale {key} è: {vct}")
-
-        status = value.get("status", "")
-        statusDecr = get_status_description(status)
-        logger.info(f"ℹ️  La credenziale {key} è in stato: {status} {statusDecr}")
-
-        claims = value.get("claims", {})
-        claims = unescape_json(claims)
-
-        data_row = value.get("data_row", {})
-
-        issuing_country = ""
-        issuing_authority = ""
-
-        content = claims.get("content")
-
-        contentList = []
-
-        if content and content.startswith(CONTENT_PDF_BASE_64_PREFIX):
-            logger.debug("ℹ️  La credenziale presenta un claim 'content' contenente dati pdf_base64")
-            contentList = estrai_testo_from_dati_pdf_base64(content)
-
-            if contentList and len(contentList) > 0:
-                logger.debug("✅ Il PDF contiene almeno una pagina con contenuto.")
-                for i, pagina in enumerate(contentList, start=1):
-                    logger.debug(f"📄 Pagina {i}:\n{pagina}\n{'-' * 40}")
-
-        dt_iat_local_formatted = dt_exp_local_formatted = None
-        metadata = ""
-
-        if key.startswith(MSO_MDOC_PREFIX):
-            name_space = claims.get("nameSpaces", {}).get(ISO_18013_5_NAME, {})
-            issuing_country = name_space.get("issuing_country")
-            issuing_authority = name_space.get("issuing_authority")
-
-            validity_info = claims.get("mso", {}).get("validityInfo", {})
-            iat = validity_info.get("validFrom")  # stringa in formato ISO 8601 con timezone UTC
-            exp = validity_info.get("validUntil")  # stringa in formato ISO 8601 con timezone UTC
-
-            try:
-                # Parsing della stringa in oggetto datetime con timezone UTC
-                dt_iat_utc = datetime.fromisoformat(iat)
-                dt_exp_utc = datetime.fromisoformat(iat)
-
-                # Conversione nel timezone locale (esempio: Europe/Rome)
-                local_tz = datetime.now().astimezone().tzinfo
-                dt_iat_local = dt_iat_utc.astimezone(local_tz)
-                dt_exp_local = dt_exp_utc.astimezone(local_tz)
-
-                # Formattazione finale come dd-mm-yyyy HH:MM:SS
-                dt_iat_local_formatted = dt_iat_local.strftime("%d-%m-%Y %H:%M:%S")
-                dt_exp_local_formatted = dt_exp_local.strftime("%d-%m-%Y %H:%M:%S")
-            except (TypeError, ValueError):
-                dt_iat_local_formatted = dt_exp_local_formatted = None
-                logger.error(f"❌ Non è stato possibile leggere l'intervallo di validità della credenziale {key}")
-
-        elif key.startswith(SD_JWT_PREFIX):
-            issuing_country = claims.get("issuing_country")
-            issuing_authority = claims.get("issuing_authority")
-            iat = claims.get("iat")  # int in formato unix time stamp con timezone UTC
-            exp = claims.get("exp")  # int in formato unix time stamp con timezone UTC
-
-            try:
-                dt_iat_utc = datetime.fromtimestamp(int(iat))
-                dt_exp_utc = datetime.fromtimestamp(int(exp))
-
-                # Conversione nel timezone locale (esempio: Europe/Rome)
-                local_tz = datetime.now().astimezone().tzinfo
-                dt_iat_local = dt_iat_utc.astimezone(local_tz)
-                dt_exp_local = dt_exp_utc.astimezone(local_tz)
-
-                # Formattazione finale come dd-mm-yyyy HH:MM:SS
-                dt_iat_local_formatted = dt_iat_local.strftime("%d-%m-%Y %H:%M:%S")
-                dt_exp_local_formatted = dt_exp_local.strftime("%d-%m-%Y %H:%M:%S")
-
-            except (TypeError, ValueError):
-                dt_iat_local_formatted = dt_exp_local_formatted = None
-                logger.error(f"❌ Non è stato possibile leggere l'intervallo di validità della credenziale {key}")
-
-        if dt_iat_local_formatted and dt_exp_local_formatted:
-            metadata = f"Credenziale emessa da {issuing_authority} ({issuing_country}) il {dt_iat_local_formatted}, scade il {dt_exp_local_formatted}."
-        else:
-            metadata = f"Credenziale emessa da {issuing_authority} ({issuing_country})"
-
-        logger.info(f"ℹ️  Il metadata della credenziale {key} è: {metadata}")
-
-        try:
-            templateContent = render_template(
-                credentialType + ".html",
-                data_row=data_row,
-                claims=claims,
-                metadata=metadata,
-                status=status,
-                statusDecr=statusDecr,
-                contentList=contentList,
-            )
-            return templateContent
-        except Exception as e:
-            logger.error(f"❌ {e}")
-            return f"Nessun template trovato per la credenziale di tipo {credentialType} nel wallet", 500
-    else:
+    if not (result := app_state.credential_store.find_by_prefix_with_key(credentialType)):
         logger.error(f"❌ Nessuna credenziale di tipo {credentialType} trovata nella memoria")
         return f"Nessuna credenziale di tipo {credentialType} trovata nel wallet", 400
+
+    key, value = result
+    logger.info(f"✅ Recuperata dalla memoria credenziale con chiave {key}")
+
+    vct = value.get("vct", "")
+    logger.info(f"ℹ️  Il vct della credenziale {key} è: {vct}")
+
+    status = value.get("status", "")
+    statusDecr = get_status_description(status)
+    logger.info(f"ℹ️  La credenziale {key} è in stato: {status} {statusDecr}")
+
+    claims = value.get("claims", {})
+    claims = unescape_json(claims)
+
+    data_row = value.get("data_row", {})
+    content = claims.get("content")
+
+    contentList = []
+    if content and content.startswith(CONTENT_PDF_BASE_64_PREFIX):
+        logger.debug("ℹ️  La credenziale presenta un claim 'content' contenente dati pdf_base64")
+        contentList = estrai_testo_from_dati_pdf_base64(content)
+
+        if contentList and len(contentList) > 0:
+            logger.debug("✅ Il PDF contiene almeno una pagina con contenuto.")
+            for i, pagina in enumerate(contentList, start=1):
+                logger.debug(f"📄 Pagina {i}:\n{pagina}\n{'-' * 40}")
+
+    metadata = _create_credential_metadata(key, claims)
+    logger.info(f"ℹ️  Il metadata della credenziale {key} è: {metadata}")
+
+    try:
+        return render_template(
+            credentialType + ".html",
+            data_row=data_row,
+            claims=claims,
+            metadata=metadata,
+            status=status,
+            statusDecr=statusDecr,
+            contentList=contentList,
+        )
+    except Exception as e:
+        logger.error(f"❌ {e}")
+        return f"Nessun template trovato per la credenziale di tipo {credentialType} nel wallet", 500
+
+
+def _create_credential_metadata(credential_key, claims):
+    parsed_claims = _parse_credential_claims_by_key(credential_key, claims)
+
+    dt_iat_local_formatted = parsed_claims["dt_iat_local_formatted"]
+    dt_exp_local_formatted = parsed_claims["dt_exp_local_formatted"]
+    issuing_authority = parsed_claims["issuing_authority"]
+    issuing_country = parsed_claims["issuing_country"]
+
+    if dt_iat_local_formatted and dt_exp_local_formatted:
+        metadata = f"Credenziale emessa da {issuing_authority} ({issuing_country}) il {dt_iat_local_formatted}, scade il {dt_exp_local_formatted}."
+    else:
+        logger.error(f"❌ Non è stato possibile leggere l'intervallo di validità della credenziale {credential_key}")
+        metadata = f"Credenziale emessa da {issuing_authority} ({issuing_country})"
+    return metadata
+
+
+def _parse_credential_claims_by_key(credential_key, claims):
+    issuing_country = ""
+    issuing_authority = ""
+    dt_iat_local_formatted, dt_exp_local_formatted = None, None
+
+    if credential_key.startswith(MSO_MDOC_PREFIX):
+        name_space = claims.get("nameSpaces", {}).get(ISO_18013_5_NAME, {})
+        issuing_country = name_space.get("issuing_country")
+        issuing_authority = name_space.get("issuing_authority")
+
+        validity_info = claims.get("mso", {}).get("validityInfo", {})
+        iat = validity_info.get("validFrom")  # stringa in formato ISO 8601 con timezone UTC
+        exp = validity_info.get("validUntil")  # stringa in formato ISO 8601 con timezone UTC
+
+        dt_iat_local_formatted = _unix_ts_to_str_datetime(
+            int(datetime.fromisoformat(iat).timestamp()), format="%d-%m-%Y %H:%M:%S"
+        )
+        dt_exp_local_formatted = _unix_ts_to_str_datetime(
+            int(datetime.fromisoformat(exp).timestamp()), format="%d-%m-%Y %H:%M:%S"
+        )
+
+    elif credential_key.startswith(SD_JWT_PREFIX):
+        issuing_country = claims.get("issuing_country")
+        issuing_authority = claims.get("issuing_authority")
+        iat = claims.get("iat")  # int in formato unix time stamp con timezone UTC
+        exp = claims.get("exp")  # int in formato unix time stamp con timezone UTC
+        dt_iat_local_formatted = _unix_ts_to_str_datetime(iat, format="%d-%m-%Y %H:%M:%S")
+        dt_exp_local_formatted = _unix_ts_to_str_datetime(exp, format="%d-%m-%Y %H:%M:%S")
+
+    return dict(
+        issuing_country=issuing_country,
+        issuing_authority=issuing_authority,
+        dt_iat_local_formatted=dt_iat_local_formatted,
+        dt_exp_local_formatted=dt_exp_local_formatted,
+    )
+
+
+def _unix_ts_to_str_datetime(
+    timestamp: int, format: str = "%d-%m-%Y %H:%M:%S", timezone: datetime.tzinfo = None
+) -> str | None:
+    """Convert a unix timestamp (`int`) into a timezone-aware datetime string.
+
+    Notes:
+    - The input timestamp is treated as UTC and converted to the target timezone.
+    """
+    if timezone is None:
+        timezone = datetime.now().astimezone().tzinfo
+
+    result = None
+    try:
+        dt = datetime.fromtimestamp(timestamp)
+        dt = dt.astimezone(timezone)
+        return dt.strftime(format)
+    except (TypeError, ValueError):
+        logger.error(f"❌ Non è stato possibile convertire il timestamp {timestamp} in datetime")
+    return result
 
 
 def _clear_session():

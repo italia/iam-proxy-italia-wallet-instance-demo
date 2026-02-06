@@ -467,3 +467,12 @@ def estrai_parametro_query_string(url: str, parametro: str) -> str | None:
         return query_params.get(parametro, [None])[0]
     except Exception:
         return None
+
+
+def remove_str_prefix(raw: str, prefixes: list[str]) -> str:
+    """Delete a prefix from a string if it exists."""
+    value_lower = raw.lower()
+    for prefix in prefixes:
+        if value_lower.startswith(prefix.lower()):
+            return raw[len(prefix) :]
+    return raw
