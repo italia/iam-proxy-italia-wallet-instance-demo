@@ -4,6 +4,7 @@ Centralized settings for the IT Wallet instance demo.
 All values are overridable via environment variables (use UPPER_SNAKE_CASE,
 e.g. SECRET_KEY, OID_FED_LIST_PATH). Also loads from config.json "app" section.
 """
+
 from settings_utils import (
     CONFIG_DIR,  # noqa: F401
     DEFAULTS,

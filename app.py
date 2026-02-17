@@ -6,11 +6,10 @@ import sys
 
 from flask import Flask, g, has_app_context
 
-from settings import JWT_PREFIX, MSO_MDOC_PREFIX, SD_JWT_PREFIX
-from settings import CONFIG_DIR, CORRELATION_ID_FALLBACK, SECRET_KEY
 from routes.itwallet_routes import itwallet_routes
 from routes.main_routes import main_routes
 from routes.wallet_routes import wallet_routes
+from settings import CONFIG_DIR, CORRELATION_ID_FALLBACK, JWT_PREFIX, MSO_MDOC_PREFIX, SD_JWT_PREFIX, SECRET_KEY
 from utils.utils import remove_str_prefix, sanitize_for_logging
 
 # Configura la codifica stdout
