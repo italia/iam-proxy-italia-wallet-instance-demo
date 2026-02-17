@@ -10,9 +10,9 @@ main_routes = Blueprint("main_routes", __name__)
 @main_routes.route("/favicon.ico")
 def favicon():
     return send_from_directory(
-        os.path.join(current_app.root_path, "static"),
-        "images/logo_eudi_wallet.ico",
-        mimetype="image/vnd.microsoft.icon",
+        os.path.join(current_app.root_path, 'static'),
+        'images/wallet_logo.svg',
+        mimetype='image/svg+xml'
     )
 
 
