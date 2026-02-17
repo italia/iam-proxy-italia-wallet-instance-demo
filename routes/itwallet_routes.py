@@ -21,6 +21,7 @@ from utils.utils import (
     estrai_testo_from_dati_pdf_base64,
     extract_claim,
     guess_credential_configuration_icon,
+    sanitize_for_logging,
 )
 
 logger = logging.getLogger(__name__)
@@ -643,24 +644,53 @@ def completedLoginToVerifier():
         return jsonify({"success": False, "data": {"error": f"{e}"}}), 500
 
 
+def _get_template_name_for_credential_key(key: str) -> str | None:
+    """
+    Resolve a trusted credential store key to a whitelisted template name.
+    Prevents XSS/template injection by using only config-validated names.
+    Template names follow the pattern: config_id or config_id + "-credid".
+    """
+    wallet_credential_supported = extract_claim(
+        current_app.config, "metadata.credential_flow.credential_configurations_supported"
+    )
+    if not wallet_credential_supported:
+        return None
+    supported_list = list(wallet_credential_supported)
+    key_lower = key.lower()
+    # Find the config id that matches the key (longest prefix match first)
+    for config_id in sorted(supported_list, key=len, reverse=True):
+        if not key_lower.startswith(config_id.lower()):
+            continue
+        # Try config_id + "-credid" first (common template pattern), then config_id
+        for candidate in (config_id + "-credid", config_id):
+            if all(c.isalnum() or c in "_-" for c in candidate):
+                return candidate
+    return None
+
+
 @itwallet_routes.route("/itwallet/template/<credentialType>", methods=["GET"])
 def credentialTypeTemplate(credentialType):
     _clear_session()
-    logger.info(f"➡️  Ricevuta request GET /itwallet/template/{credentialType}")
+    logger.info("➡️  Ricevuta request GET /itwallet/template/%s", sanitize_for_logging(credentialType))
 
     if not (result := app_state.credential_store.find_by_prefix_with_key(credentialType)):
-        logger.error(f"❌ Nessuna credenziale di tipo {credentialType} trovata nella memoria")
-        return f"Nessuna credenziale di tipo {credentialType} trovata nel wallet", 400
+        logger.error("❌ Nessuna credenziale di tipo %s trovata nella memoria", sanitize_for_logging(credentialType))
+        return "Nessuna credenziale di tipo richiesto trovata nel wallet", 400
 
     key, value = result
-    logger.info(f"✅ Recuperata dalla memoria credenziale con chiave {key}")
+    logger.info("✅ Recuperata dalla memoria credenziale con chiave %s", sanitize_for_logging(key))
 
     vct = value.get("vct", "")
-    logger.info(f"ℹ️  Il vct della credenziale {key} è: {vct}")
+    logger.info("ℹ️  Il vct della credenziale %s è: %s", sanitize_for_logging(key), sanitize_for_logging(vct))
 
     status = value.get("status", "")
     statusDecr = get_status_description(status)
-    logger.info(f"ℹ️  La credenziale {key} è in stato: {status} {statusDecr}")
+    logger.info(
+        "ℹ️  La credenziale %s è in stato: %s %s",
+        sanitize_for_logging(key),
+        sanitize_for_logging(status),
+        sanitize_for_logging(statusDecr),
+    )
 
     claims = value.get("claims", {})
     claims = unescape_json(claims)
@@ -676,14 +706,19 @@ def credentialTypeTemplate(credentialType):
         if contentList and len(contentList) > 0:
             logger.debug("✅ Il PDF contiene almeno una pagina con contenuto.")
             for i, pagina in enumerate(contentList, start=1):
-                logger.debug(f"📄 Pagina {i}:\n{pagina}\n{'-' * 40}")
+                logger.debug("📄 Pagina %d:\n%s\n%s", i, sanitize_for_logging(pagina), "-" * 40)
 
     metadata = _create_credential_metadata(key, claims)
-    logger.info(f"ℹ️  Il metadata della credenziale {key} è: {metadata}")
+    logger.info("ℹ️  Il metadata della credenziale %s è: %s", sanitize_for_logging(key), sanitize_for_logging(metadata))
+
+    template_name = _get_template_name_for_credential_key(key)
+    if not template_name:
+        logger.error("❌ Nessun template configurato per la credenziale con chiave %s", sanitize_for_logging(key))
+        return "Nessun template trovato per la credenziale nel wallet", 500
 
     try:
         return render_template(
-            credentialType + ".html",
+            template_name + ".html",
             data_row=data_row,
             claims=claims,
             metadata=metadata,
@@ -692,8 +727,8 @@ def credentialTypeTemplate(credentialType):
             contentList=contentList,
         )
     except Exception as e:
-        logger.error(f"❌ {e}")
-        return f"Nessun template trovato per la credenziale di tipo {credentialType} nel wallet", 500
+        logger.error("❌ %s", sanitize_for_logging(str(e)))
+        return "Nessun template trovato per la credenziale nel wallet", 500
 
 
 def _create_credential_metadata(credential_key, claims):
@@ -707,7 +742,10 @@ def _create_credential_metadata(credential_key, claims):
     if dt_iat_local_formatted and dt_exp_local_formatted:
         metadata = f"Credenziale emessa da {issuing_authority} ({issuing_country}) il {dt_iat_local_formatted}, scade il {dt_exp_local_formatted}."
     else:
-        logger.error(f"❌ Non è stato possibile leggere l'intervallo di validità della credenziale {credential_key}")
+        logger.error(
+            "❌ Non è stato possibile leggere l'intervallo di validità della credenziale %s",
+            sanitize_for_logging(credential_key),
+        )
         metadata = f"Credenziale emessa da {issuing_authority} ({issuing_country})"
     return metadata
 
@@ -766,7 +804,7 @@ def _unix_ts_to_str_datetime(
         dt = dt.astimezone(timezone)
         return dt.strftime(format)
     except (TypeError, ValueError):
-        logger.error(f"❌ Non è stato possibile convertire il timestamp {timestamp} in datetime")
+        logger.error("❌ Non è stato possibile convertire il timestamp %s in datetime", sanitize_for_logging(timestamp))
     return result
 
 

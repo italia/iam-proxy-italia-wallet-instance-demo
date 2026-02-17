@@ -469,6 +469,18 @@ def estrai_parametro_query_string(url: str, parametro: str) -> str | None:
         return None
 
 
+def sanitize_for_logging(value) -> str:
+    """
+    Sanitize a value for safe logging to prevent log injection.
+    Replaces newlines and control characters that could be used to forge log entries.
+    """
+    if value is None:
+        return ""
+    s = str(value)
+    # Replace newlines, carriage returns, and other control chars
+    return "".join(c if ord(c) >= 32 and c not in "\n\r\t" else " " for c in s)
+
+
 def remove_str_prefix(raw: str, prefixes: list[str]) -> str:
     """Delete a prefix from a string if it exists."""
     value_lower = raw.lower()
