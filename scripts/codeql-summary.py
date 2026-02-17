@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Print CodeQL SARIF results and exit 1 if any security issues are reported."""
+
 import json
 import sys
 
