@@ -1,13 +1,27 @@
 import json
 import logging
-import time
-from urllib.parse import urlparse
 
 import requests
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.asymmetric import ec
 
+from utils.http_utils import http_request_with_retry
+
 logger = logging.getLogger(__name__)
+
+
+def _parse_oid_fed_list(response: requests.Response) -> list[str]:
+    """Parse JSON array of strings from oid_fed_list response."""
+    ct = response.headers.get("Content-Type", "")
+    if "application/json" not in ct:
+        logger.error("❌ Risposta non application/json")
+        return []
+    data = response.json()
+    if isinstance(data, list) and all(isinstance(x, str) for x in data):
+        logger.debug("✅ Array ricevuto: %s", json.dumps(data, indent=2))
+        return data
+    logger.error("❌ Risposta JSON non è un array di stringhe")
+    return []
 
 
 def oid_fed_list(
@@ -32,82 +46,29 @@ def oid_fed_list(
         In caso di errore, rilancia un'eccezione.
     """
     url = base_url.rstrip("/") + "/list" + query_string
-    parsed = urlparse(url)
-    host = parsed.hostname
+    headers = {"Accept": "application/json"}
+    logger.debug(">>>> Invio GET %s", url)
+    result = http_request_with_retry(
+        "GET",
+        url,
+        headers=headers,
+        max_retries=max_retries,
+        retry_delay=retry_delay,
+        proxies=proxies,
+        no_proxy_domains=no_proxy_domains,
+        parse_response=_parse_oid_fed_list,
+    )
+    if not result:
+        return []
+    return result
 
-    use_proxy = False
 
-    if proxies:
-        use_proxy = True
-
-        if no_proxy_domains:
-            for domain in no_proxy_domains:
-                if host == domain or host.endswith(f".{domain}"):
-                    use_proxy = False
-                    break
-
-    headers = {
-        "Accept": "application/json",
-    }
-
-    logger.debug(f">>>> Invio GET {url} (use_proxy={use_proxy})")
-    logger.debug("Headers:")
-    logger.debug(json.dumps(headers, indent=2))
-
-    last_exception = None
-    for attempt in range(1, max_retries + 1):
-        try:
-            if use_proxy:
-                response = requests.get(url, headers=headers, verify=False, proxies=proxies)
-            else:
-                response = requests.get(url, headers=headers, verify=False)
-
-            logger.debug(f">>>> HTTP {response.status_code}")
-            if response.ok:
-                content_type = response.headers.get("Content-Type", "")
-                if "application/json" in content_type:
-                    json_array = response.json()
-                    if isinstance(json_array, list) and all(isinstance(item, str) for item in json_array):
-                        logger.debug("✅ Array ricevuto:")
-                        logger.debug(json.dumps(json_array, indent=2))
-                        return json_array
-                    else:
-                        logger.error("❌ Risposta JSON non è un array di stringhe")
-                        return []
-                else:
-                    logger.error("❌ Risposta non application/json")
-                    return []
-            else:
-                # HTTP error, come 400 Bad Request
-                logger.error(f"❌ Errore HTTP {response.status_code}")
-                logger.error(f"Contenuto risposta: {response.text}")
-                raise RuntimeError(f"Errore HTTP {response.status_code}: {response.text}")
-        except requests.ConnectionError as ce:
-            logger.error(f"❌ Tentativo {attempt} - Errore di connessione: {ce}")
-            last_exception = ce
-            if attempt < max_retries:
-                time.sleep(retry_delay)
-            else:
-                logger.error("❌ Numero massimo di tentativi raggiunto, abortisco.")
-                raise ConnectionError(
-                    f"Impossibile stabilire la connessione verso {url} dopo ripetuti tentativi"
-                ) from ce
-        except requests.RequestException as re:
-            # Altri errori di richiesta, rilancio subito
-            logger.error(f"❌ Internal error: {re}")
-            raise
-        except ValueError as ve:
-            logger.error(f"❌ Internal error: {ve}")
-            raise
-        except Exception as e:
-            logger.error(f"❌ Internal error: {e}")
-            raise
-
-    # Se siamo qui, tutti i tentativi sono falliti per motivi di connessione
-    if last_exception:
-        raise last_exception
-    else:
-        raise RuntimeError("Richiesta fallita, ma senza eccezioni di rete.")
+def _parse_entity_statement_jwt(response: requests.Response) -> str:
+    """Parse JWT from entity-statement response."""
+    ct = response.headers.get("Content-Type", "")
+    if "application/entity-statement+jwt" not in ct:
+        raise RuntimeError(f"Risposta non application/entity-statement+jwt ma {ct}")
+    return response.text.strip()
 
 
 def oid_fed_fetch_openid_configuration(
@@ -130,75 +91,15 @@ def oid_fed_fetch_openid_configuration(
         In caso di errore, rilancia un'eccezione.
     """
     url = base_url.rstrip("/") + "/.well-known/openid-federation"
-    parsed = urlparse(url)
-    host = parsed.hostname
-
-    use_proxy = False
-
-    if proxies:
-        use_proxy = True
-
-        if no_proxy_domains:
-            for domain in no_proxy_domains:
-                if host == domain or host.endswith(f".{domain}"):
-                    use_proxy = False
-                    break
-
-    headers = {
-        "Accept": "application/entity-statement+jwt",
-    }
-
-    logger.debug(f">>>> Invio GET {url} (use_proxy={use_proxy})")
-    logger.debug("Headers:")
-    logger.debug(json.dumps(headers, indent=2))
-
-    last_exception = None
-    for attempt in range(1, max_retries + 1):
-        try:
-            if use_proxy:
-                response = requests.get(url, headers=headers, verify=False, proxies=proxies)
-            else:
-                response = requests.get(url, headers=headers, verify=False)
-
-            logger.debug(f">>>> HTTP {response.status_code}")
-            if response.ok:
-                content_type = response.headers.get("Content-Type", "")
-                if "application/entity-statement+jwt" in content_type:
-                    jwt_text = response.text.strip()
-                    logger.debug("✅ JWT ricevuto:")
-                    logger.debug(jwt_text)
-                    return jwt_text
-                else:
-                    logger.error(f"❌ Risposta non application/entity-statement+jwt ma {content_type}")
-                    raise RuntimeError(f"Risposta non application/entity-statement+jwt ma {content_type}")
-            else:
-                # HTTP error, come 400 Bad Request
-                logger.error(f"❌ Errore HTTP {response.status_code}")
-                logger.error(f"Contenuto risposta: {response.text}")
-                raise RuntimeError(f"Errore HTTP {response.status_code}: {response.text}")
-        except requests.ConnectionError as ce:
-            logger.error(f"❌ Tentativo {attempt} - Errore di connessione: {ce}")
-            last_exception = ce
-            if attempt < max_retries:
-                time.sleep(retry_delay)
-            else:
-                logger.error("❌ Numero massimo di tentativi raggiunto, abortisco.")
-                raise ConnectionError(
-                    f"Impossibile stabilire la connessione verso {url} dopo ripetuti tentativi"
-                ) from ce
-        except requests.RequestException as re:
-            # Altri errori di richiesta, rilancio subito
-            logger.error(f"❌ Internal error: {re}")
-            raise
-        except ValueError as ve:
-            logger.error(f"❌ Internal error: {ve}")
-            raise
-        except Exception as e:
-            logger.error(f"❌ Internal error: {e}")
-            raise
-
-    # Se siamo qui, tutti i tentativi sono falliti per motivi di connessione
-    if last_exception:
-        raise last_exception
-    else:
-        raise RuntimeError("Richiesta fallita, ma senza eccezioni di rete.")
+    headers = {"Accept": "application/entity-statement+jwt"}
+    logger.debug(">>>> Invio GET %s", url)
+    return http_request_with_retry(
+        "GET",
+        url,
+        headers=headers,
+        max_retries=max_retries,
+        retry_delay=retry_delay,
+        proxies=proxies,
+        no_proxy_domains=no_proxy_domains,
+        parse_response=_parse_entity_statement_jwt,
+    )

@@ -4,7 +4,6 @@ import logging
 import time
 import uuid
 from typing import Tuple
-from urllib.parse import urlparse
 
 import jwt
 import requests
@@ -19,11 +18,43 @@ from constants import (
     CREDENTIAL_SUSPENDED,
     CREDENTIAL_VALID,
 )
+from utils.http_utils import http_request_with_retry
 from utils.sdJwtUtils import issue_sd_jwt
 from utils.utils import base64url_encode, priv_ec_key_obj_to_jwk, pub_ec_key_obj_to_jwk
 
 logger = logging.getLogger(__name__)
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+
+def _parse_json_for_par(response: requests.Response) -> dict:
+    """Parse and validate JSON response for PAR endpoint."""
+    from utils.http_utils import _parse_json_response
+
+    result = _parse_json_response(response, str(response.url))
+    logger.info("✅ Risposta OK:")
+    logger.info(json.dumps(result, indent=2))
+    return result
+
+
+def _parse_text_response(response: requests.Response) -> str:
+    """Return response body as stripped text."""
+    text = response.text.strip()
+    logger.info("✅ Risposta: %s", text[:200] + "..." if len(text) > 200 else text)
+    return text
+
+
+def _parse_jwt_response(expected_ct: str):
+    """Return parser that validates Content-Type and returns JWT text."""
+
+    def parser(response: requests.Response) -> str:
+        ct = response.headers.get("Content-Type", "")
+        if expected_ct not in ct:
+            raise RuntimeError(f"Risposta non {expected_ct} ma {ct}")
+        text = response.text.strip()
+        logger.info("✅ JWT ricevuto: %s", text)
+        return text
+
+    return parser
 
 
 def request_as_par(
@@ -52,103 +83,27 @@ def request_as_par(
     Returns:
         Dizionario JSON della risposta, o eccezione in caso di errore.
     """
-
-    parsed = urlparse(url)
-    host = parsed.hostname
-
-    use_proxy = False
-
-    if proxies:
-        use_proxy = True
-
-        if no_proxy_domains:
-            for domain in no_proxy_domains:
-                if host == domain or host.endswith(f".{domain}"):
-                    use_proxy = False
-                    break
-
     headers = {
         "Content-Type": "application/x-www-form-urlencoded",
         "Accept": "application/json; charset=utf-8",
         "OAuth-Client-Attestation": wallet_attestation_jwt,
         "OAuth-Client-Attestation-PoP": wallet_attestation_dpop_jwt,
     }
-
     data = {"client_id": client_id, "request": request_object_jwt}
-
-    logger.info(f">>>> Invio POST a {url} (use_proxy={use_proxy})")
-    logger.info("📦 Header:")
-    logger.info(json.dumps(headers, indent=2))
-    logger.info("📦 Payload:")
-    logger.info(json.dumps(data, indent=2))
-
-    for attempt in range(1, max_retries + 1):
-        try:
-            if use_proxy:
-                response = requests.post(url, headers=headers, data=data, verify=False, proxies=proxies)
-            else:
-                response = requests.post(url, headers=headers, data=data, verify=False)
-
-            if response.ok:
-                content_type = response.headers.get("Content-Type", "")
-
-                if not content_type:
-                    logger.error("❌ Risposta non valida: Content-Type non indicato")
-                    raise RuntimeError(f"Risposta ricevuta da {url} non valida: Content-Type non indicato")
-
-                if "application/json" in content_type:
-                    try:
-                        json_response = response.json()
-                        logger.info("✅ Risposta OK:")
-                        logger.info(json.dumps(json_response, indent=2))
-                        return json_response
-                    except ValueError as ve:
-                        logger.error("❌ Errore nel parsing JSON:", ve)
-                        logger.error(f"Contenuto risposta: {response.text}")
-                        raise ValueError(f"Risposta ricevuta da {url} non valida: {ve}")
-                else:
-                    logger.error(f"❌ Risposta non valida: Content-Type non è application/json, ma {content_type}")
-                    raise RuntimeError(
-                        f"Risposta ricevuta da {url} non valida: Content-Type non è application/json, ma {content_type}"
-                    )
-
-            else:
-                try:
-                    # provo a fare parsing JSON
-                    parsed = response.json()
-                    # lo "flattizzo" in stringa leggibile
-                    err = parsed.get("error", "")
-                    desc = parsed.get("error_description", "")
-                    error_str = f"{err} - {desc}".strip(" -")
-                except ValueError:
-                    # non è JSON → prendo così com'è
-                    error_str = " ".join(response.text.split())
-
-                logger.error(
-                    f"❌ Errore ritornato dall'endpoint {url}: {error_str} (HTTP Status code: {response.status_code})"
-                )
-                raise RuntimeError(
-                    f"Errore ritornato dall'endpoint {url}: {error_str} (HTTP Status code: {response.status_code})"
-                )
-
-        except requests.ConnectionError as ce:
-            logger.error(f"❌ Tentativo {attempt} - Errore di connessione: {ce}")
-            if attempt < max_retries:
-                time.sleep(retry_delay)
-            else:
-                logger.error("<<<< ❌ Numero massimo di tentativi raggiunto, abortisco.")
-                raise ConnectionError(
-                    f"Impossibile stabilire la connessione verso {url} dopo ripetuti tentativi"
-                ) from ce
-        except requests.RequestException as re:
-            logger.error(f"<<<< ❌ Restituito in risposta: {re}")
-            raise
-        except ValueError as ve:
-            logger.error(f"<<<< ❌ Restituito in risposta: {ve}")
-            raise
-        except Exception as e:
-            logger.error(f"<<<< ❌ Restituito in risposta: {e}")
-            raise
+    logger.info(">>>> Invio POST a %s", url)
+    logger.info("📦 Header:\n%s", json.dumps(headers, indent=2))
+    logger.info("📦 Payload:\n%s", json.dumps(data, indent=2))
+    return http_request_with_retry(
+        "POST",
+        url,
+        headers=headers,
+        data=data,
+        max_retries=max_retries,
+        retry_delay=retry_delay,
+        proxies=proxies,
+        no_proxy_domains=no_proxy_domains,
+        parse_response=_parse_json_for_par,
+    )
 
 
 def request_authorize(
@@ -173,73 +128,17 @@ def request_authorize(
         Il JWT rappresentnte l'entity statement.
         In caso di errore, rilancia un'eccezione.
     """
-    url = url + query_string
-
-    parsed = urlparse(url)
-    host = parsed.hostname
-
-    use_proxy = False
-
-    if proxies:
-        use_proxy = True
-
-        if no_proxy_domains:
-            for domain in no_proxy_domains:
-                if host == domain or host.endswith(f".{domain}"):
-                    use_proxy = False
-                    break
-
-    logger.info(f">>>> Invio GET {url} (use_proxy={use_proxy})")
-
-    for attempt in range(1, max_retries + 1):
-        try:
-            if use_proxy:
-                response = requests.get(url, verify=False, proxies=proxies)
-            else:
-                response = requests.get(url, verify=False)
-
-            if response.ok:
-                response_authorize = response.text.strip()
-                logger.info("✅ Risposta:")
-                logger.info(response_authorize)
-                return response_authorize
-            else:
-                try:
-                    # provo a fare parsing JSON
-                    parsed = response.json()
-                    # lo "flattizzo" in stringa leggibile
-                    err = parsed.get("error", "")
-                    desc = parsed.get("error_description", "")
-                    error_str = f"{err} - {desc}".strip(" -")
-                except ValueError:
-                    # non è JSON → prendo così com'è
-                    error_str = " ".join(response.text.split())
-
-                logger.error(
-                    f"❌ Errore ritornato dall'endpoint {url}: {error_str} (HTTP Status code: {response.status_code})"
-                )
-                raise RuntimeError(
-                    f"Errore ritornato dall'endpoint {url}: {error_str} (HTTP Status code: {response.status_code})"
-                )
-        except requests.ConnectionError as ce:
-            logger.error(f"❌ Tentativo {attempt} - Errore di connessione: {ce}")
-            if attempt < max_retries:
-                time.sleep(retry_delay)
-            else:
-                logger.error("<<<< ❌ Numero massimo di tentativi raggiunto, abortisco.")
-                raise ConnectionError(
-                    f"Impossibile stabilire la connessione verso {url} dopo ripetuti tentativi"
-                ) from ce
-        except requests.RequestException as re:
-            # Altri errori di richiesta, rilancio subito
-            logger.error(f"<<<< ❌ Restituito in risposta: {re}")
-            raise
-        except ValueError as ve:
-            logger.error(f"<<<< ❌ Restituito in risposta: {ve}")
-            raise
-        except Exception as e:
-            logger.error(f"<<<< ❌ Restituito in risposta: {e}")
-            raise
+    full_url = url + query_string
+    logger.info(">>>> Invio GET %s", full_url)
+    return http_request_with_retry(
+        "GET",
+        full_url,
+        max_retries=max_retries,
+        retry_delay=retry_delay,
+        proxies=proxies,
+        no_proxy_domains=no_proxy_domains,
+        parse_response=_parse_text_response,
+    )
 
 
 def request_token(
@@ -275,21 +174,6 @@ def request_token(
     Returns:
         Dizionario JSON della risposta, o eccezione in caso di errore.
     """
-
-    parsed = urlparse(url)
-    host = parsed.hostname
-
-    use_proxy = False
-
-    if proxies:
-        use_proxy = True
-
-        if no_proxy_domains:
-            for domain in no_proxy_domains:
-                if host == domain or host.endswith(f".{domain}"):
-                    use_proxy = False
-                    break
-
     headers = {
         "Content-Type": "application/x-www-form-urlencoded",
         "Accept": "application/json; charset=utf-8",
@@ -297,81 +181,21 @@ def request_token(
         "OAuth-Client-Attestation-PoP": wallet_attestation_dpop_jwt,
         "DPoP": dpop_proof_jwt,
     }
-
     data = {"grant_type": grant_type, "code": code, "redirect_uri": redirect_uri, "code_verifier": code_verifier}
-
-    logger.info(f">>>> Invio POST a {url} (use_proxy={use_proxy})")
-    logger.info("📦 Header:")
-    logger.info(json.dumps(headers, indent=2))
-    logger.info("📦 Payload:")
-    logger.info(json.dumps(data, indent=2))
-
-    for attempt in range(1, max_retries + 1):
-        try:
-            if use_proxy:
-                response = requests.post(url, headers=headers, data=data, verify=False, proxies=proxies)
-            else:
-                response = requests.post(url, headers=headers, data=data, verify=False)
-
-            if response.ok:
-                content_type = response.headers.get("Content-Type", "")
-
-                if not content_type:
-                    logger.error("❌ Risposta non valida: Content-Type non indicato")
-                    raise RuntimeError(f"Risposta ricevuta da {url} non valida: Content-Type non indicato")
-
-                if "application/json" in content_type:
-                    try:
-                        json_response = response.json()
-                        logger.info("✅ Risposta OK:")
-                        logger.info(json.dumps(json_response, indent=2))
-                        return json_response
-                    except ValueError as ve:
-                        logger.error("❌ Errore nel parsing JSON:", ve)
-                        logger.error(f"Contenuto risposta: {response.text}")
-                        raise ValueError(f"Risposta ricevuta da {url} non valida: {ve}")
-                else:
-                    logger.error(f"❌ Risposta non valida: Content-Type non è application/json, ma {content_type}")
-                    raise RuntimeError(
-                        f"Risposta ricevuta da {url} non valida: Content-Type non è application/json, ma {content_type}"
-                    )
-            else:
-                try:
-                    # provo a fare parsing JSON
-                    parsed = response.json()
-                    # lo "flattizzo" in stringa leggibile
-                    err = parsed.get("error", "")
-                    desc = parsed.get("error_description", "")
-                    error_str = f"{err} - {desc}".strip(" -")
-                except ValueError:
-                    # non è JSON → prendo così com'è
-                    error_str = " ".join(response.text.split())
-
-                logger.error(
-                    f"❌ Errore ritornato dall'endpoint {url}: {error_str} (HTTP Status code: {response.status_code})"
-                )
-                raise RuntimeError(
-                    f"Errore ritornato dall'endpoint {url}: {error_str} (HTTP Status code: {response.status_code})"
-                )
-
-        except requests.ConnectionError as ce:
-            logger.error(f"❌ Tentativo {attempt} - Errore di connessione: {ce}")
-            if attempt < max_retries:
-                time.sleep(retry_delay)
-            else:
-                logger.error("<<<< ❌ Numero massimo di tentativi raggiunto, abortisco.")
-                raise ConnectionError(
-                    f"Impossibile stabilire la connessione verso {url} dopo ripetuti tentativi"
-                ) from ce
-        except requests.RequestException as re:
-            logger.error(f"<<<< ❌ Restituito in risposta: {re}")
-            raise
-        except ValueError as ve:
-            logger.error(f"<<<< ❌ Restituito in risposta: {ve}")
-            raise
-        except Exception as e:
-            logger.error(f"<<<< ❌ Restituito in risposta: {e}")
-            raise
+    logger.info(">>>> Invio POST a %s", url)
+    logger.info("📦 Header:\n%s", json.dumps(headers, indent=2))
+    logger.info("📦 Payload:\n%s", json.dumps(data, indent=2))
+    return http_request_with_retry(
+        "POST",
+        url,
+        headers=headers,
+        data=data,
+        max_retries=max_retries,
+        retry_delay=retry_delay,
+        proxies=proxies,
+        no_proxy_domains=no_proxy_domains,
+        parse_response=_parse_json_for_par,
+    )
 
 
 def request_credential(
@@ -401,103 +225,41 @@ def request_credential(
     Returns:
         Dizionario JSON della risposta, o eccezione in caso di errore.
     """
-
-    parsed = urlparse(url)
-    host = parsed.hostname
-
-    use_proxy = False
-
-    if proxies:
-        use_proxy = True
-
-        if no_proxy_domains:
-            for domain in no_proxy_domains:
-                if host == domain or host.endswith(f".{domain}"):
-                    use_proxy = False
-                    break
-
     headers = {
         "Content-Type": "application/json; charset=utf-8",
         "Accept": "application/json; charset=UTF-8",
         "Authorization": f"DPoP {access_token}",
         "DPoP": dpop_proof_jwt,
     }
-
     data = {"credential_identifier": credential_id, "proof": {"proof_type": "jwt", "jwt": proof_jwt}}
+    logger.info(">>>> Invio POST a %s", url)
+    logger.info("📦 Header:\n%s", json.dumps(headers, indent=2))
+    logger.info("📦 Payload:\n%s", json.dumps(data, indent=2))
+    return http_request_with_retry(
+        "POST",
+        url,
+        headers=headers,
+        json_body=data,
+        max_retries=max_retries,
+        retry_delay=retry_delay,
+        proxies=proxies,
+        no_proxy_domains=no_proxy_domains,
+        parse_response=_parse_json_for_par,
+    )
 
-    logger.info(f">>>> Invio POST a {url} (use_proxy={use_proxy})")
-    logger.info("📦 Header:")
-    logger.info(json.dumps(headers, indent=2))
-    logger.info("📦 Payload:")
-    logger.info(json.dumps(data, indent=2))
 
-    for attempt in range(1, max_retries + 1):
-        try:
-            if use_proxy:
-                response = requests.post(url, headers=headers, json=data, verify=False, proxies=proxies)
-            else:
-                response = requests.post(url, headers=headers, json=data, verify=False)
+def _parse_nonce_response(response: requests.Response) -> str:
+    """Parse c_nonce from nonce endpoint JSON response."""
+    from utils.http_utils import _parse_json_response
 
-            if response.ok:
-                content_type = response.headers.get("Content-Type", "")
-
-                if not content_type:
-                    logger.error("❌ Risposta non valida: Content-Type non indicato")
-                    raise RuntimeError(f"Risposta ricevuta da {url} non valida: Content-Type non indicato")
-
-                if "application/json" in content_type:
-                    try:
-                        json_response = response.json()
-                        logger.info("✅ Risposta OK:")
-                        logger.info(json.dumps(json_response, indent=2))
-                        return json_response
-                    except ValueError as ve:
-                        logger.error("❌ Errore nel parsing JSON:", ve)
-                        logger.error(f"Contenuto risposta: {response.text}")
-                        raise ValueError(f"Risposta ricevuta da {url} non valida: {ve}")
-                else:
-                    logger.error(f"❌ Risposta non valida: Content-Type non è application/json, ma {content_type}")
-                    raise RuntimeError(
-                        f"Risposta ricevuta da {url} non valida: Content-Type non è application/json, ma {content_type}"
-                    )
-
-            else:
-                try:
-                    # provo a fare parsing JSON
-                    parsed = response.json()
-                    # lo "flattizzo" in stringa leggibile
-                    err = parsed.get("error", "")
-                    desc = parsed.get("error_description", "")
-                    error_str = f"{err} - {desc}".strip(" -")
-                except ValueError:
-                    # non è JSON → prendo così com'è
-                    error_str = " ".join(response.text.split())
-
-                logger.error(
-                    f"❌ Errore ritornato dall'endpoint {url}: {error_str} (HTTP Status code: {response.status_code})"
-                )
-                raise RuntimeError(
-                    f"Errore ritornato dall'endpoint {url}: {error_str} (HTTP Status code: {response.status_code})"
-                )
-        except requests.ConnectionError as ce:
-            logger.error(f"❌ Tentativo {attempt} - Errore di connessione: {ce}")
-            if attempt < max_retries:
-                time.sleep(retry_delay)
-            else:
-                logger.error("<<<< ❌ Numero massimo di tentativi raggiunto, abortisco.")
-                raise ConnectionError(
-                    f"Impossibile stabilire la connessione verso {url} dopo ripetuti tentativi"
-                ) from ce
-        except requests.RequestException as re:
-            # Altri errori di richiesta, rilancio subito
-            logger.error(f"<<<< ❌ Restituito in risposta: {re}")
-            raise
-        except ValueError as ve:
-            logger.error(f"<<<< ❌ Restituito in risposta: {ve}")
-            raise
-        except Exception as e:
-            logger.error(f"<<<< ❌ Restituito in risposta: {e}")
-            raise
+    result = _parse_json_response(response, str(response.url))
+    if not result:
+        raise ValueError("Il JSON ricevuto non contiene alcun dato")
+    c_nonce = result.get("c_nonce")
+    if c_nonce is None:
+        raise ValueError("Il JSON ricevuto non contiene la chiave 'c_nonce'")
+    logger.info("✅ c_nonce estratto: %s", c_nonce)
+    return c_nonce
 
 
 def request_nonce(
@@ -516,105 +278,19 @@ def request_nonce(
         Il valore di c_nonce estratto dalla risposta JSON in caso di successo.
         In caso di errore, rilancia un'eccezione.
     """
-
-    parsed = urlparse(url)
-    host = parsed.hostname
-
-    use_proxy = False
-
-    if proxies:
-        use_proxy = True
-
-        if no_proxy_domains:
-            for domain in no_proxy_domains:
-                if host == domain or host.endswith(f".{domain}"):
-                    use_proxy = False
-                    break
-
-    headers = {
-        "Content-Type": "application/json; charset=utf-8",
-        "Accept": "application/json; charset=UTF-8",
-    }
-
-    logger.info(f">>>> Invio POST a {url} (use_proxy={use_proxy})")
-    logger.info("📦 Header:")
-    logger.info(json.dumps(headers, indent=2))
-
-    for attempt in range(1, max_retries + 1):
-        try:
-            if use_proxy:
-                response = requests.post(url, headers=headers, verify=False, proxies=proxies)
-            else:
-                response = requests.post(url, headers=headers, verify=False)
-
-            if response.ok:
-                content_type = response.headers.get("Content-Type", "")
-
-                if not content_type:
-                    logger.error("❌ Risposta non valida: Content-Type non indicato")
-                    raise RuntimeError(f"Risposta ricevuta da {url} non valida: Content-Type non indicato")
-
-                if "application/json" in content_type:
-                    try:
-                        json_response = response.json()
-                        logger.info("✅ Risposta OK:")
-                        logger.info(json.dumps(json_response, indent=2))
-
-                        if json_response:
-                            c_nonce = json_response.get("c_nonce")
-                            if c_nonce is not None:
-                                logger.info(f"✅ c_nonce estratto: {c_nonce}")
-                                return c_nonce
-                            else:
-                                raise ValueError("Il JSON ricevuto non contiene la chiave 'c_nonce'")
-                        else:
-                            raise ValueError("Il JSON ricevuto non contiene alcun dato")
-                    except ValueError as ve:
-                        logger.error("❌ Errore nel parsing JSON:", ve)
-                        logger.error(f"Contenuto risposta: {response.text}")
-                        raise ValueError(f"Risposta ricevuta da {url} non valida: {ve}")
-                else:
-                    logger.error(f"❌ Risposta non valida: Content-Type non è application/json, ma {content_type}")
-                    raise RuntimeError(
-                        f"Risposta ricevuta da {url} non valida: Content-Type non è application/json, ma {content_type}"
-                    )
-            else:
-                try:
-                    # provo a fare parsing JSON
-                    parsed = response.json()
-                    # lo "flattizzo" in stringa leggibile
-                    err = parsed.get("error", "")
-                    desc = parsed.get("error_description", "")
-                    error_str = f"{err} - {desc}".strip(" -")
-                except ValueError:
-                    # non è JSON → prendo così com'è
-                    error_str = " ".join(response.text.split())
-
-                logger.error(
-                    f"❌ Errore ritornato dall'endpoint {url}: {error_str} (HTTP Status code: {response.status_code})"
-                )
-                raise RuntimeError(
-                    f"Errore ritornato dall'endpoint {url}: {error_str} (HTTP Status code: {response.status_code})"
-                )
-        except requests.ConnectionError as ce:
-            logger.error(f"❌ Tentativo {attempt} - Errore di connessione: {ce}")
-            if attempt < max_retries:
-                time.sleep(retry_delay)
-            else:
-                logger.error("<<<< ❌ Numero massimo di tentativi raggiunto, abortisco.")
-                raise ConnectionError(
-                    f"Impossibile stabilire la connessione verso {url} dopo ripetuti tentativi"
-                ) from ce
-        except requests.RequestException as re:
-            # Altri errori di richiesta, rilancio subito
-            logger.error(f"<<<< ❌ Restituito in risposta: {re}")
-            raise
-        except ValueError as ve:
-            logger.error(f"<<<< ❌ Restituito in risposta: {ve}")
-            raise
-        except Exception as e:
-            logger.error(f"<<<< ❌ Restituito in risposta: {e}")
-            raise
+    headers = {"Content-Type": "application/json; charset=utf-8", "Accept": "application/json; charset=UTF-8"}
+    logger.info(">>>> Invio POST a %s", url)
+    logger.info("📦 Header:\n%s", json.dumps(headers, indent=2))
+    return http_request_with_retry(
+        "POST",
+        url,
+        headers=headers,
+        max_retries=max_retries,
+        retry_delay=retry_delay,
+        proxies=proxies,
+        no_proxy_domains=no_proxy_domains,
+        parse_response=_parse_nonce_response,
+    )
 
 
 def request_request_uri(
@@ -637,82 +313,17 @@ def request_request_uri(
     Returns:
         Dizionario JSON della risposta, o eccezione in caso di errore.
     """
-    url = url + query_string
-
-    parsed = urlparse(url)
-    host = parsed.hostname
-
-    use_proxy = False
-
-    if proxies:
-        use_proxy = True
-
-        if no_proxy_domains:
-            for domain in no_proxy_domains:
-                if host == domain or host.endswith(f".{domain}"):
-                    use_proxy = False
-                    break
-
-    logger.info(f">>>> Invio GET {url} (use_proxy={use_proxy})")
-
-    for attempt in range(1, max_retries + 1):
-        try:
-            if use_proxy:
-                response = requests.get(url, verify=False, proxies=proxies)
-            else:
-                response = requests.get(url, verify=False)
-
-            if response.ok:
-                content_type = response.headers.get("Content-Type", "")
-                if "application/oauth-authz-req+jwt" in content_type:
-                    jwt_text = response.text.strip()
-                    logger.info("✅ JWT ricevuto:")
-                    logger.info(jwt_text)
-                    return jwt_text
-                else:
-                    logger.error(
-                        f"❌ Risposta non valida: Content-Type non è application/oauth-authz-req+jwt, ma {content_type}"
-                    )
-                    raise RuntimeError(
-                        f"Risposta ricevuta da {url} non valida: Content-Type non è application/oauth-authz-req+jwt, ma {content_type}"
-                    )
-            else:
-                try:
-                    # provo a fare parsing JSON
-                    parsed = response.json()
-                    # lo "flattizzo" in stringa leggibile
-                    err = parsed.get("error", "")
-                    desc = parsed.get("error_description", "")
-                    error_str = f"{err} - {desc}".strip(" -")
-                except ValueError:
-                    # non è JSON → prendo così com'è
-                    error_str = " ".join(response.text.split())
-
-                logger.error(
-                    f"❌ Errore ritornato dall'endpoint {url}: {error_str} (HTTP Status code: {response.status_code})"
-                )
-                raise RuntimeError(
-                    f"Errore ritornato dall'endpoint {url}: {error_str} (HTTP Status code: {response.status_code})"
-                )
-
-        except requests.ConnectionError as ce:
-            logger.error(f"❌ Tentativo {attempt} - Errore di connessione: {ce}")
-            if attempt < max_retries:
-                time.sleep(retry_delay)
-            else:
-                logger.error("<<<< ❌ Numero massimo di tentativi raggiunto, abortisco.")
-                raise ConnectionError(
-                    f"Impossibile stabilire la connessione verso {url} dopo ripetuti tentativi"
-                ) from ce
-        except requests.RequestException as re:
-            logger.error(f"<<<< ❌ Restituito in risposta: {re}")
-            raise
-        except ValueError as ve:
-            logger.error(f"<<<< ❌ Restituito in risposta: {ve}")
-            raise
-        except Exception as e:
-            logger.error(f"<<<< ❌ Restituito in risposta: {e}")
-            raise
+    full_url = url + query_string
+    logger.info(">>>> Invio GET %s", full_url)
+    return http_request_with_retry(
+        "GET",
+        full_url,
+        max_retries=max_retries,
+        retry_delay=retry_delay,
+        proxies=proxies,
+        no_proxy_domains=no_proxy_domains,
+        parse_response=_parse_jwt_response("application/oauth-authz-req+jwt"),
+    )
 
 
 def request_response_uri(
@@ -738,98 +349,29 @@ def request_response_uri(
     Returns:
         Dizionario JSON della risposta, o eccezione in caso di errore.
     """
-
-    parsed = urlparse(url)
-    host = parsed.hostname
-
-    use_proxy = False
-
-    if proxies:
-        use_proxy = True
-
-        if no_proxy_domains:
-            for domain in no_proxy_domains:
-                if host == domain or host.endswith(f".{domain}"):
-                    use_proxy = False
-                    break
-
     headers = {"Content-Type": "application/x-www-form-urlencoded", "Accept": "application/json; charset=utf-8"}
-
     data = {"response": response_uri_request_jwt, "state": state}
+    logger.info(">>>> Invio POST a %s", url)
+    logger.info("📦 Header:\n%s", json.dumps(headers, indent=2))
+    logger.info("📦 Payload:\n%s", json.dumps(data, indent=2))
+    return http_request_with_retry(
+        "POST",
+        url,
+        headers=headers,
+        data=data,
+        max_retries=max_retries,
+        retry_delay=retry_delay,
+        proxies=proxies,
+        no_proxy_domains=no_proxy_domains,
+        parse_response=_parse_json_for_par,
+    )
 
-    logger.info(f">>>> Invio POST a {url} (use_proxy={use_proxy})")
-    logger.info("📦 Header:")
-    logger.info(json.dumps(headers, indent=2))
-    logger.info("📦 Payload:")
-    logger.info(json.dumps(data, indent=2))
 
-    for attempt in range(1, max_retries + 1):
-        try:
-            if use_proxy:
-                response = requests.post(url, headers=headers, data=data, verify=False, proxies=proxies)
-            else:
-                response = requests.post(url, headers=headers, data=data, verify=False)
-
-            if response.ok:
-                content_type = response.headers.get("Content-Type", "")
-
-                if not content_type:
-                    logger.error("❌ Risposta non valida: Content-Type non indicato")
-                    raise RuntimeError(f"Risposta ricevuta da {url} non valida: Content-Type non indicato")
-
-                if "application/json" in content_type:
-                    try:
-                        json_response = response.json()
-                        logger.info("✅ Risposta OK:")
-                        logger.info(json.dumps(json_response, indent=2))
-                        return json_response
-                    except ValueError as ve:
-                        logger.error("❌ Errore nel parsing JSON:", ve)
-                        logger.error(f"Contenuto risposta: {response.text}")
-                        raise ValueError(f"Risposta ricevuta da {url} non valida: {ve}")
-                else:
-                    logger.error(f"❌ Risposta non valida: Content-Type non è application/json, ma {content_type}")
-                    raise RuntimeError(
-                        f"Risposta ricevuta da {url} non valida: Content-Type non è application/json, ma {content_type}"
-                    )
-
-            else:
-                try:
-                    # provo a fare parsing JSON
-                    parsed = response.json()
-                    # lo "flattizzo" in stringa leggibile
-                    err = parsed.get("error", "")
-                    desc = parsed.get("error_description", "")
-                    error_str = f"{err} - {desc}".strip(" -")
-                except ValueError:
-                    # non è JSON → prendo così com'è
-                    error_str = " ".join(response.text.split())
-
-                logger.error(
-                    f"❌ Errore ritornato dall'endpoint {url}: {error_str} (HTTP Status code: {response.status_code})"
-                )
-                raise RuntimeError(
-                    f"Errore ritornato dall'endpoint {url}: {error_str} (HTTP Status code: {response.status_code})"
-                )
-
-        except requests.ConnectionError as ce:
-            logger.error(f"❌ Tentativo {attempt} - Errore di connessione: {ce}")
-            if attempt < max_retries:
-                time.sleep(retry_delay)
-            else:
-                logger.error("<<<< ❌ Numero massimo di tentativi raggiunto, abortisco.")
-                raise ConnectionError(
-                    f"Impossibile stabilire la connessione verso {url} dopo ripetuti tentativi"
-                ) from ce
-        except requests.RequestException as re:
-            logger.error(f"<<<< ❌ Restituito in risposta: {re}")
-            raise
-        except ValueError as ve:
-            logger.error(f"<<<< ❌ Restituito in risposta: {ve}")
-            raise
-        except Exception as e:
-            logger.error(f"<<<< ❌ Restituito in risposta: {e}")
-            raise
+def _handle_presentation_redirect(response: requests.Response) -> str:
+    """Extract redirect URL from 3xx response for presentation callback."""
+    redirect_url = response.headers["Location"]
+    logger.info("➡️  Redirect verso: %s", redirect_url)
+    return redirect_url
 
 
 def request_presentation_callback(
@@ -852,91 +394,26 @@ def request_presentation_callback(
         ConnectionError: se la connessione fallisce dopo max_retries tentativi
         RuntimeError: se la risposta non è OK
     """
-    parsed = urlparse(url)
-    host = parsed.hostname
+    logger.info(">>>> Invio GET %s", url)
 
-    # Determina se usare il proxy
-    use_proxy = False
-    if proxies:
-        use_proxy = True
-        if no_proxy_domains:
-            for domain in no_proxy_domains:
-                if host == domain or host.endswith(f".{domain}"):
-                    use_proxy = False
-                    break
+    def _log_and_parse(response: requests.Response) -> str:
+        logger.info("📍 Risposta: %s", response.status_code)
+        logger.info("📍 Body: %s", response.text[:500] + ("..." if len(response.text) > 500 else ""))
+        text = response.text.strip()
+        logger.info("✅ Risposta finale: %s", text)
+        return text
 
-    logger.info(f">>>> Invio GET {url} (use_proxy={use_proxy})")
-
-    for attempt in range(1, max_retries + 1):
-        try:
-            current_url = url
-            if use_proxy:
-                resp = requests.get(current_url, verify=False, proxies=proxies, allow_redirects=False)
-            else:
-                resp = requests.get(current_url, verify=False, allow_redirects=False)
-
-            logger.info(f"📍 Risposta: {resp.status_code}")
-            logger.info(f"📍 Headers: {resp.headers}")
-            logger.info(
-                f"📍 Body: {resp.text[:500]}{'...' if len(resp.text) > 500 else ''}"
-            )  # Limita a 500 caratteri per il log
-
-            if 300 <= resp.status_code < 400 and "Location" in resp.headers:
-                redirect_url = resp.headers["Location"]
-                logger.info(f"➡️  Redirect verso: {redirect_url}")
-
-                # Creo una "risposta finta" con status 200 e contenuto = redirect_url
-                fake_resp = requests.Response()
-                fake_resp.encoding = "utf-8"
-                fake_resp.headers["Content-Type"] = "text/plain; charset=utf-8"
-                fake_resp.status_code = 200
-                fake_resp._content = redirect_url.encode("utf-8")  # serve bytes
-                response = fake_resp
-            else:
-                response = resp
-
-            if response.ok:
-                response_content = response.text.strip()
-                logger.info("✅ Risposta finale:")
-                logger.info(response_content)
-                return response_content
-            else:
-                try:
-                    # provo a fare parsing JSON
-                    parsed = response.json()
-                    # lo "flattizzo" in stringa leggibile
-                    err = parsed.get("error", "")
-                    desc = parsed.get("error_description", "")
-                    error_str = f"{err} - {desc}".strip(" -")
-                except ValueError:
-                    # non è JSON → prendo così com'è
-                    error_str = " ".join(response.text.split())
-
-                logger.error(
-                    f"❌ Errore ritornato dall'endpoint {url}: {error_str} (HTTP Status code: {response.status_code})"
-                )
-                raise RuntimeError(
-                    f"Errore ritornato dall'endpoint {url}: {error_str} (HTTP Status code: {response.status_code})"
-                )
-
-        except requests.ConnectionError as ce:
-            logger.error(f"❌ Tentativo {attempt} - Errore di connessione: {ce}")
-            if attempt < max_retries:
-                time.sleep(retry_delay)
-            else:
-                logger.error("<<<< ❌ Numero massimo di tentativi raggiunto, abortisco.")
-                raise ConnectionError(
-                    f"Impossibile stabilire la connessione verso {url} dopo ripetuti tentativi"
-                ) from ce
-        except requests.RequestException as re:
-            logger.error(f"<<<< ❌ Restituito in risposta: {re}")
-            raise
-        except ValueError as ve:
-            logger.error(f"<<<< ❌ Restituito in risposta: {ve}")
-            raise
-        except Exception as e:
-            logger.error(f"<<<< ❌ Restituito in risposta: {e}")
-            raise
+    return http_request_with_retry(
+        "GET",
+        url,
+        max_retries=max_retries,
+        retry_delay=retry_delay,
+        proxies=proxies,
+        no_proxy_domains=no_proxy_domains,
+        parse_response=_log_and_parse,
+        handle_redirect=_handle_presentation_redirect,
+        allow_redirects=False,
+    )
 
 
 def request_status(
@@ -962,99 +439,22 @@ def request_status(
         Status Assertion object in caso di successo.
         In caso di errore, rilancia un'eccezione.
     """
-    headers = {
-        "Content-Type": "application/json; charset=utf-8",
-        "Accept": "application/json; charset=UTF-8",
-    }
-
+    headers = {"Content-Type": "application/json; charset=utf-8", "Accept": "application/json; charset=UTF-8"}
     data = {"status_assertion_requests": status_assertion_requests}
-
-    parsed = urlparse(url)
-    host = parsed.hostname
-
-    use_proxy = False
-
-    if proxies:
-        use_proxy = True
-
-        if no_proxy_domains:
-            for domain in no_proxy_domains:
-                if host == domain or host.endswith(f".{domain}"):
-                    use_proxy = False
-                    break
-
-    logger.info(f">>>> Invio POST a {url} (use_proxy={use_proxy})")
-    logger.info("📦 Header:")
-    logger.info(json.dumps(headers, indent=2))
-    logger.info("📦 Payload:")
-    logger.info(json.dumps(data, indent=2))
-
-    for attempt in range(1, max_retries + 1):
-        try:
-            if use_proxy:
-                response = requests.get(url, headers=headers, json=data, verify=False, proxies=proxies)
-            else:
-                response = requests.post(url, headers=headers, json=data, verify=False)
-
-            if response.ok:
-                content_type = response.headers.get("Content-Type", "")
-
-                if not content_type:
-                    logger.error("❌ Risposta non valida: Content-Type non indicato")
-                    raise RuntimeError(f"Risposta ricevuta da {url} non valida: Content-Type non indicato")
-
-                if "application/json" in content_type:
-                    try:
-                        json_response = response.json()
-                        logger.info("✅ Risposta OK:")
-                        logger.info(json.dumps(json_response, indent=2))
-                        return json_response
-                    except ValueError as ve:
-                        logger.error("❌ Errore nel parsing JSON:", ve)
-                        logger.error(f"Contenuto risposta: {response.text}")
-                        raise ValueError(f"Risposta ricevuta da {url} non valida: {ve}")
-                else:
-                    logger.error(f"❌ Risposta non valida: Content-Type non è application/json, ma {content_type}")
-                    raise RuntimeError(
-                        f"Risposta ricevuta da {url} non valida: Content-Type non è application/json, ma {content_type}"
-                    )
-            else:
-                try:
-                    # provo a fare parsing JSON
-                    parsed = response.json()
-                    # lo "flattizzo" in stringa leggibile
-                    err = parsed.get("error", "")
-                    desc = parsed.get("error_description", "")
-                    error_str = f"{err} - {desc}".strip(" -")
-                except ValueError:
-                    # non è JSON → prendo così com'è
-                    error_str = " ".join(response.text.split())
-
-                logger.error(
-                    f"❌ Errore ritornato dall'endpoint {url}: {error_str} (HTTP Status code: {response.status_code})"
-                )
-                raise RuntimeError(
-                    f"Errore ritornato dall'endpoint {url}: {error_str} (HTTP Status code: {response.status_code})"
-                )
-        except requests.ConnectionError as ce:
-            logger.error(f"❌ Tentativo {attempt} - Errore di connessione: {ce}")
-            if attempt < max_retries:
-                time.sleep(retry_delay)
-            else:
-                logger.error("<<<< ❌ Numero massimo di tentativi raggiunto, abortisco.")
-                raise ConnectionError(
-                    f"Impossibile stabilire la connessione verso {url} dopo ripetuti tentativi"
-                ) from ce
-        except requests.RequestException as re:
-            # Altri errori di richiesta, rilancio subito
-            logger.error(f"<<<< ❌ Restituito in risposta: {re}")
-            raise
-        except ValueError as ve:
-            logger.error(f"<<<< ❌ Restituito in risposta: {ve}")
-            raise
-        except Exception as e:
-            logger.error(f"<<<< ❌ Restituito in risposta: {e}")
-            raise
+    logger.info(">>>> Invio POST a %s", url)
+    logger.info("📦 Header:\n%s", json.dumps(headers, indent=2))
+    logger.info("📦 Payload:\n%s", json.dumps(data, indent=2))
+    return http_request_with_retry(
+        "POST",
+        url,
+        headers=headers,
+        json_body=data,
+        max_retries=max_retries,
+        retry_delay=retry_delay,
+        proxies=proxies,
+        no_proxy_domains=no_proxy_domains,
+        parse_response=_parse_json_for_par,
+    )
 
 
 def get_status_description(status):

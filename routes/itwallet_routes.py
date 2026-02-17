@@ -519,6 +519,41 @@ def completedAddCredentialItWallet():
         return jsonify({"success": False, "data": {"error": str(e)}}), 500
 
 
+def _require_param(value: str | None, msg: str) -> str:
+    """Return value or raise ValueError with msg."""
+    if not value:
+        raise ValueError(msg)
+    return value
+
+
+def _validate_login_to_rp_request(data: dict) -> tuple[str, str, str, str]:
+    """Validate request data and extract clientId, requestUri, requestUriMethod, state. Raises ValueError on error."""
+    rp_id = data.get("relyingPartyId") or ""
+    qr_content = data.get("qrCodeContent") or ""
+    rp_parsed = urlparse(rp_id)
+    if not (rp_parsed.scheme and rp_parsed.netloc):
+        raise ValueError(f"L'ID del Relying Party selezionato non è un URL valido: {rp_id}")
+    qr_parsed = urlparse(qr_content)
+    if not (qr_parsed.scheme and qr_parsed.netloc):
+        raise ValueError(f"Il contenuto del QR Code non è un URL valido: {qr_content}")
+    client_id = _require_param(
+        estrai_parametro_query_string(qr_content, "client_id"),
+        "L'URL specificata nel QR Code non presenta il parametro 'client_id' in query string",
+    )
+    if client_id != rp_id:
+        raise ValueError("client_id nel QR Code non corrisponde al Relying Party")
+    request_uri = _require_param(
+        estrai_parametro_query_string(qr_content, "request_uri"),
+        "L'URL specificata nel QR Code non presenta il parametro 'request_uri' in query string",
+    )
+    request_uri_method = estrai_parametro_query_string(qr_content, "request_uri_method") or "get"
+    state = _require_param(
+        estrai_parametro_query_string(qr_content, "state"),
+        "L'URL specificata nel QR Code non presenta il parametro 'state' in query string",
+    )
+    return client_id, request_uri, request_uri_method, state
+
+
 @itwallet_routes.route("/itwallet/loginToRelyingParty", methods=["POST"])
 def loginToRelyingParty():
     """
@@ -537,63 +572,17 @@ def loginToRelyingParty():
         }
     """
     _clear_session()
-
     logger.info("➡️  Ricevuta request POST /itwallet/loginToRelyingParty")
-
     try:
-        data = request.get_json()  # <-- recupera il JSON dal body della richiesta
+        data = request.get_json()
         logger.info("%s", sanitize_for_logging(data))
-
-        relyingPartyId = data.get("relyingPartyId")
-        qrCodeContent = data.get("qrCodeContent")
-
-        relyingPartyIdParsed = urlparse(relyingPartyId)
-        # Verifica se relyingPartyId è un URL valido
-        if relyingPartyIdParsed.scheme and relyingPartyIdParsed.netloc:
-            logger.info(
-                "✅ L'ID del Relying Party selezionato è un URL valido %s", sanitize_for_logging(relyingPartyId)
-            )
-
-            qrCodeContentParsed = urlparse(qrCodeContent)
-
-            # Verifica se qrCodeContentParsed è un URL valido
-            if qrCodeContentParsed.scheme and qrCodeContentParsed.netloc:
-                logger.info("✅ Il contenuto del QR Code è un URL valido: %s", sanitize_for_logging(qrCodeContent))
-
-                clientId = estrai_parametro_query_string(qrCodeContent, "client_id")
-                if not clientId:
-                    raise ValueError(
-                        "L'URL specificata nel QR Code non presenta il parametro 'client_id' in query string"
-                    )
-
-                if clientId != relyingPartyId:
-                    raise ValueError(
-                        f"L'URL specificata nel QR Code presenta il parametro 'client_id' in query string il cui valore non è valido: atteso '{relyingPartyId}', trovato '{clientId}'"
-                    )
-
-                requestUri = estrai_parametro_query_string(qrCodeContent, "request_uri")
-                if not requestUri:
-                    raise ValueError(
-                        "L'URL specificata nel QR Code non presenta il parametro 'request_uri' in query string"
-                    )
-
-                requestUriMethod = estrai_parametro_query_string(qrCodeContent, "request_uri_method")
-                if not requestUriMethod:
-                    requestUriMethod = "get"
-
-                state = estrai_parametro_query_string(qrCodeContent, "state")
-                if not requestUri:
-                    raise ValueError("L'URL specificata nel QR Code non presenta il parametro 'state' in query string")
-
-            else:
-                raise ValueError(f"Il contenuto del QR Code non è un URL valido: {qrCodeContent}")
-
-        else:
-            raise ValueError(f"L'ID del Relying Party selezionato non è un URL valido: {relyingPartyId}")
-
+        client_id, request_uri, request_uri_method, state = _validate_login_to_rp_request(data)
+        logger.info(
+            "✅ L'ID del Relying Party selezionato è un URL valido %s", sanitize_for_logging(data.get("relyingPartyId"))
+        )
+        logger.info("✅ Il contenuto del QR Code è un URL valido: %s", sanitize_for_logging(data.get("qrCodeContent")))
         service = ItWalletService(session)
-        result = service.loginToVerifier(clientId, requestUri, requestUriMethod, state)
-
+        result = service.loginToVerifier(client_id, request_uri, request_uri_method, state)
         status_code = 200 if result["success"] else 500
         return jsonify(result), status_code
     except ValueError as ve:

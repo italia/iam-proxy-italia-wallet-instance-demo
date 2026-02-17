@@ -119,79 +119,49 @@ def decode_and_verify_issuer_signed(
         raise ValueError(f"La credenziale rilasciata non è valida: {e}")
 
 
+def _validate_namespace_element(ns_name: str, i: int, element: object, digest_dict: dict) -> None:
+    """Validate a single namespace element and its digest. Raises ValueError on failure."""
+    if not isinstance(element, cbor2.CBORTag):
+        raise ValueError(f"Elemento [{i}] del Namespace '{ns_name}' non è un CBOR Tag")
+    element_decoded = cbor2.loads(element.value)
+    try:
+        check_required_claims(element_decoded, {"digestID", "random", "elementIdentifier", "elementValue"})
+    except ValueError as ve:
+        raise ValueError(f"Elemento [{i}] del Namespace '{ns_name}' non è valido: {ve}") from ve
+    digest_id = element_decoded["digestID"]
+    elem_value = element_decoded["elementValue"]
+    elem_for_digest = cbor2.CBORTag(1004, elem_value.isoformat()) if isinstance(elem_value, date) else elem_value
+    struct = {
+        "digestID": digest_id,
+        "random": element_decoded["random"],
+        "elementIdentifier": element_decoded["elementIdentifier"],
+        "elementValue": elem_for_digest,
+    }
+    final_bytes = cbor2.dumps(cbor2.CBORTag(24, cbor2.dumps(struct, canonical=True)), canonical=True)
+    digest = hashlib.sha256(final_bytes).digest()
+    expected_digest = digest_dict.get(digest_id)
+    if not expected_digest:
+        raise ValueError(
+            f"Elemento [{i}] del Namespace '{ns_name}': digestID={digest_id} non trovato nel MSO per {element_decoded['elementIdentifier']}"
+        )
+    if digest != expected_digest:
+        raise ValueError(
+            f"Elemento [{i}] del Namespace '{ns_name}': mismatch digest per {element_decoded['elementIdentifier']}"
+        )
+
+
 def _handle_namespaces(namespaces: dict, expected_namespaces: set, mso_value_digests: dict):
     check_required_claims(namespaces, expected_namespaces)
-
     for ns_name, ns_content in namespaces.items():
         if ns_name not in expected_namespaces:
             continue
-
-        if ns_name in expected_namespaces:
-            if not isinstance(ns_content, list):
-                raise ValueError(f"Namespace '{ns_name}' non è di tipo list")
-
-            digest_dict = mso_value_digests.get(ns_name)
-
-            if not digest_dict:
-                raise ValueError(f"Nessun digest dichiarato per il Namespace '{ns_name}' nel MSO")
-
-            for i, element in enumerate(ns_content):
-                # Se element è un CBORTag
-                if not isinstance(element, cbor2.CBORTag):
-                    raise ValueError(f"Elemento [{i}] del Namespace '{ns_name}' non è un CBOR Tag")
-
-                # Decodifico l'elementto corrente e ottengo un dict con digestID, random, elementIdentifier, elementValue
-                elementDecoded = cbor2.loads(element.value)
-
-                try:
-                    expected_claims = {"digestID", "random", "elementIdentifier", "elementValue"}
-                    check_required_claims(elementDecoded, expected_claims)
-                except ValueError as ve:
-                    raise ValueError(f"Elemento [{i}] del Namespace '{ns_name}' non è valido: {ve}")
-
-                digestID = elementDecoded.get("digestID")
-                random_bytes = elementDecoded.get("random")
-                elementIdentifier = elementDecoded.get("elementIdentifier")
-                elementValue = elementDecoded.get("elementValue")
-
-                # Se elementValue è datetime.date, ricrea CBORTag(1004, iso string) per il digest
-                if isinstance(elementValue, date):
-                    elementValue_for_digest = cbor2.CBORTag(1004, elementValue.isoformat())
-                else:
-                    elementValue_for_digest = elementValue
-
-                # Ricostruisci la struttura CBOR esatta sull'operazione svolta durante l'emissione:
-                struct = {
-                    "digestID": digestID,
-                    "random": random_bytes,
-                    "elementIdentifier": elementIdentifier,
-                    "elementValue": elementValue_for_digest,
-                }
-
-                # Serializza canonicalmente il dict
-                inner_cbor = cbor2.dumps(struct, canonical=True)
-
-                # Incapsula nel tag 24
-                outer_cbor = cbor2.CBORTag(24, inner_cbor)
-
-                # Serializza canonicalmente il tag 24
-                final_bytes = cbor2.dumps(outer_cbor, canonical=True)
-
-                # Calcola digest SHA-256
-                digest = hashlib.sha256(final_bytes).digest()
-
-                # Recupera digest dichiarato
-                expected_digest = digest_dict.get(digestID)
-
-                if not expected_digest:
-                    raise ValueError(
-                        f"Elemento [{i}] del Namespace '{ns_name}': digestID={digestID} non trovato nel MSO per {elementIdentifier}"
-                    )
-                else:
-                    if digest != expected_digest:
-                        raise ValueError(
-                            f"Elemento [{i}] del Namespace '{ns_name}': mismatch digest per {elementIdentifier}, calcolato '{digest.hex()}' trovato nel MSO '{expected_digest.hex()}'"
-                        )
+        if not isinstance(ns_content, list):
+            raise ValueError(f"Namespace '{ns_name}' non è di tipo list")
+        digest_dict = mso_value_digests.get(ns_name)
+        if not digest_dict:
+            raise ValueError(f"Nessun digest dichiarato per il Namespace '{ns_name}' nel MSO")
+        for i, element in enumerate(ns_content):
+            _validate_namespace_element(ns_name, i, element, digest_dict)
 
 
 # Restituisce mso
@@ -218,99 +188,52 @@ def _handle_cose_sign1(cose_msg: list, expected_version: str, expected_doc_type:
     return mso
 
 
+def _validate_mso_core(mso: dict, expected_version: str, expected_doc_type: str) -> None:
+    """Validate MSO core fields (docType, version, valueDigests, digestAlgorithm)."""
+    doc_type = mso.get("docType")
+    if not doc_type or doc_type != expected_doc_type:
+        raise ValueError(f"docType: atteso '{expected_doc_type}', trovato '{doc_type}'")
+    version = mso.get("version")
+    if not version or version != expected_version:
+        raise ValueError(f"version: atteso '{expected_version}', trovato '{version}'")
+    value_digests = mso.get("valueDigests")
+    if not value_digests or not isinstance(value_digests, dict):
+        raise ValueError("valueDigests mancante o non valido")
+    digest_algorithm = mso.get("digestAlgorithm")
+    if not digest_algorithm or digest_algorithm != HASH_ALGORITHM:
+        raise ValueError(f"digestAlgorithm: atteso '{HASH_ALGORITHM}', trovato '{digest_algorithm}'")
+
+
+def _validate_mso_device_and_validity(mso: dict) -> None:
+    """Validate MSO deviceKeyInfo and validityInfo."""
+    device_key_info = mso.get("deviceKeyInfo")
+    if not device_key_info or not isinstance(device_key_info, dict):
+        raise ValueError("deviceKeyInfo mancante o non valido")
+    device_key = device_key_info.get("deviceKey")
+    if not device_key or not isinstance(device_key, dict):
+        raise ValueError("deviceKeyInfo.deviceKey mancante o non valido")
+    validity_info = mso.get("validityInfo")
+    if not validity_info or not isinstance(validity_info, dict):
+        raise ValueError("validityInfo mancante o non valido")
+    try:
+        check_required_claims(validity_info, {"signed", "validFrom", "validUntil"})
+    except ValueError as ve:
+        raise ValueError(f"validityInfo non valido: {ve}") from ve
+    _check_validity_range(validity_info["signed"], validity_info["validFrom"], validity_info["validUntil"])
+
+
 # Restituisce mso
 def _handle_payload(cbor_elem: bytes, expected_version: str, expected_doc_type: str) -> dict:
     try:
         decoded = cbor2.loads(cbor_elem)
-
-        if isinstance(decoded, cbor2.CBORTag):
-            mso = cbor2.loads(decoded.value)
-
-            if mso:
-                # Estrai campi obbligatori
-                doc_type = mso.get("docType")
-                version = mso.get("version")
-                value_digests = mso.get("valueDigests")
-                digest_algorithm = mso.get("digestAlgorithm")
-                device_key_info = mso.get("deviceKeyInfo")
-                validity_info = mso.get("validityInfo")
-
-                # controllo campo docType
-                if not doc_type:
-                    raise ValueError("Il MSO non presenta il campo 'docType'")
-
-                if doc_type != expected_doc_type:
-                    raise ValueError(
-                        f"Il valore del campo 'docType' del MSO non è valido: atteso '{expected_doc_type}', trovato '{doc_type}'"
-                    )
-
-                # controllo campo version
-                if not version:
-                    raise ValueError("Il MSO non presenta il campo 'version'")
-
-                if version != expected_version:
-                    raise ValueError(
-                        f"Il valore del campo 'version' del MSO non è valido: atteso '{expected_version}', trovato '{version}'"
-                    )
-
-                # controllo campo valueDigests
-                if not value_digests:
-                    raise ValueError("Il MSO non presenta il campo 'valueDigests'")
-
-                if not isinstance(value_digests, dict):
-                    raise ValueError("Il valore del campo 'valueDigests' del MSO presenta un formato non valido")
-
-                # controllo campo digestAlgorithm
-                if not digest_algorithm:
-                    raise ValueError("Il MSO non presenta il campo 'digestAlgorithm'")
-
-                if digest_algorithm != HASH_ALGORITHM:
-                    raise ValueError(
-                        f"Il valore del campo 'digestAlgorithm' del MSO non è valido: atteso '{HASH_ALGORITHM}', trovato '{digest_algorithm}'"
-                    )
-
-                # controllo campo deviceKeyInfo
-                if not device_key_info:
-                    raise ValueError("Il MSO non presenta il campo 'deviceKeyInfo'")
-
-                if not isinstance(device_key_info, dict):
-                    raise ValueError("Il valore del campo 'deviceKeyInfo' del MSO presenta un formato non valido")
-
-                device_key = device_key_info.get("deviceKey")
-
-                if not device_key:
-                    raise ValueError("Il MSO non presenta il campo 'deviceKeyInfo.deviceKey'")
-
-                if not isinstance(device_key, dict):
-                    raise ValueError(
-                        "Il valore del campo 'deviceKeyInfo.deviceKey' del MSO presenta un formato non valido"
-                    )
-
-                # controllo campo validityInfo
-                if not validity_info:
-                    raise ValueError("Il MSO non presenta il campo 'validityInfo'")
-
-                if not isinstance(validity_info, dict):
-                    raise ValueError("Il valore del campo 'validityInfo' del MSO presenta un formato non valido")
-
-                try:
-                    validity_info_expected_claims = {"signed", "validFrom", "validUntil"}
-                    check_required_claims(validity_info, validity_info_expected_claims)
-                except ValueError as ve:
-                    raise ValueError(f"Il valore del campo 'validityInfo' del MSO non è valido: {ve}")
-
-                signed_dt = validity_info.get("signed")
-                valid_from_dt = validity_info.get("validFrom")
-                valid_until_dt = validity_info.get("validUntil")
-
-                _check_validity_range(signed_dt, valid_from_dt, valid_until_dt)
-
-                return mso
-            else:
-                raise ValueError("MSO non trovato all'interno del payload")
-        else:
+        if not isinstance(decoded, cbor2.CBORTag):
             raise ValueError("Payload non è unn CBOR valido")
-
+        mso = cbor2.loads(decoded.value)
+        if not mso:
+            raise ValueError("MSO non trovato all'interno del payload")
+        _validate_mso_core(mso, expected_version, expected_doc_type)
+        _validate_mso_device_and_validity(mso)
+        return mso
     except cbor2.CBORDecodeError:
         raise ValueError("Payload non è unn CBOR")
 

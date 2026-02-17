@@ -5,6 +5,7 @@ import io
 import json
 import secrets
 import string
+import unicodedata
 from datetime import datetime, timezone
 from typing import Tuple, Union
 from urllib.parse import parse_qs, urlparse
@@ -31,7 +32,6 @@ from cryptography.hazmat.primitives.serialization import (
     load_pem_public_key,
 )
 from jwcrypto import jwk
-import unicodedata
 
 from constants import CONTENT_PDF_BASE_64_PREFIX
 
