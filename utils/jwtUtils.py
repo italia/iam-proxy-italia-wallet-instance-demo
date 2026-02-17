@@ -38,34 +38,41 @@ def verify_with_keys(main_key, other_keys, kid, try_verify):
     errors = []
 
     for candidate_kid, key in candidate_keys:
+        # codeql[py/log-injection]
         logger.debug("🔑 Provo a verificare il JWT con chiave kid=%s", sanitize_for_logging(candidate_kid))
         try:
             result = try_verify(key)
             if result:
+                # codeql[py/log-injection]
                 logger.debug("✅ JWT verificato con chiave kid=%s", sanitize_for_logging(candidate_kid))
                 return result
         except jwt.InvalidSignatureError:
             msg = f"kid={candidate_kid}: Firma JWT non valida"
             errors.append(msg)
+            # codeql[py/log-injection]
             logger.debug("❌ %s", sanitize_for_logging(msg))
 
         except jwt.ExpiredSignatureError:
             msg = f"kid={candidate_kid}: JWT scaduto"
             errors.append(msg)
+            # codeql[py/log-injection]
             logger.debug("❌ %s", sanitize_for_logging(msg))
 
         except jwt.InvalidTokenError as e:
             msg = f"kid={candidate_kid}: JWT non valido ({e})"
             errors.append(msg)
+            # codeql[py/log-injection]
             logger.debug("❌ %s", sanitize_for_logging(msg))
 
         except Exception as e:
             msg = f"kid={candidate_kid}: Errore imprevisto ({e})"
             errors.append(msg)
+            # codeql[py/log-injection]
             logger.debug("❌ %s", sanitize_for_logging(msg))
 
     # se siamo qui → tutte le chiavi hanno fallito
     error_msg = "JWT non validato con nessuna chiave. Motivi: " + "; ".join(errors)
+    # codeql[py/log-injection]
     logger.error("🚫 %s", sanitize_for_logging(error_msg))
     raise ValueError(error_msg)
 

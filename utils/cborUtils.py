@@ -73,6 +73,7 @@ def decode_and_verify_issuer_signed(
     """
     try:
         logger.debug("➡️  Issuer signed da validare e decodificare:")
+        # codeql[py/log-injection]
         logger.debug("%s", sanitize_for_logging(issuer_signed_base64_url))
 
         # Decodifica issuer signed base64 url encoded
@@ -80,6 +81,7 @@ def decode_and_verify_issuer_signed(
         issuer_signed = cbor2.loads(issuer_signed_bytes)
 
         logger.debug("✅ Issuer signed decodificato:")
+        # codeql[py/log-injection]
         logger.debug("%s", sanitize_for_logging(pprint.pformat(issuer_signed)))
 
         issuer_auth_array = issuer_signed["issuerAuth"]
@@ -115,6 +117,7 @@ def decode_and_verify_issuer_signed(
         return result_json
 
     except Exception as e:
+        # codeql[py/log-injection]
         logger.error("❌ La credenziale rilasciata non è valida: %s", sanitize_for_logging(str(e)))
         raise ValueError(f"La credenziale rilasciata non è valida: {e}")
 
@@ -301,6 +304,7 @@ def _handle_signature(
     signature_bytes: bytes, alg: int, cert_der_bytes: bytes, protected_header_bytes: bytes, payload_bytes: bytes
 ):
     alg_name = _cose_alg_id_to_name(alg)
+    # codeql[py/log-injection]
     logger.debug("📌 Verifica firma con algoritmo COSE %s", sanitize_for_logging(alg_name))
 
     # 1. Recupero chiave pubblica per validare la firma
@@ -340,6 +344,7 @@ def _handle_signature(
 
     # 3. Serializzazione della struttura firmata in CBOR (to_be_signed)
     to_be_signed = cbor2.dumps(sig_structure)
+    # codeql[py/log-injection]
     logger.debug("📄 to_be_signed generato: %s", sanitize_for_logging(to_be_signed.hex()))
 
     # 4 Calcolo del digest (hash) della struttura firmata
@@ -359,6 +364,7 @@ def _handle_signature(
     digest.update(to_be_signed)
     digest_bytes = digest.finalize()
 
+    # codeql[py/log-injection]
     logger.debug(
         "🔍 Digest calcolato su to_be_signed (%s): %s",
         sanitize_for_logging(hash_alg.name),
@@ -369,12 +375,15 @@ def _handle_signature(
     # Nota: signature_bytes in COSE sono concatenazione r||s (raw)
     r, s = _parse_cose_ecdsa_signature(signature_bytes, alg)
 
+    # codeql[py/log-injection]
     logger.debug("🖋️  Firma COSE - r: %s", sanitize_for_logging(r))
+    # codeql[py/log-injection]
     logger.debug("🖋️  Firma COSE - s: %s", sanitize_for_logging(s))
 
     # Codifica r,s in formato DER ASN.1 perché cryptography (e OpenSSL) usano quello
     der_signature = encode_dss_signature(r, s)
 
+    # codeql[py/log-injection]
     logger.debug("🖋️  Firma COSE - DER: %s", sanitize_for_logging(der_signature))
 
     # 6. Verifica firma
@@ -382,6 +391,7 @@ def _handle_signature(
         public_key.verify(der_signature, to_be_signed, ec.ECDSA(hash_alg))
         logger.debug("✅ Firma valida")
     except InvalidSignature as e:
+        # codeql[py/log-injection]
         logger.error(
             "❌ Firma non valida per algoritmo %s: %s",
             sanitize_for_logging(alg_name),
@@ -389,6 +399,7 @@ def _handle_signature(
         )
         raise ValueError("Firma non valida") from e
     except Exception as e:
+        # codeql[py/log-injection]
         logger.error(
             "❌ Errore durante la verifica della firma per algoritmo %s: %s",
             sanitize_for_logging(alg_name),

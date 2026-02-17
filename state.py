@@ -90,6 +90,7 @@ class CredentialStore:
         Restituisce il dizionario {"data_row": ..., "vct": ..., "claims": ..., "status_assertion": ..., "status": ... } o None.
         """
         prefix_lower = prefix.lower()
+        # codeql[py/log-injection]
         logger.debug(
             "🔍 Ricerca nel wallet crededenziale la cui chiave ha come prefisso: %s",
             sanitize_for_logging(repr(prefix_lower)),
@@ -118,6 +119,7 @@ class CredentialStore:
         Restituisce una tupla (chiave, valore) o None.
         Valore è il dizionario {"data_row": ..., "vct": ..., "claims": ..., "status_assertion": ..., "status": ... } o None.
         """
+        # codeql[py/log-injection]
         logger.debug("🔍 Ricerca nel wallet crededenziale il cui vct è: %s", sanitize_for_logging(vct))
         for k, entry in self._store.items():
             if entry.get("vct") == vct:

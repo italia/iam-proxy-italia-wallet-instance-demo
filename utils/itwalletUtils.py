@@ -32,6 +32,7 @@ def _parse_json_for_par(response: requests.Response) -> dict:
 
     result = _parse_json_response(response, str(response.url))
     logger.info("✅ Risposta OK:")
+    # codeql[py/log-injection]
     logger.info("%s", sanitize_for_logging(json.dumps(result, indent=2)))
     return result
 
@@ -39,6 +40,7 @@ def _parse_json_for_par(response: requests.Response) -> dict:
 def _parse_text_response(response: requests.Response) -> str:
     """Return response body as stripped text."""
     text = response.text.strip()
+    # codeql[py/log-injection]
     logger.info("✅ Risposta: %s", sanitize_for_logging(text[:200] + "..." if len(text) > 200 else text))
     return text
 
@@ -51,6 +53,7 @@ def _parse_jwt_response(expected_ct: str):
         if expected_ct not in ct:
             raise RuntimeError(f"Risposta non {expected_ct} ma {ct}")
         text = response.text.strip()
+        # codeql[py/log-injection]
         logger.info("✅ JWT ricevuto: %s", sanitize_for_logging(text))
         return text
 
@@ -90,8 +93,11 @@ def request_as_par(
         "OAuth-Client-Attestation-PoP": wallet_attestation_dpop_jwt,
     }
     data = {"client_id": client_id, "request": request_object_jwt}
+    # codeql[py/log-injection]
     logger.info(">>>> Invio POST a %s", sanitize_for_logging(url))
+    # codeql[py/log-injection]
     logger.info("📦 Header:\n%s", sanitize_for_logging(json.dumps(headers, indent=2)))
+    # codeql[py/log-injection]
     logger.info("📦 Payload:\n%s", sanitize_for_logging(json.dumps(data, indent=2)))
     return http_request_with_retry(
         "POST",
@@ -129,6 +135,7 @@ def request_authorize(
         In caso di errore, rilancia un'eccezione.
     """
     full_url = url + query_string
+    # codeql[py/log-injection]
     logger.info(">>>> Invio GET %s", sanitize_for_logging(full_url))
     return http_request_with_retry(
         "GET",
@@ -182,8 +189,11 @@ def request_token(
         "DPoP": dpop_proof_jwt,
     }
     data = {"grant_type": grant_type, "code": code, "redirect_uri": redirect_uri, "code_verifier": code_verifier}
+    # codeql[py/log-injection]
     logger.info(">>>> Invio POST a %s", sanitize_for_logging(url))
+    # codeql[py/log-injection]
     logger.info("📦 Header:\n%s", sanitize_for_logging(json.dumps(headers, indent=2)))
+    # codeql[py/log-injection]
     logger.info("📦 Payload:\n%s", sanitize_for_logging(json.dumps(data, indent=2)))
     return http_request_with_retry(
         "POST",
@@ -232,8 +242,11 @@ def request_credential(
         "DPoP": dpop_proof_jwt,
     }
     data = {"credential_identifier": credential_id, "proof": {"proof_type": "jwt", "jwt": proof_jwt}}
+    # codeql[py/log-injection]
     logger.info(">>>> Invio POST a %s", sanitize_for_logging(url))
+    # codeql[py/log-injection]
     logger.info("📦 Header:\n%s", sanitize_for_logging(json.dumps(headers, indent=2)))
+    # codeql[py/log-injection]
     logger.info("📦 Payload:\n%s", sanitize_for_logging(json.dumps(data, indent=2)))
     return http_request_with_retry(
         "POST",
@@ -258,6 +271,7 @@ def _parse_nonce_response(response: requests.Response) -> str:
     c_nonce = result.get("c_nonce")
     if c_nonce is None:
         raise ValueError("Il JSON ricevuto non contiene la chiave 'c_nonce'")
+    # codeql[py/log-injection]
     logger.info("✅ c_nonce estratto: %s", sanitize_for_logging(c_nonce))
     return c_nonce
 
@@ -279,7 +293,9 @@ def request_nonce(
         In caso di errore, rilancia un'eccezione.
     """
     headers = {"Content-Type": "application/json; charset=utf-8", "Accept": "application/json; charset=UTF-8"}
+    # codeql[py/log-injection]
     logger.info(">>>> Invio POST a %s", sanitize_for_logging(url))
+    # codeql[py/log-injection]
     logger.info("📦 Header:\n%s", sanitize_for_logging(json.dumps(headers, indent=2)))
     return http_request_with_retry(
         "POST",
@@ -314,6 +330,7 @@ def request_request_uri(
         Dizionario JSON della risposta, o eccezione in caso di errore.
     """
     full_url = url + query_string
+    # codeql[py/log-injection]
     logger.info(">>>> Invio GET %s", sanitize_for_logging(full_url))
     return http_request_with_retry(
         "GET",
@@ -351,8 +368,11 @@ def request_response_uri(
     """
     headers = {"Content-Type": "application/x-www-form-urlencoded", "Accept": "application/json; charset=utf-8"}
     data = {"response": response_uri_request_jwt, "state": state}
+    # codeql[py/log-injection]
     logger.info(">>>> Invio POST a %s", sanitize_for_logging(url))
+    # codeql[py/log-injection]
     logger.info("📦 Header:\n%s", sanitize_for_logging(json.dumps(headers, indent=2)))
+    # codeql[py/log-injection]
     logger.info("📦 Payload:\n%s", sanitize_for_logging(json.dumps(data, indent=2)))
     return http_request_with_retry(
         "POST",
@@ -370,6 +390,7 @@ def request_response_uri(
 def _handle_presentation_redirect(response: requests.Response) -> str:
     """Extract redirect URL from 3xx response for presentation callback."""
     redirect_url = response.headers["Location"]
+    # codeql[py/log-injection]
     logger.info("➡️  Redirect verso: %s", sanitize_for_logging(redirect_url))
     return redirect_url
 
@@ -394,15 +415,18 @@ def request_presentation_callback(
         ConnectionError: se la connessione fallisce dopo max_retries tentativi
         RuntimeError: se la risposta non è OK
     """
+    # codeql[py/log-injection]
     logger.info(">>>> Invio GET %s", sanitize_for_logging(url))
 
     def _log_and_parse(response: requests.Response) -> str:
         logger.info("📍 Risposta: %s", response.status_code)
+        # codeql[py/log-injection]
         logger.info(
             "📍 Body: %s",
             sanitize_for_logging(response.text[:500] + ("..." if len(response.text) > 500 else "")),
         )
         text = response.text.strip()
+        # codeql[py/log-injection]
         logger.info("✅ Risposta finale: %s", sanitize_for_logging(text))
         return text
 
@@ -444,8 +468,11 @@ def request_status(
     """
     headers = {"Content-Type": "application/json; charset=utf-8", "Accept": "application/json; charset=UTF-8"}
     data = {"status_assertion_requests": status_assertion_requests}
+    # codeql[py/log-injection]
     logger.info(">>>> Invio POST a %s", sanitize_for_logging(url))
+    # codeql[py/log-injection]
     logger.info("📦 Header:\n%s", sanitize_for_logging(json.dumps(headers, indent=2)))
+    # codeql[py/log-injection]
     logger.info("📦 Payload:\n%s", sanitize_for_logging(json.dumps(data, indent=2)))
     return http_request_with_retry(
         "POST",
@@ -1043,11 +1070,13 @@ def generate_response_uri_request_jwe(
         logger.error("❌ La chiave per cifrare il JWE non presenta il claim 'kty'")
         return None
 
+    # codeql[py/log-injection]
     logger.debug(
         "🗝️  Chiave per cifrare il JWE (kid=%s, kty=%s):",
         sanitize_for_logging(kid),
         sanitize_for_logging(kty),
     )
+    # codeql[py/log-injection]
     logger.debug("%s", sanitize_for_logging(json.dumps(enc_key, indent=2)))
 
     # Seleziona algoritmi in base a kty
@@ -1074,7 +1103,9 @@ def generate_response_uri_request_jwe(
         )
         return None
 
+    # codeql[py/log-injection]
     logger.debug("🔑 Algoritmo di cifratura chiave: %s", sanitize_for_logging(key_encryption_alg))
+    # codeql[py/log-injection]
     logger.debug("🛡  Algoritmo di cifratura contenuto: %s", sanitize_for_logging(content_encryption_alg))
 
     # Converte la JWK in oggetto JWK per jose
@@ -1094,6 +1125,7 @@ def generate_response_uri_request_jwe(
     # Crea il payload JWE
     payload = {"vp_token": vp_token, "state": state}
 
+    # codeql[py/log-injection]
     logger.debug(
         "🔓 Payload JWT prima della cifratura:\n%s",
         sanitize_for_logging(json.dumps(payload, indent=2)),
@@ -1109,6 +1141,7 @@ def generate_response_uri_request_jwe(
     # Serializza in formato compatto
     encrypted = jwetoken.serialize(compact=True)
 
+    # codeql[py/log-injection]
     logger.debug("✅ JWE prodotto compatto: %s", sanitize_for_logging(encrypted))
 
     response_uri_request_jwe = encrypted

@@ -19,6 +19,7 @@ def _parse_oid_fed_list(response: requests.Response) -> list[str]:
         return []
     data = response.json()
     if isinstance(data, list) and all(isinstance(x, str) for x in data):
+        # codeql[py/log-injection]
         logger.debug("✅ Array ricevuto: %s", sanitize_for_logging(json.dumps(data, indent=2)))
         return data
     logger.error("❌ Risposta JSON non è un array di stringhe")
@@ -48,6 +49,7 @@ def oid_fed_list(
     """
     url = base_url.rstrip("/") + "/list" + query_string
     headers = {"Accept": "application/json"}
+    # codeql[py/log-injection]
     logger.debug(">>>> Invio GET %s", sanitize_for_logging(url))
     result = http_request_with_retry(
         "GET",
@@ -93,6 +95,7 @@ def oid_fed_fetch_openid_configuration(
     """
     url = base_url.rstrip("/") + "/.well-known/openid-federation"
     headers = {"Accept": "application/entity-statement+jwt"}
+    # codeql[py/log-injection]
     logger.debug(">>>> Invio GET %s", sanitize_for_logging(url))
     return http_request_with_retry(
         "GET",

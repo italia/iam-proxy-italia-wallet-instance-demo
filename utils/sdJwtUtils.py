@@ -35,6 +35,7 @@ def issue_sd_jwt(
     Returns:
         str: Credenziale SD-JWT compatta (<sd-jwt>~<disclosures>~)
     """
+    # codeql[py/log-injection]
     logger.debug("📥 Richiesta emissione della credenziale SD-JWT '%s'", sanitize_for_logging(vct))
 
     # Determina l'algoritmo in base alla curva della chiave privata JWK dell'issuer
@@ -43,6 +44,7 @@ def issue_sd_jwt(
     alg = alg_map.get(crv)
     if not alg:
         raise ValueError(f"La chiave privata JWK dell'issuer presenta una curva non supportata: {crv}")
+    # codeql[py/log-injection]
     logger.debug("🔑 La chiave privata JWK dell'issuer presenta la curva %s", sanitize_for_logging(crv))
 
     # Rimuovi la chiave 'kid' dall'issuer_jwk_dict, se presente
@@ -64,6 +66,7 @@ def issue_sd_jwt(
             raise ValueError(
                 f"La chiave pubblica JWK dell'holder per il key binding presenta una curva non supportata: {crv}"
             )
+        # codeql[py/log-injection]
         logger.debug(
             "🔑 La chiave pubblica dell'holder per il key binding presenta la curva %s",
             sanitize_for_logging(crv),
@@ -81,8 +84,10 @@ def issue_sd_jwt(
             user_claims[k] = v
 
     logger.debug("🧾 Claims disponibili:")
+    # codeql[py/log-injection]
     logger.debug("%s", sanitize_for_logging(json.dumps(claims, indent=2)))
 
+    # codeql[py/log-injection]
     logger.debug(
         "📤 Claim richiesti per la selective disclosure: %s",
         sanitize_for_logging(selectively_disclosable_claims),
@@ -101,6 +106,7 @@ def issue_sd_jwt(
     # La credenziale è già creata nel costruttore
     sd_jwt = issuer.sd_jwt_issuance
 
+    # codeql[py/log-injection]
     logger.debug("✅ SD-JWT generato con successo per '%s'", sanitize_for_logging(vct))
     return sd_jwt
 
@@ -117,6 +123,7 @@ def decode_and_verify_sd_jwt(sd_jwt_compact: str, jwks: dict, disclosures=None) 
             raise ValueError("Il parametro 'jwks' non contiene una lista valida di chiavi in 'keys'")
 
         logger.debug("➡️  Credenziale da validare e decodificare:")
+        # codeql[py/log-injection]
         logger.debug("%s", sanitize_for_logging(sd_jwt_compact))
 
         # Decodifica header e payload
@@ -128,8 +135,10 @@ def decode_and_verify_sd_jwt(sd_jwt_compact: str, jwks: dict, disclosures=None) 
 
         logger.debug("✅ Credenziale decodificata")
         logger.debug("📦 Header:")
+        # codeql[py/log-injection]
         logger.debug("%s", sanitize_for_logging(json.dumps(header, indent=2)))
         logger.debug("📦 Payload:")
+        # codeql[py/log-injection]
         logger.debug("%s", sanitize_for_logging(json.dumps(payload, indent=2)))
 
         # Estrai il kid
@@ -142,7 +151,9 @@ def decode_and_verify_sd_jwt(sd_jwt_compact: str, jwks: dict, disclosures=None) 
         if not issuer_pub_jwk:
             raise ValueError(f"Nessuna chiave trovata con kid={kid} per validare la firma del SD-JWT")
 
+        # codeql[py/log-injection]
         logger.debug("🔑 Chiave trovata con kid: %s", sanitize_for_logging(kid))
+        # codeql[py/log-injection]
         logger.debug("%s", sanitize_for_logging(json.dumps(issuer_pub_jwk, indent=2)))
 
         # Importa la chiave per ispezione della curva (opzionale)
@@ -163,11 +174,13 @@ def decode_and_verify_sd_jwt(sd_jwt_compact: str, jwks: dict, disclosures=None) 
 
         logger.debug("✅ Decodifica e validazione riuscita!")
         logger.debug("📦 Claims finali:")
+        # codeql[py/log-injection]
         logger.debug("%s", sanitize_for_logging(json.dumps(claims, indent=2)))
 
         return claims
 
     except Exception as e:
+        # codeql[py/log-injection]
         logger.error("❌ La credenziale rilasciata non è valida: %s", sanitize_for_logging(str(e)))
         raise ValueError(f"La credenziale rilasciata non è valida: {e}")
 
@@ -194,6 +207,7 @@ def present_sd_jwt(
     Returns:
         str: Presentazione compatta: <sd-jwt>~<disclosures>~<kb-jwt>
     """
+    # codeql[py/log-injection]
     logger.debug("📤 Richiesta presentazione della credenziale SD-JWT %s", sanitize_for_logging(vct))
 
     holder_public_jwk = None
@@ -207,6 +221,7 @@ def present_sd_jwt(
             raise ValueError(
                 f"La chiave privata JWK dell'holder per il key binding presenta una curva non supportata: {crv}"
             )
+        # codeql[py/log-injection]
         logger.debug(
             "🔑 La chiave privata JWK dell'holder per il key binding presenta la curva %s",
             sanitize_for_logging(crv),
@@ -221,13 +236,16 @@ def present_sd_jwt(
 
     payload = _decode_jws_payload(sd_jwt)
     logger.debug("🧾 Payload:")
+    # codeql[py/log-injection]
     logger.debug("%s", sanitize_for_logging(json.dumps(payload, indent=2)))
 
     logger.debug("📜 Disclosure disponibili:")
     for d in disclosures:
         disclosure = _decode_disclosure(d)
+        # codeql[py/log-injection]
         logger.debug("%s", sanitize_for_logging(disclosure))
 
+    # codeql[py/log-injection]
     logger.debug("📤 Claim richiesti per la presentazione: %s", sanitize_for_logging(claims_to_reveal))
 
     holder.create_presentation(
@@ -239,6 +257,7 @@ def present_sd_jwt(
     )
 
     presentation = holder.sd_jwt_presentation
+    # codeql[py/log-injection]
     logger.debug("✅ Presentazione generata per la credenziale %s!", sanitize_for_logging(vct))
     return presentation
 

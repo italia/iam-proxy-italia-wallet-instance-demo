@@ -132,6 +132,7 @@ class ItWalletService:
         if not trust_root_url:
             raise ValueError(f"Nessun Trust root per il paese {country}")
 
+        # codeql[py/log-injection]
         logger.info(
             "ℹ️  Trust root individuato per il paese %s: %s",
             sanitize_for_logging(country),
@@ -154,6 +155,7 @@ class ItWalletService:
         """Process credential issuers from oid_fed_list, apply overrides, return PID provider EC."""
         pid_provider_ec = None
         for entity_id in entity_ids:
+            # codeql[py/log-injection]
             logger.info("➡️  Entity ID: %s", sanitize_for_logging(entity_id))
             ec_payload = self._entity_configuration_management(
                 entity_id, [METADATA_TYPE_FEDERATION_ENTITY, METADATA_TYPE_CREDENTIAL_ISSUER], trust_root_url
@@ -189,6 +191,7 @@ class ItWalletService:
              self.session["code_verifier"]
              self.session["pid_provider_url]
         """
+        # codeql[py/log-injection]
         logger.info("➡️  Richiesta di Inizializzazione del wallet per il paese: %s", sanitize_for_logging(country))
         cred_config_id = extract_claim(current_app.config, "metadata.initialize_flow.credential_configuration_id")
         init_response_mode = extract_claim(current_app.config, "metadata.initialize_flow.response_mode")
@@ -199,6 +202,7 @@ class ItWalletService:
         trust_root_url = extract_claim(current_app.config, f"ms_trust_configuration.{country}.trust_root")
         if not trust_root_url:
             raise ValueError(f"Nessun Trust root per il paese {country}")
+        # codeql[py/log-injection]
         logger.info(
             "ℹ️  Trust root individuato per il paese %s: %s",
             sanitize_for_logging(country),
@@ -211,6 +215,7 @@ class ItWalletService:
         if not app_state.ec_store.exists(trust_root_url):
             trust_root_ec = self._entity_configuration_management(trust_root_url, [METADATA_TYPE_FEDERATION_ENTITY])
             app_state.ec_store.add(trust_root_url, trust_root_ec)
+            # codeql[py/log-injection]
             logger.info("✅ Scaricato e salvato EC trust root %s", sanitize_for_logging(trust_root_url))
 
         params = {"entity_type": METADATA_TYPE_CREDENTIAL_ISSUER}
@@ -220,6 +225,7 @@ class ItWalletService:
             proxies=self.proxies,
             no_proxy_domains=self.no_proxy_domains,
         )
+        # codeql[py/log-injection]
         logger.info("📄 oid_fed_list response: %s", sanitize_for_logging(oid_fed_list_reponse))
 
         pid_provider_ec = self._find_pid_provider_and_process_issuers(
@@ -244,6 +250,7 @@ class ItWalletService:
 
         # Calcola client_id (thumbprint)
         wallet_client_id = get_thumbprint_from_private_key(wallet_private_key)
+        # codeql[py/log-injection]
         logger.debug(
             "ℹ️  Calcolato client id del wallet come thumbprint della sua chiave pvt: %s",
             sanitize_for_logging(wallet_client_id),
@@ -266,8 +273,11 @@ class ItWalletService:
         # Generazione PKCE
         pkce = generate_pkce_pair()
         logger.info("🧪 PKCE Info")
+        # codeql[py/log-injection]
         logger.info(" 🔐 code_verifier: %s", sanitize_for_logging(pkce.get("code_verifier", "")))
+        # codeql[py/log-injection]
         logger.info(" 🧠 code_challenge: %s", sanitize_for_logging(pkce.get("code_challenge", "")))
+        # codeql[py/log-injection]
         logger.info(" 🔧 method: %s", sanitize_for_logging(pkce.get("code_challenge_method", "")))
 
         # Salvataggio in sessione del PKCE code verifier
@@ -305,6 +315,7 @@ class ItWalletService:
         query_filter = f"metadata.{METADATA_TYPE_AUTHORIZATION_SERVER}.pushed_authorization_request_endpoint"
         pid_provider_as_par_url = extract_claim(pid_provider_ec, query_filter)
 
+        # codeql[py/log-injection]
         logger.info("🚀 Invio PAR request al PAR endpoint %s", sanitize_for_logging(pid_provider_as_par_url))
 
         # Effettua una par request
@@ -318,7 +329,9 @@ class ItWalletService:
             no_proxy_domains=self.no_proxy_domains,
         )
 
+        # codeql[py/log-injection]
         logger.info("✅ Ricevuta risposta dal PAR endpoint %s", sanitize_for_logging(pid_provider_as_par_url))
+        # codeql[py/log-injection]
         logger.info("%s", sanitize_for_logging(as_par_response))
 
         request_uri = as_par_response.get("request_uri")
@@ -326,6 +339,7 @@ class ItWalletService:
             raise ValueError("PAR Response non contiene un claim 'request_uri'")
 
         initialize_flow_idphint = extract_claim(current_app.config, f"metadata.initialize_flow.idphints.{idp}")
+        # codeql[py/log-injection]
         logger.info(
             "ℹ️  Selezionato idp %s: %s",
             sanitize_for_logging(idp),
@@ -477,6 +491,7 @@ class ItWalletService:
         """
         Metodo pubblico per rimuovere una credenziale dal proprio wallet.
         """
+        # codeql[py/log-injection]
         logger.info("➡️  Richiesta di rimozione dal wallet della credenziale %s", sanitize_for_logging(credential_id))
 
         # Recupera la tipologia di credenziale riservata all'inizializazzione del wallet
@@ -496,11 +511,13 @@ class ItWalletService:
             if not credentialIsPresent:
                 raise ValueError(f"La credenziale {credential_id} non è presente nel wallet")
 
+            # codeql[py/log-injection]
             logger.info("ℹ️  La credenziale %s è presente nel wallet", sanitize_for_logging(credential_id))
 
             # Rimuove una credenziale se esiste ricercandola per key.
             app_state.credential_store.remove(credential_id)
 
+            # codeql[py/log-injection]
             logger.info("✅ Rimmossa dal wallet la credenziale %s", sanitize_for_logging(credential_id))
 
         return {
@@ -521,10 +538,12 @@ class ItWalletService:
              self.session["rp_state"]
              self.session["rp_response_uri"]
         """
+        # codeql[py/log-injection]
         logger.info(
             "➡️  Richiesta di aggiunta al wallet di una credenziale di tipo %s",
             sanitize_for_logging(credential_configuration_id),
         )
+        # codeql[py/log-injection]
         logger.info(
             "ℹ️  Nel wallet hai al momento: %s",
             sanitize_for_logging(app_state.credential_store.keys_with_vct()),
@@ -532,6 +551,7 @@ class ItWalletService:
 
         if app_state.credential_store.find_by_prefix_with_key(credential_configuration_id):
             raise ValueError(f"La credenziale {credential_configuration_id} è già presente nel wallet")
+        # codeql[py/log-injection]
         logger.info("✅ La credenziale %s non è presente nel wallet", sanitize_for_logging(credential_configuration_id))
 
         validate_credential_and_presentation_flow()
@@ -539,6 +559,7 @@ class ItWalletService:
         trust_root_url, eaa_provider_url, eaa_provider_ec = get_trust_root_and_eaa_provider_ec(
             credential_configuration_id
         )
+        # codeql[py/log-injection]
         logger.info("ℹ️  Trust root: %s", sanitize_for_logging(trust_root_url))
         logger.info(
             "✅ Trovata entità %s che rilascia credenziali di tipo %s", eaa_provider_url, credential_configuration_id
@@ -559,6 +580,7 @@ class ItWalletService:
 
         # Calcola client_id (thumbprint)
         wallet_client_id = get_thumbprint_from_private_key(wallet_private_key)
+        # codeql[py/log-injection]
         logger.debug(
             "ℹ️  Calcolato client id del wallet come thumbprint della sua chiave pvt: %s",
             sanitize_for_logging(wallet_client_id),
@@ -580,8 +602,11 @@ class ItWalletService:
         # Generazione PKCE
         pkce = generate_pkce_pair()
         logger.info("🧪 PKCE Info")
+        # codeql[py/log-injection]
         logger.info(" 🔐 code_verifier: %s", sanitize_for_logging(pkce.get("code_verifier", "")))
+        # codeql[py/log-injection]
         logger.info(" 🧠 code_challenge: %s", sanitize_for_logging(pkce.get("code_challenge", "")))
+        # codeql[py/log-injection]
         logger.info(" 🔧 method: %s", sanitize_for_logging(pkce.get("code_challenge_method", "")))
 
         # Salvataggio in sessione del PKCE code verifier
@@ -618,6 +643,7 @@ class ItWalletService:
         query_filter = f"metadata.{METADATA_TYPE_AUTHORIZATION_SERVER}.pushed_authorization_request_endpoint"
         eaa_provider_as_par_url = extract_claim(eaa_provider_ec, query_filter)
 
+        # codeql[py/log-injection]
         logger.info("🚀 Invio PAR request al PAR endpoint: %s", sanitize_for_logging(eaa_provider_as_par_url))
 
         # Effettua una par request
@@ -631,7 +657,9 @@ class ItWalletService:
             no_proxy_domains=self.no_proxy_domains,
         )
 
+        # codeql[py/log-injection]
         logger.info("✅ Ricevuta risposta dal PAR endpoint: %s", sanitize_for_logging(eaa_provider_as_par_url))
+        # codeql[py/log-injection]
         logger.info("%s", sanitize_for_logging(as_par_response))
 
         request_uri = as_par_response.get("request_uri")
@@ -715,6 +743,7 @@ class ItWalletService:
         """
         logger.info("➡️  Richiesta di completamento dell'operazione di aggiunta al wallet di una credenziale")
 
+        # codeql[py/log-injection]
         logger.info("➡️  %s", sanitize_for_logging(credentials_presenting))
 
         # recupero selected_country dalla memoria
@@ -1006,6 +1035,7 @@ class ItWalletService:
             f"➡️  Richiesta di completamento dell'operazione di login presso il Relying Party / Verifier {rp_client_id} effettuata dal wallet"
         )
 
+        # codeql[py/log-injection]
         logger.info("➡️  %s", sanitize_for_logging(credentials_presenting))
 
         # recupero EC del Relying Party / Verifier dalla memoria usando come chiave di ricerca l'id del Relying Party / Verifier
@@ -1204,6 +1234,7 @@ class ItWalletService:
 
         # Calcola client_id (thumbprint)
         wallet_client_id = get_thumbprint_from_private_key(wallet_private_key)
+        # codeql[py/log-injection]
         logger.debug(
             "ℹ️  Calcolato client id del wallet come thumbprint della sua chiave pvt: %s",
             sanitize_for_logging(wallet_client_id),
@@ -1414,6 +1445,7 @@ class ItWalletService:
 
         # Calcola client_id (thumbprint)
         wallet_client_id = get_thumbprint_from_private_key(wallet_private_key)
+        # codeql[py/log-injection]
         logger.debug(
             "ℹ️  Calcolato client id del wallet come thumbprint della sua chiave pvt: %s",
             sanitize_for_logging(wallet_client_id),
@@ -1635,6 +1667,7 @@ class ItWalletService:
 
         # Calcola client_id (thumbprint)
         wallet_client_id = get_thumbprint_from_private_key(wallet_private_key)
+        # codeql[py/log-injection]
         logger.debug(
             "ℹ️  Calcolato client id del wallet come thumbprint della sua chiave pvt: %s",
             sanitize_for_logging(wallet_client_id),
@@ -1884,9 +1917,11 @@ class ItWalletService:
         logger.debug("=== 🌐 Dati in sessione ===")
         try:
             session_json = json.dumps(dict(self.session), indent=2, ensure_ascii=False)
+            # codeql[py/log-injection]
             logger.debug("%s", sanitize_for_logging(session_json))
         except TypeError:
             # fallback se qualche valore non è serializzabile
             for key, value in self.session.items():
+                # codeql[py/log-injection]
                 logger.debug("%s: %s", sanitize_for_logging(key), sanitize_for_logging(value))
         logger.debug("========================")

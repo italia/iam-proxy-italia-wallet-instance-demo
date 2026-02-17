@@ -47,6 +47,7 @@ def wallet_access():
             session_id = generate_nonce()
             session["session_id"] = session_id
 
+            # codeql[py/log-injection]
             logger.info("✅ Effettuato login (sessione inizializzata id=%s).", sanitize_for_logging(session_id))
 
             return redirect(url_for("wallet_routes.wallet_home", session_id=session_id))
@@ -82,6 +83,7 @@ def wallet_home():
 @wallet_routes.route("/wallet/logout", methods=["GET"])
 def logout():
     session_id = session.get("session_id", "")
+    # codeql[py/log-injection]
     logger.info("✅ Effettuato logout (sessione cancellata id=%s).", sanitize_for_logging(session_id))
 
     # Svuota la sessione

@@ -29,11 +29,13 @@ def get_proxies_from_config() -> tuple[dict | None, list[str]]:
     no_proxy_raw = extract_claim(current_app.config, "metadata.no_proxy") or ""
     no_proxy_domains = [d.strip() for d in no_proxy_raw.split(",") if d.strip()]
     logger.info("🚨  Configuring proxy...")
+    # codeql[py/log-injection]
     logger.info(
         "🚨  Proxy abilitati: HTTP=%s, HTTPS=%s",
         sanitize_for_logging(proxies["http"]),
         sanitize_for_logging(proxies["https"]),
     )
+    # codeql[py/log-injection]
     logger.info("🚨  No proxy domains: %s", sanitize_for_logging(no_proxy_domains))
     return proxies, no_proxy_domains
 
@@ -149,6 +151,7 @@ def apply_replace_values(entity_id: str, config_prefix: str) -> int:
         return 0
     count = app_state.ec_store.replace_in_all_value_fields(old_val, new_val)
     if count:
+        # codeql[py/log-injection]
         logger.info("✅ Sostituite %d occorrenze in EC %s", count, sanitize_for_logging(entity_id))
     return count
 

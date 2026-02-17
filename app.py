@@ -37,6 +37,7 @@ def from_json_filter(value):
     try:
         return json.loads(value)
     except (TypeError, json.JSONDecodeError) as e:
+        # codeql[py/log-injection]
         logging.getLogger(__name__).error(
             "Errore parsing JSON nel filtro: %s, valore: %s",
             sanitize_for_logging(str(e)),
@@ -142,6 +143,7 @@ try:
 except Exception as e:
     logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger(__name__)
+    # codeql[py/log-injection]
     logger.error("❌ Errore caricamento configurazione: %s", sanitize_for_logging(str(e)))
 
 # Registrazione dei blueprint
@@ -155,6 +157,7 @@ if __name__ == "__main__":
     port = int(os.environ.get("FLASK_RUN_PORT", 8080))
 
     logger.info("🚀 Avvio dell'app Flask...")
+    # codeql[py/log-injection]
     logger.info(
         "🌐 L'app è accessibile all'indirizzo: http://localhost:%s (o http://<docker-host-ip>:%s)",
         sanitize_for_logging(port),

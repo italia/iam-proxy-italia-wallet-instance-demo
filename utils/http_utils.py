@@ -136,6 +136,7 @@ def http_request_with_retry(
             response = _execute_request(method, url, req_kwargs)
             return _process_response(response, url, parse_response, handle_redirect)
         except requests.ConnectionError as ce:
+            # codeql[py/log-injection]
             logger.error(
                 "❌ Tentativo %d - Errore di connessione: %s",
                 attempt,
