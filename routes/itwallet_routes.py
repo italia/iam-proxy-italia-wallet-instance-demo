@@ -650,6 +650,11 @@ def _get_template_name_for_credential_key(key: str) -> str | None:
     )
     if not wallet_credential_supported:
         return None
+
+    id_credential = extract_claim(current_app.config, "metadata.initialize_flow.credential_configuration_id")
+    if id_credential:
+        wallet_credential_supported.append(id_credential)
+
     supported_list = list(wallet_credential_supported)
     key_lower = key.lower()
     # Find the config id that matches the key (longest prefix match first)
