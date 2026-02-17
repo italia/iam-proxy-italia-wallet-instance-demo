@@ -129,6 +129,15 @@ python app.py
 
 4️⃣ Open your browser at: https://localhost:8080/
 
+#### 4.1.3. Local checks (before pushing / PR)
+
+Run quality and security checks locally before opening a PR:
+
+```bash
+make install-check-deps   # one-time: install ruff, radon, bandit
+make check               # run ruff (lint+format), radon (complexity), bandit (security)
+```
+
 ### 4.2. Container Mode
 
 #### 4.2.1. Prerequisites

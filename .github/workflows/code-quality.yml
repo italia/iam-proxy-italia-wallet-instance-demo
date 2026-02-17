@@ -61,3 +61,21 @@ jobs:
         run: |
           pip install xenon
           xenon --max-absolute B --max-modules B --max-average B app.py routes/ service/ utils/
+
+  security-bandit:
+    name: Security (Bandit)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Bandit
+        run: pip install bandit
+
+      - name: Run Bandit
+        run: bandit -r app.py routes/ service/ utils/ state.py constants.py -ll -c pyproject.toml

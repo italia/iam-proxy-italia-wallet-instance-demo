@@ -72,8 +72,8 @@ def wallet_reset():
         logger.info("✅ Il Wallet è stato resettato correttamente")
         return jsonify({"success": True}), 200
     except Exception as e:
-        logger.error(f"❌ {e}")
-        return jsonify({"success": False, "data": {"error": f"{e}"}}), 500
+        logger.error("❌ %s", sanitize_for_logging(str(e)))
+        return jsonify({"success": False, "data": {"error": str(e)}}), 500
 
 
 @itwallet_routes.route("/itwallet/cb", methods=["GET"])
@@ -84,7 +84,7 @@ def wallet_callback():
     if params_list:
         logger.info("➡️  Ricevuta request GET /itwallet/cb con query string:")
         for k, v in params_list:
-            logger.info(f"   {k} = {v}")
+            logger.info("   %s = %s", sanitize_for_logging(k), sanitize_for_logging(v))
     else:
         logger.info("➡️  Ricevuta request GET /itwallet/cb senza query string")
 
@@ -151,11 +151,11 @@ def initItWallet():
         return jsonify(result), status_code
 
     except ValueError as ve:
-        logger.error(f"❌ {ve}")
-        return jsonify({"success": False, "data": {"error": f"{ve}"}}), 400
+        logger.error("❌ %s", sanitize_for_logging(str(ve)))
+        return jsonify({"success": False, "data": {"error": str(ve)}}), 400
     except Exception as e:
-        logger.error(f"❌ {e}")
-        return jsonify({"success": False, "data": {"error": f"{e}"}}), 500
+        logger.error("❌ %s", sanitize_for_logging(str(e)))
+        return jsonify({"success": False, "data": {"error": str(e)}}), 500
 
 
 @itwallet_routes.route("/itwallet/init/complete", methods=["GET"])
@@ -187,11 +187,11 @@ def completedInitItWallet():
         return jsonify(result), status_code
 
     except ValueError as ve:
-        logger.error(f"❌ {ve}")
-        return jsonify({"success": False, "data": {"error": f"{ve}"}}), 400
+        logger.error("❌ %s", sanitize_for_logging(str(ve)))
+        return jsonify({"success": False, "data": {"error": str(ve)}}), 400
     except Exception as e:
-        logger.error(f"❌ {e}")
-        return jsonify({"success": False, "data": {"error": f"{e}"}}), 500
+        logger.error("❌ %s", sanitize_for_logging(str(e)))
+        return jsonify({"success": False, "data": {"error": str(e)}}), 500
 
 
 @itwallet_routes.route("/itwallet/credentialSupported", methods=["GET"])
@@ -225,9 +225,11 @@ def credentialSupported():
 
         logger.info("✅ Tipologie di credenziali supportate dal wallet:")
         for c in wallet_credentialSupported_list:
-            logger.info(f" - {c}")
+            logger.info(" - %s", sanitize_for_logging(c))
 
-        logger.info(f"ℹ️  Nel wallet hai al momento: {app_state.credential_store.keys_with_vct()}")
+        logger.info(
+            "ℹ️  Nel wallet hai al momento: %s", sanitize_for_logging(app_state.credential_store.keys_with_vct())
+        )
 
         # Genera lista di dizionari
         result = []
@@ -243,11 +245,11 @@ def credentialSupported():
         return jsonify({"success": True, "data": result}), 200
 
     except ValueError as ve:
-        logger.error(f"❌ {ve}")
-        return jsonify({"success": False, "data": {"error": f"{ve}"}}), 400
+        logger.error("❌ %s", sanitize_for_logging(str(ve)))
+        return jsonify({"success": False, "data": {"error": str(ve)}}), 400
     except Exception as e:
-        logger.error(f"❌ {e}")
-        return jsonify({"success": False, "data": {"error": f"{e}"}}), 500
+        logger.error("❌ %s", sanitize_for_logging(str(e)))
+        return jsonify({"success": False, "data": {"error": str(e)}}), 500
 
 
 @itwallet_routes.route("/itwallet/objectTypesInMemory", methods=["GET"])
@@ -273,13 +275,15 @@ def objectTypesInMemory():
         # Recupera tipologie di oggetti presenti nella memoria del Wallet.
         objectTypesInMemory = app_state.get_store_types()
 
-        logger.info(f"✅ Tipologie di oggetti presenti nella memoria del Wallet:  {objectTypesInMemory}")
+        logger.info(
+            "✅ Tipologie di oggetti presenti nella memoria del Wallet:  %s", sanitize_for_logging(objectTypesInMemory)
+        )
 
         return jsonify({"success": True, "data": objectTypesInMemory}), 200
 
     except Exception as e:
-        logger.error(f"❌ {e}")
-        return jsonify({"success": False, "data": {"error": f"{e}"}}), 500
+        logger.error("❌ %s", sanitize_for_logging(str(e)))
+        return jsonify({"success": False, "data": {"error": str(e)}}), 500
 
 
 @itwallet_routes.route("/itwallet/viewObjectTypeInMemory", methods=["POST"])
@@ -305,7 +309,7 @@ def viewObjectTypeInMemory():
 
     try:
         data = request.get_json()  # <-- recupera il JSON dal body della richiesta
-        logger.info(f"{data}")
+        logger.info("%s", sanitize_for_logging(data))
 
         # Verifica presenza della chiave objectType
         objectTypeValue = data.get("objectType")
@@ -315,14 +319,14 @@ def viewObjectTypeInMemory():
         # Recupera il contenuto dell'oggetto richiesto (lista di valori).
         result = app_state.get_store(objectTypeValue)
 
-        logger.info(f"✅ Recuperato oggetto di tipo {objectTypeValue} dalla memoria del Wallet")
-        logger.debug(json.dumps(result, indent=2, ensure_ascii=False))
+        logger.info("✅ Recuperato oggetto di tipo %s dalla memoria del Wallet", sanitize_for_logging(objectTypeValue))
+        logger.debug("%s", sanitize_for_logging(json.dumps(result, indent=2, ensure_ascii=False)))
 
         return jsonify({"success": True, "data": result}), 200
 
     except Exception as e:
-        logger.error(f"❌ {e}")
-        return jsonify({"success": False, "data": {"error": f"{e}"}}), 500
+        logger.error("❌ %s", sanitize_for_logging(str(e)))
+        return jsonify({"success": False, "data": {"error": str(e)}}), 500
 
 
 @itwallet_routes.route("/itwallet/onboardedRelyingParties", methods=["GET"])
@@ -354,7 +358,7 @@ def onboardedRelyingParties():
 
             logger.info("✅ Relying Party onboardati:")
             for rp in onboardedRelyingParties:
-                logger.info(f" - {rp}")
+                logger.info(" - %s", sanitize_for_logging(rp))
 
             # Genera lista di dizionari
             result = []
@@ -366,11 +370,11 @@ def onboardedRelyingParties():
         else:
             return jsonify(result), 500
     except ValueError as ve:
-        logger.error(f"❌ {ve}")
-        return jsonify({"success": False, "data": {"error": f"{ve}"}}), 400
+        logger.error("❌ %s", sanitize_for_logging(str(ve)))
+        return jsonify({"success": False, "data": {"error": str(ve)}}), 400
     except Exception as e:
-        logger.error(f"❌ {e}")
-        return jsonify({"success": False, "data": {"error": f"{e}"}}), 500
+        logger.error("❌ %s", sanitize_for_logging(str(e)))
+        return jsonify({"success": False, "data": {"error": str(e)}}), 500
 
 
 @itwallet_routes.route("/itwallet/deleteCredential", methods=["POST"])
@@ -400,7 +404,7 @@ def deleteCredentialItWallet():
 
     try:
         data = request.get_json()  # <-- recupera il JSON dal body della richiesta
-        logger.info(f"{data}")
+        logger.info("%s", sanitize_for_logging(data))
 
         # Verifica presenza della chiave credentialId
         credential_id = data.get("credentialId")
@@ -414,11 +418,11 @@ def deleteCredentialItWallet():
         return jsonify(result), status_code
 
     except ValueError as ve:
-        logger.error(f"❌ {ve}")
-        return jsonify({"success": False, "data": {"error": f"{ve}"}}), 400
+        logger.error("❌ %s", sanitize_for_logging(str(ve)))
+        return jsonify({"success": False, "data": {"error": str(ve)}}), 400
     except Exception as e:
-        logger.error(f"❌ {e}")
-        return jsonify({"success": False, "data": {"error": f"{e}"}}), 500
+        logger.error("❌ %s", sanitize_for_logging(str(e)))
+        return jsonify({"success": False, "data": {"error": str(e)}}), 500
 
 
 @itwallet_routes.route("/itwallet/addCredential", methods=["POST"])
@@ -444,7 +448,7 @@ def addCredentialItWallet():
 
     try:
         data = request.get_json()  # <-- recupera il JSON dal body della richiesta
-        logger.info(f"{data}")
+        logger.info("%s", sanitize_for_logging(data))
 
         # Verifica presenza della chiave credentialId
         credential_configuration_id = data.get("credentialId")
@@ -458,11 +462,11 @@ def addCredentialItWallet():
         return jsonify(result), status_code
 
     except ValueError as ve:
-        logger.error(f"❌ {ve}")
-        return jsonify({"success": False, "data": {"error": f"{ve}"}}), 400
+        logger.error("❌ %s", sanitize_for_logging(str(ve)))
+        return jsonify({"success": False, "data": {"error": str(ve)}}), 400
     except Exception as e:
-        logger.error(f"❌ {e}")
-        return jsonify({"success": False, "data": {"error": f"{e}"}}), 500
+        logger.error("❌ %s", sanitize_for_logging(str(e)))
+        return jsonify({"success": False, "data": {"error": str(e)}}), 500
 
 
 @itwallet_routes.route("/itwallet/addCredential/complete", methods=["POST"])
@@ -489,7 +493,7 @@ def completedAddCredentialItWallet():
 
     try:
         data = request.get_json()  # <-- recupera il JSON dal body della richiesta
-        logger.info(f"{data}")
+        logger.info("%s", sanitize_for_logging(data))
 
         # Verifica presenza del parametro credentialsPresenting
         credentials_presenting = data.get("credentialsPresenting")
@@ -508,11 +512,11 @@ def completedAddCredentialItWallet():
         return jsonify(result), status_code
 
     except ValueError as ve:
-        logger.error(f"❌ {ve}")
-        return jsonify({"success": False, "data": {"error": f"{ve}"}}), 400
+        logger.error("❌ %s", sanitize_for_logging(str(ve)))
+        return jsonify({"success": False, "data": {"error": str(ve)}}), 400
     except Exception as e:
-        logger.error(f"❌ {e}")
-        return jsonify({"success": False, "data": {"error": f"{e}"}}), 500
+        logger.error("❌ %s", sanitize_for_logging(str(e)))
+        return jsonify({"success": False, "data": {"error": str(e)}}), 500
 
 
 @itwallet_routes.route("/itwallet/loginToRelyingParty", methods=["POST"])
@@ -538,7 +542,7 @@ def loginToRelyingParty():
 
     try:
         data = request.get_json()  # <-- recupera il JSON dal body della richiesta
-        logger.info(f"{data}")
+        logger.info("%s", sanitize_for_logging(data))
 
         relyingPartyId = data.get("relyingPartyId")
         qrCodeContent = data.get("qrCodeContent")
@@ -546,13 +550,15 @@ def loginToRelyingParty():
         relyingPartyIdParsed = urlparse(relyingPartyId)
         # Verifica se relyingPartyId è un URL valido
         if relyingPartyIdParsed.scheme and relyingPartyIdParsed.netloc:
-            logger.info(f"✅ L'ID del Relying Party selezionato è un URL valido {relyingPartyId}")
+            logger.info(
+                "✅ L'ID del Relying Party selezionato è un URL valido %s", sanitize_for_logging(relyingPartyId)
+            )
 
             qrCodeContentParsed = urlparse(qrCodeContent)
 
             # Verifica se qrCodeContentParsed è un URL valido
             if qrCodeContentParsed.scheme and qrCodeContentParsed.netloc:
-                logger.info(f"✅ Il contenuto del QR Code è un URL valido: {qrCodeContent}")
+                logger.info("✅ Il contenuto del QR Code è un URL valido: %s", sanitize_for_logging(qrCodeContent))
 
                 clientId = estrai_parametro_query_string(qrCodeContent, "client_id")
                 if not clientId:
@@ -591,11 +597,11 @@ def loginToRelyingParty():
         status_code = 200 if result["success"] else 500
         return jsonify(result), status_code
     except ValueError as ve:
-        logger.error(f"❌ {ve}")
-        return jsonify({"success": False, "data": {"error": f"{ve}"}}), 400
+        logger.error("❌ %s", sanitize_for_logging(str(ve)))
+        return jsonify({"success": False, "data": {"error": str(ve)}}), 400
     except Exception as e:
-        logger.error(f"❌ {e}")
-        return jsonify({"success": False, "data": {"error": f"{e}"}}), 500
+        logger.error("❌ %s", sanitize_for_logging(str(e)))
+        return jsonify({"success": False, "data": {"error": str(e)}}), 500
 
 
 @itwallet_routes.route("/itwallet/loginToVerifier/complete", methods=["POST"])
@@ -618,7 +624,7 @@ def completedLoginToVerifier():
 
     try:
         data = request.get_json()  # <-- recupera il JSON dal body della richiesta
-        logger.info(f"{data}")
+        logger.info("%s", sanitize_for_logging(data))
 
         # Verifica presenza del parametro credentialsPresenting
         credentials_presenting = data.get("credentialsPresenting")
@@ -637,11 +643,11 @@ def completedLoginToVerifier():
         return jsonify(result), status_code
 
     except ValueError as ve:
-        logger.error(f"❌ {ve}")
-        return jsonify({"success": False, "data": {"error": f"{ve}"}}), 400
+        logger.error("❌ %s", sanitize_for_logging(str(ve)))
+        return jsonify({"success": False, "data": {"error": str(ve)}}), 400
     except Exception as e:
-        logger.error(f"❌ {e}")
-        return jsonify({"success": False, "data": {"error": f"{e}"}}), 500
+        logger.error("❌ %s", sanitize_for_logging(str(e)))
+        return jsonify({"success": False, "data": {"error": str(e)}}), 500
 
 
 def _get_template_name_for_credential_key(key: str) -> str | None:

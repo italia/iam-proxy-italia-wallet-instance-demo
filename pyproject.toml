@@ -22,3 +22,13 @@ min = "B"
 max_absolute = "B"
 max_modules = "B"
 max_average = "A"
+
+[tool.bandit]
+exclude_dirs = [".ci_env", ".ci-venv", ".git", "__pycache__", ".venv", "venv", "static", "templates"]
+skips = [
+    "B101",  # assert_used
+    "B104",  # hardcoded_bind_all_interfaces - demo dev server
+    "B201",  # flask_debug_true - dev/demo
+    "B501",  # request verify=False - proxy/dev config
+    "B113",  # request_without_timeout - existing pattern
+]
