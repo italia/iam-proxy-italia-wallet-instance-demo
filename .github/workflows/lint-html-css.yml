@@ -1,13 +1,26 @@
 # HTML and CSS linting
 # - stylelint: CSS/SCSS linting
 # - HTMLHint: HTML linting
+# Runs only when CSS or HTML files are touched
 name: Lint HTML & CSS
 
 on:
   push:
     branches: ["**"]
+    paths:
+      - "**/*.css"
+      - "**/*.html"
+      - ".htmlhintrc"
+      - ".stylelintrc.json"
+      - ".github/workflows/lint-html-css.yml"
   pull_request:
     branches: ["**"]
+    paths:
+      - "**/*.css"
+      - "**/*.html"
+      - ".htmlhintrc"
+      - ".stylelintrc.json"
+      - ".github/workflows/lint-html-css.yml"
 
 # Avoid duplicate runs when both push and pull_request trigger for the same commit
 concurrency:
@@ -15,7 +28,30 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    outputs:
+      css: ${{ steps.filter.outputs.css }}
+      html: ${{ steps.filter.outputs.html }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            css:
+              - "**/*.css"
+              - ".stylelintrc.json"
+            html:
+              - "**/*.html"
+              - ".htmlhintrc"
+
   css:
+    needs: changes
+    if: needs.changes.outputs.css == 'true'
     name: CSS (stylelint)
     runs-on: ubuntu-latest
     steps:
@@ -35,6 +71,8 @@ jobs:
         run: npx stylelint 'static/**/*.css' --max-warnings 0
 
   html:
+    needs: changes
+    if: needs.changes.outputs.html == 'true'
     name: HTML (HTMLHint)
     runs-on: ubuntu-latest
     steps:

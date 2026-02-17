@@ -1,12 +1,19 @@
 # Security audit on code: CodeQL analysis for Python
 # https://docs.github.com/en/code-security/code-scanning/automatically-scanning-your-code-for-vulnerabilities-and-errors
+# Runs only when Python files are touched (+ weekly schedule)
 name: Security audit (code)
 
 on:
   push:
     branches: ["**"]
+    paths:
+      - "**/*.py"
+      - ".github/workflows/security-code.yml"
   pull_request:
     branches: ["**"]
+    paths:
+      - "**/*.py"
+      - ".github/workflows/security-code.yml"
   schedule:
     # Run weekly on Mondays at 00:00 UTC
     - cron: '0 0 * * 1'

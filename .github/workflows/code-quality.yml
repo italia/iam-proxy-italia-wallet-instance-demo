@@ -1,14 +1,20 @@
 # Code quality, complexity, and Python linting
 # - Ruff: fast Python linter and formatter
 # - Radon: cyclomatic complexity and maintainability index
-# - pip-audit: dependency vulnerability scan
+# Runs only when Python files are touched (pip-audit in security-dependencies)
 name: Code quality & linting
 
 on:
   push:
     branches: ["**"]
+    paths:
+      - "**/*.py"
+      - ".github/workflows/code-quality.yml"
   pull_request:
     branches: ["**"]
+    paths:
+      - "**/*.py"
+      - ".github/workflows/code-quality.yml"
 
 permissions:
   actions: write
@@ -100,23 +106,3 @@ jobs:
 
       - name: Run Bandit
         run: bandit -r app.py routes/ service/ utils/ state.py constants.py -ll -c pyproject.toml
-
-  pip-audit:
-    needs: skip_check
-    if: needs.skip_check.outputs.should_skip != 'true'
-    name: pip-audit (dependencies)
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Install pip-audit
-        run: pip install pip-audit
-
-      - name: Run pip-audit
-        run: pip-audit .

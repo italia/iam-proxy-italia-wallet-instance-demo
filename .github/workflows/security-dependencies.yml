@@ -1,12 +1,29 @@
 # Security audit on dependencies: known vulnerabilities in Python packages
 # https://pip.pypa.io/en/stable/user_guide/#using-pip-audit
+# Runs only when dependency files are touched (+ weekly schedule)
 name: Security audit (dependencies)
 
 on:
   push:
     branches: ["**"]
+    paths:
+      - "pyproject.toml"
+      - "poetry.lock"
+      - "setup.py"
+      - "setup.cfg"
+      - "requirements*.txt"
+      - "constraints*.txt"
+      - ".github/workflows/security-dependencies.yml"
   pull_request:
     branches: ["**"]
+    paths:
+      - "pyproject.toml"
+      - "poetry.lock"
+      - "setup.py"
+      - "setup.cfg"
+      - "requirements*.txt"
+      - "constraints*.txt"
+      - ".github/workflows/security-dependencies.yml"
   schedule:
     - cron: '0 0 * * 1'
 
