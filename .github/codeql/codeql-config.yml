@@ -1,5 +1,9 @@
 # CodeQL configuration for code scanning
-# Excludes py/log-injection: logging uses sanitize_for_logging() (CWE-117 false positives)
+# Excluded queries (false positives):
+#   py/log-injection - logging uses sanitize_for_logging()
+#   py/stack-trace-exposure - error handling in dev/demo context
+#   py/full-ssrf - URLs from config, not user input
+#   py/flask-debug - demo app, debug for local development
 name: "CodeQL config"
 
 queries:
@@ -8,3 +12,9 @@ queries:
 query-filters:
   - exclude:
       id: py/log-injection
+  - exclude:
+      id: py/stack-trace-exposure
+  - exclude:
+      id: py/full-ssrf
+  - exclude:
+      id: py/flask-debug

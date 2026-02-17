@@ -51,12 +51,13 @@ css:
 
 # CodeQL: requires CodeQL CLI in PATH (download from github.com/github/codeql-action/releases)
 codeql:
+    # download codeql bundle here: https://github.com/github/codeql-action/releases/tag/codeql-bundle-v2.24.1
 	@echo "--- CodeQL (security analysis) ---"
 	@command -v codeql >/dev/null 2>&1 || { echo "CodeQL CLI not found. Install from: https://github.com/github/codeql-action/releases"; exit 1; }
 	rm -rf $(CODEQL_DB)
-	codeql database create $(CODEQL_DB) --language=python --codescanning-config=.github/codeql/codeql-config.yml
-	codeql database analyze $(CODEQL_DB) --format=sarif-latest --output=$(CODEQL_RESULTS) --sarif-category=python --codescanning-config=.github/codeql/codeql-config.yml
-	@echo "CodeQL results written to $(CODEQL_RESULTS)"
+	codeql database create $(CODEQL_DB) --language=python --codescanning-config .github/codeql/codeql-config.yml
+	codeql database analyze $(CODEQL_DB) --format=sarif-latest --output=$(CODEQL_RESULTS) --sarif-category=python
+	@python3 scripts/codeql-summary.py $(CODEQL_RESULTS)
 
 # Default target (run by `make` or `make all`)
 all: check
