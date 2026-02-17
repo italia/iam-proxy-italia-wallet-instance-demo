@@ -1,5 +1,8 @@
 """
 Helper functions to reduce cyclomatic complexity in itwallet_service.
+
+Validation and check logic for Entity Configuration, access tokens, and RP authorization
+requests are centralized here to keep the main service file maintainable.
 """
 
 import logging
@@ -144,3 +147,97 @@ def apply_replace_values(entity_id: str, config_prefix: str) -> int:
     if count:
         logger.info("✅ Sostituite %d occorrenze in EC %s", count, entity_id)
     return count
+
+
+def _validate_ec_iss_sub(ec_payload: dict, expected: str) -> None:
+    """Validate EC iss and sub match expected. Raises ValueError."""
+    if ec_payload.get("iss") != expected or ec_payload.get("sub") != expected:
+        raise ValueError(f"EC iss/sub non valido: atteso '{expected}'")
+
+
+def _validate_ec_authority_hints(ec_payload: dict, expected_hint: Any) -> None:
+    """Validate EC authority_hints contains expected_hint. Raises ValueError."""
+    hints = ec_payload.get("authority_hints", [])
+    if not isinstance(hints, list) or not hints or expected_hint not in hints:
+        raise ValueError(f"EC 'authority_hints' non valido o mancante hint '{expected_hint}'")
+
+
+def _validate_ec_metadata_and_jwks(ec_payload: dict, expected_metadata_types: list) -> None:
+    """Validate EC has required metadata types and jwks. Raises ValueError."""
+    from constants import METADATA_TYPE_FEDERATION_ENTITY
+
+    actual = ec_payload.get("metadata", {})
+    missing = [t for t in expected_metadata_types if t not in actual]
+    if missing:
+        raise ValueError(f"EC metadata mancanti: {missing}")
+    for mtype in expected_metadata_types:
+        if mtype == METADATA_TYPE_FEDERATION_ENTITY:
+            continue
+        try:
+            _ = ec_payload["metadata"][mtype]["jwks"]
+        except KeyError:
+            raise ValueError(f"metadata.{mtype}.jwks mancante")
+
+
+def validate_ec(
+    ec_payload: dict, expected_issuer_url: str, expected_metadata_types: list, expected_hint: Any = None
+) -> None:
+    """Validate Entity Configuration: iss/sub, authority_hints, metadata types, jwks. Raises ValueError."""
+    if not ec_payload:
+        raise ValueError("Entity Configuration non specificato")
+    _validate_ec_iss_sub(ec_payload, expected_issuer_url)
+    if expected_hint is not None:
+        _validate_ec_authority_hints(ec_payload, expected_hint)
+    _validate_ec_metadata_and_jwks(ec_payload, expected_metadata_types)
+
+
+def validate_access_token(
+    json_content: dict, expected_issuer_url: str, expected_client_id: str, expected_cnf_jkt_value: str
+) -> None:
+    """Validate DPoP access token claims (iss, client_id, sub, cnf.jkt). Raises ValueError."""
+    if not json_content:
+        raise ValueError("Access Token non specificato")
+    if json_content.get("iss") != expected_issuer_url:
+        raise ValueError(
+            f"Il claim 'iss' dell'access token presenta un valore non valido: "
+            f"atteso '{expected_issuer_url}', trovato {json_content.get('iss')}"
+        )
+    if json_content.get("client_id") != expected_client_id:
+        raise ValueError(
+            f"Il claim 'client_id' dell'access token presenta un valore non valido: "
+            f"atteso '{expected_client_id}', trovato {json_content.get('client_id')}"
+        )
+    if json_content.get("sub") is None:
+        raise ValueError("Claim 'sub' non presente nell'access token")
+    cnf = json_content.get("cnf")
+    if not cnf or not isinstance(cnf, dict):
+        raise ValueError("Claim 'cnf' non presente nell'access token")
+    jkt = cnf.get("jkt")
+    if jkt != expected_cnf_jkt_value:
+        raise ValueError(
+            f"Il claim 'cnf.jkt' dell'access token presenta un valore non valido: "
+            f"atteso '{expected_cnf_jkt_value}', trovato {jkt}"
+        )
+
+
+def parse_rp_authorization_request(json_content: dict, client_id: str) -> tuple[list, str, str, str]:
+    """Validate RP Authorization Request JWT. Returns (credentials_requested, state, nonce, response_uri)."""
+    if not json_content:
+        raise ValueError("JWT nel Request_uri response non specificato")
+    pres_rt = extract_claim(current_app.config, "metadata.presentation_flow.response_type")
+    pres_rm = extract_claim(current_app.config, "metadata.presentation_flow.response_mode")
+    require_jwt_claim(json_content, "client_id", expected=client_id, msg=f"client_id atteso '{client_id}'")
+    require_jwt_claim(json_content, "iss", expected=client_id, msg=f"iss atteso '{client_id}'")
+    state = require_jwt_claim(json_content, "state", msg="Claim 'state' mancante")
+    nonce = require_jwt_claim(json_content, "nonce", msg="Claim 'nonce' mancante")
+    response_uri = require_jwt_claim(json_content, "response_uri", msg="Claim 'response_uri' mancante")
+    require_jwt_claim(json_content, "response_type", expected=pres_rt, msg=f"response_type atteso '{pres_rt}'")
+    require_jwt_claim(json_content, "response_mode", expected=pres_rm, msg=f"response_mode atteso '{pres_rm}'")
+    dcql = json_content.get("dcql_query")
+    if not dcql:
+        raise ValueError("Claim 'dcql_query' non presente nel JWT")
+    credentials = dcql.get("credentials", [])
+    if not isinstance(credentials, list) or not all(isinstance(c, dict) for c in credentials):
+        credentials = []
+    logger.info("ℹ️  dcql_query.credentials: %d tipologie", len(credentials))
+    return credentials, state, nonce, response_uri

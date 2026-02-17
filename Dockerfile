@@ -10,11 +10,11 @@ RUN addgroup --system wiwgroup && adduser --system --ingroup wiwgroup wiwuser
 # Imposta la directory di lavoro dentro il container
 WORKDIR /app
 
-# Copia i file di dipendenze
-COPY requirements.txt .
+# Copia il file di progetto per le dipendenze
+COPY pyproject.toml .
 
 # Installa le dipendenze
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir .
 
 # Assicura che Python trovi i moduli
 ENV PYTHONPATH=/app

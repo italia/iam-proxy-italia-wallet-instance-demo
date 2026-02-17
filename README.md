@@ -101,7 +101,7 @@ An example configuration is provided in the [config.json.example](config.json.ex
 
 🗂️ Step 0 — Move to the project root directory
 
-Before running any command, make sure you are located in the root directory of the project, where the <code>requirements.txt</code> and <code>app.py</code> files are placed.
+Before running any command, make sure you are located in the root directory of the project, where the <code>pyproject.toml</code> and <code>app.py</code> files are placed.
 
 ```
 cd path/to/your/project
@@ -118,7 +118,7 @@ source venv/Scripts/activate
 2️⃣ Install dependencies
 
 ```
-pip install -r requirements.txt
+pip install .
 ```
 
 3️⃣ Build and run 

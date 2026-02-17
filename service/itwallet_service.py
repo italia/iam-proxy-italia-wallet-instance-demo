@@ -1,3 +1,26 @@
+"""IT Wallet service layer for credential issuance and presentation flows.
+
+This module implements the core business logic for the Italian Digital Identity Wallet
+(IT Wallet) instance demo. It orchestrates OpenID4VCI credential issuance flows and
+OpenID4VP presentation flows, integrating with OID-Fed (OpenID Federation) for trust
+and entity discovery.
+
+Main flows implemented:
+- Wallet initialization: PID credential issuance via EAA provider (oid_fed_list, PAR, auth)
+- Add credential: Additional credential issuance (e.g. driving license) via EAA provider
+- Login to verifier: Presentation flow to Relying Parties / Verifiers (request_uri, dcql)
+
+Dependencies and data flow:
+- Entity configurations (EC) are fetched via oid_fed_fetch_openid_configuration
+- Credentials are stored in app_state.credential_store
+- Session holds OAuth state (code_verifier, rp_state, rp_nonce, etc.)
+
+Key components:
+- ItWalletService: Main service class, uses session and app_state
+- Token/credential flows use PAR, DPoP, PKCE per OAuth 2.0 / OIDC specs
+- SD-JWT and mDL (ISO 18013-5) credential formats are supported
+"""
+
 import copy
 import hashlib
 import json
@@ -36,9 +59,12 @@ from service.itwallet_helpers import (
     apply_replace_values,
     get_proxies_from_config,
     get_trust_root_and_eaa_provider_ec,
+    parse_rp_authorization_request,
     require_jwt_claim,
     require_session_key,
+    validate_access_token,
     validate_credential_and_presentation_flow,
+    validate_ec,
     validate_response_mode,
     validate_response_type,
 )
@@ -84,11 +110,15 @@ logger = logging.getLogger(__name__)
 
 
 class ItWalletService:
+    """Service for IT Wallet credential issuance and presentation flows."""
+
     def __init__(self, session):
+        """Initialize service with Flask session. Loads proxies from config."""
         self.session = session
         self.proxies, self.no_proxy_domains = get_proxies_from_config()
 
     def getOnboardedRelyingParties(self):
+        """Return list of onboarded Relying Parties (Credential Verifiers) from trust root."""
         logger.info("➡️  Richiesta elenco Relying Parties onboardati")
 
         # recupero selected_country dalla memoria
@@ -622,7 +652,7 @@ class ItWalletService:
 
         try:
             jwt_payload = decode_and_verify_jwt(authorize_response, eaa_provider_verifier_jwks)
-            credentialsRequested, rp_state, rp_nonce, rp_response_uri = self._checkRelyingPartyAuthorizationRequest(
+            credentialsRequested, rp_state, rp_nonce, rp_response_uri = parse_rp_authorization_request(
                 jwt_payload, eaa_provider_url
             )
 
@@ -881,7 +911,7 @@ class ItWalletService:
 
         try:
             request_uri_response_jwt_payload = decode_and_verify_jwt(request_uri_response, verifier_jwks)
-            credentialsRequested, rp_state, rp_nonce, rp_response_uri = self._checkRelyingPartyAuthorizationRequest(
+            credentialsRequested, rp_state, rp_nonce, rp_response_uri = parse_rp_authorization_request(
                 request_uri_response_jwt_payload, clientId
             )
 
@@ -981,6 +1011,7 @@ class ItWalletService:
     def _authorization_response_management(
         self, authorization_response: dict, state_expected: Optional[str] = None, iss_expected: Optional[str] = None
     ) -> Tuple[str, str, str]:
+        """Validate auth response, return (code, state, iss). Raises on error or mismatch."""
         if not authorization_response:
             raise ValueError("Nessun Authorization Response ricevuto")
 
@@ -1025,6 +1056,7 @@ class ItWalletService:
         wallet_public_key: EllipticCurvePublicKey,
         wallet_provider_pvt_key_jwk_dict: dict,
     ) -> Tuple[str, str]:
+        """Create JWT and SD-JWT Wallet Attestations, store in credential_store. Returns (jwt, sd_jwt)."""
         wallet_provider_pvt_key = ec_private_key_from_pem_bytes(
             pem_private_key_from_jwk_dict(wallet_provider_pvt_key_jwk_dict)
         )
@@ -1096,7 +1128,7 @@ class ItWalletService:
         credential_configuration_id: str,
         redirect_uri: str,
     ) -> Tuple[str, list]:
-
+        """Exchange auth code for DPoP access token, validate, return token and credential_identifiers."""
         # Generazione/letturia coppia di chiavi pvt e pub del wallet
         wallet_private_key, wallet_public_key = self._inizializza_wallet_keys(CONFIG_DIR)
         if not wallet_private_key or not wallet_public_key:
@@ -1160,11 +1192,11 @@ class ItWalletService:
         # Controllo Access Token
         try:
             dpop_bound_access_token_claims = decode_and_verify_jwt(dpop_bound_access_token, authorization_server_jwks)
-            self._checkAccessToken(
-                jsonContent=dpop_bound_access_token_claims,
-                expected_issuer_url=authorization_server_url,
-                expected_clientId=wallet_client_id,
-                expected_cnf_jkt_value=wallet_client_id,
+            validate_access_token(
+                dpop_bound_access_token_claims,
+                authorization_server_url,
+                wallet_client_id,
+                wallet_client_id,
             )
 
             logger.info("✅ L'access token contenuto nella TOKEN Response è risultato essere valido")
@@ -1294,6 +1326,7 @@ class ItWalletService:
         credential_identifiers: list,
         dpop_bound_access_token: str,
     ) -> str:
+        """Request credentials via nonce+proof, decode/validate, store in credential_store. Returns credential_id."""
         # Generazione/letturia coppia di chiavi pvt e pub del wallet
         wallet_private_key, wallet_public_key = self._inizializza_wallet_keys(CONFIG_DIR)
         if not wallet_private_key or not wallet_public_key:
@@ -1368,6 +1401,7 @@ class ItWalletService:
         credential_id: str,
         sd_jwt_compact: str,
     ):
+        """Fetch status assertion for SD-JWT credential, update credential_store with status."""
         # Generazione/letturia coppia di chiavi pvt e pub del wallet
         wallet_private_key, wallet_public_key = self._inizializza_wallet_keys(CONFIG_DIR)
         if not wallet_private_key or not wallet_public_key:
@@ -1487,7 +1521,7 @@ class ItWalletService:
         rp_jwks: dict,
         response_mode: str,
     ) -> dict:
-
+        """Build vp_token from credentials_presenting, send response_uri request, return auth response."""
         # recupero dello status_assertion_supported relativo al presentation flow dalla configurazione
         presentation_status_assertion_supported = extract_claim(
             current_app.config, "metadata.presentation_flow.status_assertion_supported"
@@ -1585,7 +1619,7 @@ class ItWalletService:
     def _entity_configuration_management(
         self, issuer_url: str, expectedMetadataTypes: list[str], expected_hint=None
     ) -> dict:
-
+        """Fetch and validate EC for issuer_url. Returns EC payload. Raises on failure."""
         logger.info(f"🚀 Invio richiesta all'entità {issuer_url} per scaricare il suo entity configuration")
         # Ottiene l'EC
         ec_jwt = oid_fed_fetch_openid_configuration(
@@ -1601,114 +1635,13 @@ class ItWalletService:
 
         try:
             ec_payload = decode_and_verify_jwt(ec_jwt)
-            self._checkEC(ec_payload, issuer_url, expectedMetadataTypes, expected_hint)
+            validate_ec(ec_payload, issuer_url, expectedMetadataTypes, expected_hint)
 
             logger.info(f"✅ L'Entity Configuration dell'entità {issuer_url} è risultato essere valido")
 
             return ec_payload
         except ValueError as ve:
             raise ValueError(f"Fallita validazione dell'Entity Configuration dell'entità {issuer_url}: {ve}")
-
-    def _checkEC(
-        self,
-        ec_payload: str,
-        expected_issuer_url: str,
-        expectedMetadataTypes: list[str],
-        expected_hint: Optional[str] = None,
-    ):
-        """Validate Entity Configuration claims: iss, sub, authority_hints, metadata."""
-        if not ec_payload:
-            raise ValueError("Entity Configuration non specificato")
-        self._validate_ec_iss_sub(ec_payload, expected_issuer_url)
-        if expected_hint is not None:
-            hints = ec_payload.get("authority_hints", [])
-            if not isinstance(hints, list) or not hints or expected_hint not in hints:
-                raise ValueError(f"EC 'authority_hints' non valido o mancante hint '{expected_hint}'")
-        actual = ec_payload.get("metadata", {})
-        missing = [t for t in expectedMetadataTypes if t not in actual]
-        if missing:
-            raise ValueError(f"EC metadata mancanti: {missing}")
-        self._validate_ec_metadata_jwks(ec_payload, expectedMetadataTypes)
-
-    def _validate_ec_iss_sub(self, ec_payload: dict, expected: str) -> None:
-        """Validate EC iss and sub equal expected. Raises ValueError if not."""
-        if ec_payload.get("iss") != expected or ec_payload.get("sub") != expected:
-            raise ValueError(f"EC iss/sub non valido: atteso '{expected}'")
-
-    def _validate_ec_metadata_jwks(self, ec_payload: dict, metadata_types: list) -> None:
-        """Validate each metadata type (except federation) has jwks. Raises ValueError if missing."""
-        for mtype in metadata_types:
-            if mtype != METADATA_TYPE_FEDERATION_ENTITY:
-                try:
-                    _ = ec_payload["metadata"][mtype]["jwks"]
-                except KeyError:
-                    raise ValueError(f"metadata.{mtype}.jwks mancante")
-
-    def _checkAccessToken(
-        self, jsonContent: dict, expected_issuer_url: str, expected_clientId: str, expected_cnf_jkt_value: str
-    ):
-        """
-        Metodo privato per validare i claims opzionali dell'access token
-        https://italia.github.io/eid-wallet-it-docs/versione-corrente/en/credential-issuance-low-level.html#low-level-issuance-flow
-        """
-        if not jsonContent:
-            raise ValueError("Access Token non specificato")
-
-        at_payload_iss_value = jsonContent.get("iss")
-        if at_payload_iss_value is None:
-            raise ValueError("Claim 'iss' non presente nell'access token")
-        if at_payload_iss_value != expected_issuer_url:
-            raise ValueError(
-                f"Il claim 'iss' dell'access token presenta un valore non valido: atteso '{expected_issuer_url}', trovato {at_payload_iss_value}"
-            )
-
-        at_payload_client_id_value = jsonContent.get("client_id")
-        if at_payload_client_id_value is None:
-            raise ValueError("Claim 'client_id' non presente nell'access token")
-        if at_payload_client_id_value != expected_clientId:
-            raise ValueError(
-                f"Il claim 'client_id' dell'access token presenta un valore non valido: atteso '{expected_clientId}', trovato {at_payload_client_id_value}"
-            )
-
-        jwt_payload_sub_value = jsonContent.get("sub")
-        if jwt_payload_sub_value is None:
-            raise ValueError("Claim 'sub' non presente nell'access token")
-
-        jwt_payload_cnf_value = jsonContent.get("cnf")
-        if jwt_payload_cnf_value is None:
-            raise ValueError("Claim 'cnf' non presente nell'access token")
-
-        cnf_jkt_value = jwt_payload_cnf_value.get("jkt")
-        if cnf_jkt_value is None:
-            raise ValueError("Claim 'cnf.jkt' non presente nell'access token")
-        if cnf_jkt_value != expected_cnf_jkt_value:
-            raise ValueError(
-                f"Il claim 'cnf.jkt' dell'access token presenta un valore non valido: atteso '{expected_cnf_jkt_value}', trovato {cnf_jkt_value}"
-            )
-
-    def _checkRelyingPartyAuthorizationRequest(
-        self, jsonContent: dict, clientId: str
-    ) -> Tuple[list[dict], str, str, str]:
-        """Validate RP Authorization Request JWT and return credentials_requested, state, nonce, response_uri."""
-        if not jsonContent:
-            raise ValueError("JWT nel Request_uri response non specificato")
-        pres_rt = extract_claim(current_app.config, "metadata.presentation_flow.response_type")
-        pres_rm = extract_claim(current_app.config, "metadata.presentation_flow.response_mode")
-        require_jwt_claim(jsonContent, "client_id", expected=clientId, msg=f"client_id atteso '{clientId}'")
-        require_jwt_claim(jsonContent, "iss", expected=clientId, msg=f"iss atteso '{clientId}'")
-        state = require_jwt_claim(jsonContent, "state", msg="Claim 'state' mancante")
-        nonce = require_jwt_claim(jsonContent, "nonce", msg="Claim 'nonce' mancante")
-        response_uri = require_jwt_claim(jsonContent, "response_uri", msg="Claim 'response_uri' mancante")
-        require_jwt_claim(jsonContent, "response_type", expected=pres_rt, msg=f"response_type atteso '{pres_rt}'")
-        require_jwt_claim(jsonContent, "response_mode", expected=pres_rm, msg=f"response_mode atteso '{pres_rm}'")
-        dcql_query_value = jsonContent.get("dcql_query")
-        if not dcql_query_value:
-            raise ValueError("Claim 'dcql_query' non presente nel JWT")
-        dcql_query_credentials = dcql_query_value.get("credentials", [])
-        if not isinstance(dcql_query_credentials, list) or not all(isinstance(c, dict) for c in dcql_query_credentials):
-            dcql_query_credentials = []
-        logger.info("ℹ️  dcql_query.credentials: %d tipologie", len(dcql_query_credentials))
-        return dcql_query_credentials, state, nonce, response_uri
 
     def _inizializza_wallet_keys(self, config_dir) -> Tuple[EllipticCurvePrivateKey, EllipticCurvePublicKey]:
         """
@@ -1758,6 +1691,7 @@ class ItWalletService:
         return wallet_private_key, wallet_public_key
 
     def _find_credential_by_dcql_item(self, item: dict) -> dict | None:
+        """Find credential matching DCQL item (by format+id or vct). Returns (key, value) or None."""
         if not item["id"]:
             logger.info("❌ Il DCQL non presenta il claim 'id'")
             return None
@@ -1816,6 +1750,7 @@ class ItWalletService:
         return result
 
     def _print_session_data(self):
+        """Log session data for debugging (JSON or key-value fallback)."""
         logger.debug("=== 🌐 Dati in sessione ===")
         try:
             session_json = json.dumps(dict(self.session), indent=2, ensure_ascii=False)

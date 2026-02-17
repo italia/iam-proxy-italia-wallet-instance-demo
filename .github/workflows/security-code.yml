@@ -4,7 +4,9 @@ name: Security audit (code)
 
 on:
   push:
+    branches: ["**"]
   pull_request:
+    branches: ["**"]
   schedule:
     # Run weekly on Mondays at 00:00 UTC
     - cron: '0 0 * * 1'

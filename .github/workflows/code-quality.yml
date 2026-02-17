@@ -1,19 +1,36 @@
 # Code quality, complexity, and Python linting
 # - Ruff: fast Python linter and formatter
 # - Radon: cyclomatic complexity and maintainability index
+# - pip-audit: dependency vulnerability scan
 name: Code quality & linting
 
 on:
   push:
+    branches: ["**"]
   pull_request:
+    branches: ["**"]
 
-# Avoid duplicate runs when both push and pull_request trigger for the same commit
-concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.head.sha || github.sha }}
-  cancel-in-progress: true
+permissions:
+  actions: write
+  contents: read
 
 jobs:
+  skip_check:
+    name: Skip duplicate runs
+    runs-on: ubuntu-latest
+    outputs:
+      should_skip: ${{ steps.skip.outputs.should_skip }}
+    steps:
+      - id: skip
+        uses: fkirc/skip-duplicate-actions@v5
+        with:
+          concurrent_skipping: "same_content_newer"
+          skip_after_successful_duplicate: "true"
+          do_not_skip: '["workflow_dispatch", "schedule", "merge_group"]'
+
   lint:
+    needs: skip_check
+    if: needs.skip_check.outputs.should_skip != 'true'
     name: Python lint (Ruff)
     runs-on: ubuntu-latest
     steps:
@@ -35,6 +52,8 @@ jobs:
         run: ruff format --check .
 
   complexity:
+    needs: skip_check
+    if: needs.skip_check.outputs.should_skip != 'true'
     name: Code complexity (Radon)
     runs-on: ubuntu-latest
     steps:
@@ -63,6 +82,8 @@ jobs:
           xenon --max-absolute B --max-modules B --max-average B app.py routes/ service/ utils/
 
   security-bandit:
+    needs: skip_check
+    if: needs.skip_check.outputs.should_skip != 'true'
     name: Security (Bandit)
     runs-on: ubuntu-latest
     steps:
@@ -79,3 +100,23 @@ jobs:
 
       - name: Run Bandit
         run: bandit -r app.py routes/ service/ utils/ state.py constants.py -ll -c pyproject.toml
+
+  pip-audit:
+    needs: skip_check
+    if: needs.skip_check.outputs.should_skip != 'true'
+    name: pip-audit (dependencies)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install pip-audit
+        run: pip install pip-audit
+
+      - name: Run pip-audit
+        run: pip-audit .

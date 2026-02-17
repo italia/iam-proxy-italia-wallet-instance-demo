@@ -5,7 +5,9 @@ name: Lint HTML & CSS
 
 on:
   push:
+    branches: ["**"]
   pull_request:
+    branches: ["**"]
 
 # Avoid duplicate runs when both push and pull_request trigger for the same commit
 concurrency:
