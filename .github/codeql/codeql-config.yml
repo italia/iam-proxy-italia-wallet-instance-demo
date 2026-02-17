@@ -1,0 +1,10 @@
+# CodeQL configuration for code scanning
+# Excludes py/log-injection: logging uses sanitize_for_logging() (CWE-117 false positives)
+name: "CodeQL config"
+
+queries:
+  - uses: security-extended
+
+query-filters:
+  - exclude:
+      id: py/log-injection
