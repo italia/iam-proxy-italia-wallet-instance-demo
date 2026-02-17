@@ -29,7 +29,7 @@
         <img src="{{ url_for('static', filename='images/wallet_logo.svg') }}"
             alt="Digital Wallet"
             class="wallet-logo" />
-        <div id="stateSelected" class="flag-container">
+        <div id="state-selected" class="flag-container">
           <img
             id="flagImage"
             class="state-flag"
@@ -49,33 +49,33 @@
         <label for="select">Seleziona il tuo Stato Membro:</label>
         <select id="select">
           <option value="" disabled selected>-- Scegli dal menu --</option>
-          <option value="IT" {{ 'selected' if selected_country == 'IT' else '' }}>🇮🇹 Italia</option>
-          <option value="FR" {{ 'selected' if selected_country == 'FR' else '' }}>🇫🇷 Francia</option>
-          <option value="DE" {{ 'selected' if selected_country == 'DE' else '' }}>🇩🇪 Germania</option>
-          <option value="ES" {{ 'selected' if selected_country == 'ES' else '' }}>🇪🇸 Spagna</option>
-          <option value="NL" {{ 'selected' if selected_country == 'NL' else '' }}>🇳🇱 Paesi Bassi</option>
-          <option value="BE" {{ 'selected' if selected_country == 'BE' else '' }}>🇧🇪 Belgio</option>
-          <option value="AT" {{ 'selected' if selected_country == 'AT' else '' }}>🇦🇹 Austria</option>
-          <option value="PT" {{ 'selected' if selected_country == 'PT' else '' }}>🇵🇹 Portogallo</option>
-          <option value="GR" {{ 'selected' if selected_country == 'GR' else '' }}>🇬🇷 Grecia</option>
-          <option value="IE" {{ 'selected' if selected_country == 'IE' else '' }}>🇮🇪 Irlanda</option>
-          <option value="PL" {{ 'selected' if selected_country == 'PL' else '' }}>🇵🇱 Polonia</option>
-          <option value="RO" {{ 'selected' if selected_country == 'RO' else '' }}>🇷🇴 Romania</option>
-          <option value="SE" {{ 'selected' if selected_country == 'SE' else '' }}>🇸🇪 Svezia</option>
-          <option value="FI" {{ 'selected' if selected_country == 'FI' else '' }}>🇫🇮 Finlandia</option>
-          <option value="DK" {{ 'selected' if selected_country == 'DK' else '' }}>🇩🇰 Danimarca</option>
-          <option value="CZ" {{ 'selected' if selected_country == 'CZ' else '' }}>🇨🇿 Repubblica Ceca</option>
-          <option value="SK" {{ 'selected' if selected_country == 'SK' else '' }}>🇸🇰 Slovacchia</option>
-          <option value="HU" {{ 'selected' if selected_country == 'HU' else '' }}>🇭🇺 Ungheria</option>
-          <option value="BG" {{ 'selected' if selected_country == 'BG' else '' }}>🇧🇬 Bulgaria</option>
-          <option value="HR" {{ 'selected' if selected_country == 'HR' else '' }}>🇭🇷 Croazia</option>
-          <option value="SI" {{ 'selected' if selected_country == 'SI' else '' }}>🇸🇮 Slovenia</option>
-          <option value="LT" {{ 'selected' if selected_country == 'LT' else '' }}>🇱🇹 Lituania</option>
-          <option value="LV" {{ 'selected' if selected_country == 'LV' else '' }}>🇱🇻 Lettonia</option>
-          <option value="EE" {{ 'selected' if selected_country == 'EE' else '' }}>🇪🇪 Estonia</option>
-          <option value="LU" {{ 'selected' if selected_country == 'LU' else '' }}>🇱🇺 Lussemburgo</option>
-          <option value="CY" {{ 'selected' if selected_country == 'CY' else '' }}>🇨🇾 Cipro</option>
-          <option value="MT" {{ 'selected' if selected_country == 'MT' else '' }}>🇲🇹 Malta</option>
+          <option value="IT"{% if selected_country == 'IT' %} selected{% endif %}>🇮🇹 Italia</option>
+          <option value="FR"{% if selected_country == 'FR' %} selected{% endif %}>🇫🇷 Francia</option>
+          <option value="DE"{% if selected_country == 'DE' %} selected{% endif %}>🇩🇪 Germania</option>
+          <option value="ES"{% if selected_country == 'ES' %} selected{% endif %}>🇪🇸 Spagna</option>
+          <option value="NL"{% if selected_country == 'NL' %} selected{% endif %}>🇳🇱 Paesi Bassi</option>
+          <option value="BE"{% if selected_country == 'BE' %} selected{% endif %}>🇧🇪 Belgio</option>
+          <option value="AT"{% if selected_country == 'AT' %} selected{% endif %}>🇦🇹 Austria</option>
+          <option value="PT"{% if selected_country == 'PT' %} selected{% endif %}>🇵🇹 Portogallo</option>
+          <option value="GR"{% if selected_country == 'GR' %} selected{% endif %}>🇬🇷 Grecia</option>
+          <option value="IE"{% if selected_country == 'IE' %} selected{% endif %}>🇮🇪 Irlanda</option>
+          <option value="PL"{% if selected_country == 'PL' %} selected{% endif %}>🇵🇱 Polonia</option>
+          <option value="RO"{% if selected_country == 'RO' %} selected{% endif %}>🇷🇴 Romania</option>
+          <option value="SE"{% if selected_country == 'SE' %} selected{% endif %}>🇸🇪 Svezia</option>
+          <option value="FI"{% if selected_country == 'FI' %} selected{% endif %}>🇫🇮 Finlandia</option>
+          <option value="DK"{% if selected_country == 'DK' %} selected{% endif %}>🇩🇰 Danimarca</option>
+          <option value="CZ"{% if selected_country == 'CZ' %} selected{% endif %}>🇨🇿 Repubblica Ceca</option>
+          <option value="SK"{% if selected_country == 'SK' %} selected{% endif %}>🇸🇰 Slovacchia</option>
+          <option value="HU"{% if selected_country == 'HU' %} selected{% endif %}>🇭🇺 Ungheria</option>
+          <option value="BG"{% if selected_country == 'BG' %} selected{% endif %}>🇧🇬 Bulgaria</option>
+          <option value="HR"{% if selected_country == 'HR' %} selected{% endif %}>🇭🇷 Croazia</option>
+          <option value="SI"{% if selected_country == 'SI' %} selected{% endif %}>🇸🇮 Slovenia</option>
+          <option value="LT"{% if selected_country == 'LT' %} selected{% endif %}>🇱🇹 Lituania</option>
+          <option value="LV"{% if selected_country == 'LV' %} selected{% endif %}>🇱🇻 Lettonia</option>
+          <option value="EE"{% if selected_country == 'EE' %} selected{% endif %}>🇪🇪 Estonia</option>
+          <option value="LU"{% if selected_country == 'LU' %} selected{% endif %}>🇱🇺 Lussemburgo</option>
+          <option value="CY"{% if selected_country == 'CY' %} selected{% endif %}>🇨🇾 Cipro</option>
+          <option value="MT"{% if selected_country == 'MT' %} selected{% endif %}>🇲🇹 Malta</option>
         </select>
       </div>
       <div id="idp" {% if wallet_initialized %}style="display:none;"{% endif %}>
@@ -117,9 +117,9 @@
       </div>
       <div id="button-row">
         <a href="{{ url_for('wallet_routes.logout') }}" class="btn-wallet">🔒&nbsp;Blocca&nbsp;</a>
-        <button id="init-btn" class="btn-wallet" {% if wallet_initialized %}style="display:none;"{% endif %} {% if not wallet_initialized %}disabled{% endif %}>⚙️&nbsp;Inizializza&nbsp;</button>
-        <button id="add-btn" class="btn-wallet" {% if not wallet_initialized %}style="display:none;"{% endif %}>🞧&nbsp;Aggiungi</button>
-        <button id="rp-btn" class="btn-wallet" {% if not wallet_initialized %}style="display:none;"{% endif %}>⏵&nbsp;Relying&nbsp;Party&nbsp;</button>
+        <button id="init-btn" class="btn-wallet"{% if wallet_initialized %} style="display:none;"{% endif %}{% if not wallet_initialized %} disabled{% endif %}>⚙️&nbsp;Inizializza&nbsp;</button>
+        <button id="add-btn" class="btn-wallet"{% if not wallet_initialized %} style="display:none;"{% endif %}>🞧&nbsp;Aggiungi</button>
+        <button id="rp-btn" class="btn-wallet"{% if not wallet_initialized %} style="display:none;"{% endif %}>⏵&nbsp;Relying&nbsp;Party&nbsp;</button>
       </div>
     </main>
   </div>
@@ -775,7 +775,7 @@
     // --- Aggiorna bandierina ---
     function updateFlag(selectedValue) {
         const selected = selectedValue.toLowerCase();
-        const flagDiv = document.getElementById("stateSelected");
+        const flagDiv = document.getElementById("state-selected");
         const flagImg = document.getElementById("flagImage");
 
         if (selected) {

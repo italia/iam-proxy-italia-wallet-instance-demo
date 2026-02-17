@@ -19,7 +19,7 @@ body {
 .container {
   background: white;
   border-radius: 12px;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 15px rgb(0 0 0 / 0.1);
   padding: 30px 40px;
   max-width: 480px;
   width: 90%;
@@ -137,14 +137,17 @@ main p {
   border-radius: 4px;
   font-weight: bold;
   transition: background-color 0.3s ease;
+
   /* per centrare con margine automatico, serve che sia block o flex */
   display: block;
   width: max-content; /* per adattare larghezza al testo */
 }
+
 .btn-wallet.disabled {
   cursor: not-allowed;
   background-color: #ccc;
 }
+
 .btn-logout:hover {
   background-color: #002a50;
 }
@@ -159,6 +162,7 @@ main p {
 .flash-container {
   margin: 0;
 }
+
 .flash-container p {
   margin: 0;
   padding: 12px 20px;
@@ -166,10 +170,12 @@ main p {
   font-weight: 600;
   font-size: 1rem;
 }
+
 .flash-success {
   background-color: #d4edda;
   color: #155724;
 }
+
 .flash-error {
   background-color: #f8d7da;
   color: #721c24;
@@ -182,12 +188,13 @@ main p {
      left: 0;
      width: 100vw;
      height: 100vh;
-     background: rgba(0, 0, 0, 0.5);
+     background: rgb(0 0 0 / 0.5);
      z-index: 9999;
      display: flex;
      align-items: center;
      justify-content: center;
    }
+
    /* Loader animato */
    .loader {
      border: 8px solid #f3f3f3;
@@ -197,17 +204,20 @@ main p {
      height: 60px;
      animation: spin 1s linear infinite;
    }
+
    @keyframes spin {
      0% { transform: rotate(0deg); }
      100% { transform: rotate(360deg); }
    }
+
    /* Nascondi l'overlay di default */
    #overlay.hidden {
      display: none;
    }
+
 /* Responsive */
 
-@media (max-width: 480px) {
+@media (width <= 480px) {
   .container {
     padding: 25px 20px;
   }

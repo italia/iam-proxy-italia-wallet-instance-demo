@@ -19,7 +19,7 @@ body {
 .container {
   background: white;
   border-radius: 12px;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 15px rgb(0 0 0 / 0.1);
   padding: 30px 40px;
   max-width: 480px;
   width: 90%;
@@ -134,6 +134,7 @@ main p {
 .flash-container {
   margin: 0;
 }
+
 .flash-container p {
   margin: 0;
   padding: 12px 20px;
@@ -141,10 +142,12 @@ main p {
   font-weight: 600;
   font-size: 1rem;
 }
+
 .flash-success {
   background-color: #d4edda;
   color: #155724;
 }
+
 .flash-error {
   background-color: #f8d7da;
   color: #721c24;
@@ -153,7 +156,7 @@ main p {
 
 /* Responsive */
 
-@media (max-width: 480px) {
+@media (width <= 480px) {
   .container {
     padding: 25px 20px;
   }
