@@ -3,6 +3,7 @@
 import json
 import sys
 
+
 def main():
     if len(sys.argv) < 2:
         print("Usage: codeql-summary.py <sarif-file>", file=sys.stderr)
