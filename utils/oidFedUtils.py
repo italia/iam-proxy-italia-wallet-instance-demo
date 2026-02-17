@@ -6,6 +6,7 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.asymmetric import ec
 
 from utils.http_utils import http_request_with_retry
+from utils.utils import sanitize_for_logging
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +19,7 @@ def _parse_oid_fed_list(response: requests.Response) -> list[str]:
         return []
     data = response.json()
     if isinstance(data, list) and all(isinstance(x, str) for x in data):
-        logger.debug("✅ Array ricevuto: %s", json.dumps(data, indent=2))
+        logger.debug("✅ Array ricevuto: %s", sanitize_for_logging(json.dumps(data, indent=2)))
         return data
     logger.error("❌ Risposta JSON non è un array di stringhe")
     return []
@@ -47,7 +48,7 @@ def oid_fed_list(
     """
     url = base_url.rstrip("/") + "/list" + query_string
     headers = {"Accept": "application/json"}
-    logger.debug(">>>> Invio GET %s", url)
+    logger.debug(">>>> Invio GET %s", sanitize_for_logging(url))
     result = http_request_with_retry(
         "GET",
         url,
@@ -92,7 +93,7 @@ def oid_fed_fetch_openid_configuration(
     """
     url = base_url.rstrip("/") + "/.well-known/openid-federation"
     headers = {"Accept": "application/entity-statement+jwt"}
-    logger.debug(">>>> Invio GET %s", url)
+    logger.debug(">>>> Invio GET %s", sanitize_for_logging(url))
     return http_request_with_retry(
         "GET",
         url,

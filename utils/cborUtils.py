@@ -19,7 +19,7 @@ from cryptography.hazmat.primitives.asymmetric.utils import encode_dss_signature
 from constants import HASH_ALGORITHM
 
 # Assicurati che 'make_issuer_key_callback' sia definito in utils/utils.py oppure qui stesso
-from utils.utils import base64url_decode, base64url_encode, check_required_claims
+from utils.utils import base64url_decode, base64url_encode, check_required_claims, sanitize_for_logging
 
 logger = logging.getLogger(__name__)
 """
@@ -73,14 +73,14 @@ def decode_and_verify_issuer_signed(
     """
     try:
         logger.debug("➡️  Issuer signed da validare e decodificare:")
-        logger.debug(issuer_signed_base64_url)
+        logger.debug("%s", sanitize_for_logging(issuer_signed_base64_url))
 
         # Decodifica issuer signed base64 url encoded
         issuer_signed_bytes = base64url_decode(issuer_signed_base64_url)
         issuer_signed = cbor2.loads(issuer_signed_bytes)
 
         logger.debug("✅ Issuer signed decodificato:")
-        logger.debug(pprint.pformat(issuer_signed))
+        logger.debug("%s", sanitize_for_logging(pprint.pformat(issuer_signed)))
 
         issuer_auth_array = issuer_signed["issuerAuth"]
 
@@ -115,7 +115,7 @@ def decode_and_verify_issuer_signed(
         return result_json
 
     except Exception as e:
-        logger.error(f"❌ La credenziale rilasciata non è valida: {str(e)}")
+        logger.error("❌ La credenziale rilasciata non è valida: %s", sanitize_for_logging(str(e)))
         raise ValueError(f"La credenziale rilasciata non è valida: {e}")
 
 
@@ -301,7 +301,7 @@ def _handle_signature(
     signature_bytes: bytes, alg: int, cert_der_bytes: bytes, protected_header_bytes: bytes, payload_bytes: bytes
 ):
     alg_name = _cose_alg_id_to_name(alg)
-    logger.debug(f"📌 Verifica firma con algoritmo COSE {alg_name}")
+    logger.debug("📌 Verifica firma con algoritmo COSE %s", sanitize_for_logging(alg_name))
 
     # 1. Recupero chiave pubblica per validare la firma
 
@@ -340,7 +340,7 @@ def _handle_signature(
 
     # 3. Serializzazione della struttura firmata in CBOR (to_be_signed)
     to_be_signed = cbor2.dumps(sig_structure)
-    logger.debug(f"📄 to_be_signed generato: {to_be_signed.hex()}")
+    logger.debug("📄 to_be_signed generato: %s", sanitize_for_logging(to_be_signed.hex()))
 
     # 4 Calcolo del digest (hash) della struttura firmata
 
@@ -359,29 +359,41 @@ def _handle_signature(
     digest.update(to_be_signed)
     digest_bytes = digest.finalize()
 
-    logger.debug(f"🔍 Digest calcolato su to_be_signed ({hash_alg.name}): {digest_bytes.hex()}")
+    logger.debug(
+        "🔍 Digest calcolato su to_be_signed (%s): %s",
+        sanitize_for_logging(hash_alg.name),
+        sanitize_for_logging(digest_bytes.hex()),
+    )
 
     # 5. Decodifica della firma
     # Nota: signature_bytes in COSE sono concatenazione r||s (raw)
     r, s = _parse_cose_ecdsa_signature(signature_bytes, alg)
 
-    logger.debug(f"🖋️  Firma COSE - r: {r}")
-    logger.debug(f"🖋️  Firma COSE - s: {s}")
+    logger.debug("🖋️  Firma COSE - r: %s", sanitize_for_logging(r))
+    logger.debug("🖋️  Firma COSE - s: %s", sanitize_for_logging(s))
 
     # Codifica r,s in formato DER ASN.1 perché cryptography (e OpenSSL) usano quello
     der_signature = encode_dss_signature(r, s)
 
-    logger.debug(f"🖋️  Firma COSE - DER: {der_signature}")
+    logger.debug("🖋️  Firma COSE - DER: %s", sanitize_for_logging(der_signature))
 
     # 6. Verifica firma
     try:
         public_key.verify(der_signature, to_be_signed, ec.ECDSA(hash_alg))
         logger.debug("✅ Firma valida")
     except InvalidSignature as e:
-        logger.error(f"❌ Firma non valida per algoritmo {alg_name}: {e}")
+        logger.error(
+            "❌ Firma non valida per algoritmo %s: %s",
+            sanitize_for_logging(alg_name),
+            sanitize_for_logging(str(e)),
+        )
         raise ValueError("Firma non valida") from e
     except Exception as e:
-        logger.error(f"❌ Errore durante la verifica della firma per algoritmo {alg_name}: {e}")
+        logger.error(
+            "❌ Errore durante la verifica della firma per algoritmo %s: %s",
+            sanitize_for_logging(alg_name),
+            sanitize_for_logging(str(e)),
+        )
         raise
 
 

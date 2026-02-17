@@ -4,6 +4,8 @@ from typing import Optional, Tuple
 
 import jmespath
 
+from utils.utils import sanitize_for_logging
+
 logger = logging.getLogger(__name__)
 
 
@@ -88,7 +90,10 @@ class CredentialStore:
         Restituisce il dizionario {"data_row": ..., "vct": ..., "claims": ..., "status_assertion": ..., "status": ... } o None.
         """
         prefix_lower = prefix.lower()
-        logger.debug(f"🔍 Ricerca nel wallet crededenziale la cui chiave ha come prefisso: {repr(prefix_lower)}")
+        logger.debug(
+            "🔍 Ricerca nel wallet crededenziale la cui chiave ha come prefisso: %s",
+            sanitize_for_logging(repr(prefix_lower)),
+        )
         for k, v in self._store.items():
             if isinstance(k, str) and k.lower().startswith(prefix_lower):
                 return v
@@ -113,7 +118,7 @@ class CredentialStore:
         Restituisce una tupla (chiave, valore) o None.
         Valore è il dizionario {"data_row": ..., "vct": ..., "claims": ..., "status_assertion": ..., "status": ... } o None.
         """
-        logger.debug(f"🔍 Ricerca nel wallet crededenziale il cui vct è: {vct}")
+        logger.debug("🔍 Ricerca nel wallet crededenziale il cui vct è: %s", sanitize_for_logging(vct))
         for k, entry in self._store.items():
             if entry.get("vct") == vct:
                 return (k, entry)

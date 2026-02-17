@@ -11,7 +11,7 @@ from typing import Any
 from flask import current_app
 
 from state import app_state
-from utils.utils import extract_claim
+from utils.utils import extract_claim, sanitize_for_logging
 
 logger = logging.getLogger(__name__)
 
@@ -29,8 +29,12 @@ def get_proxies_from_config() -> tuple[dict | None, list[str]]:
     no_proxy_raw = extract_claim(current_app.config, "metadata.no_proxy") or ""
     no_proxy_domains = [d.strip() for d in no_proxy_raw.split(",") if d.strip()]
     logger.info("🚨  Configuring proxy...")
-    logger.info("🚨  Proxy abilitati: HTTP=%s, HTTPS=%s", proxies["http"], proxies["https"])
-    logger.info("🚨  No proxy domains: %s", no_proxy_domains)
+    logger.info(
+        "🚨  Proxy abilitati: HTTP=%s, HTTPS=%s",
+        sanitize_for_logging(proxies["http"]),
+        sanitize_for_logging(proxies["https"]),
+    )
+    logger.info("🚨  No proxy domains: %s", sanitize_for_logging(no_proxy_domains))
     return proxies, no_proxy_domains
 
 
@@ -145,7 +149,7 @@ def apply_replace_values(entity_id: str, config_prefix: str) -> int:
         return 0
     count = app_state.ec_store.replace_in_all_value_fields(old_val, new_val)
     if count:
-        logger.info("✅ Sostituite %d occorrenze in EC %s", count, entity_id)
+        logger.info("✅ Sostituite %d occorrenze in EC %s", count, sanitize_for_logging(entity_id))
     return count
 
 
@@ -239,5 +243,8 @@ def parse_rp_authorization_request(json_content: dict, client_id: str) -> tuple[
     credentials = dcql.get("credentials", [])
     if not isinstance(credentials, list) or not all(isinstance(c, dict) for c in credentials):
         credentials = []
-    logger.info("ℹ️  dcql_query.credentials: %d tipologie", len(credentials))
+    logger.info(
+        "ℹ️  dcql_query.credentials: %d tipologie",
+        len(credentials),
+    )
     return credentials, state, nonce, response_uri

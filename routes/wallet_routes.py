@@ -4,7 +4,7 @@ import bcrypt
 from flask import Blueprint, flash, jsonify, redirect, render_template, request, session, url_for
 
 from state import app_state
-from utils.utils import generate_nonce
+from utils.utils import generate_nonce, sanitize_for_logging
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +47,7 @@ def wallet_access():
             session_id = generate_nonce()
             session["session_id"] = session_id
 
-            logger.info(f"✅ Effettuato login (sessione inizializzata id={session_id}).")
+            logger.info("✅ Effettuato login (sessione inizializzata id=%s).", sanitize_for_logging(session_id))
 
             return redirect(url_for("wallet_routes.wallet_home", session_id=session_id))
         else:
@@ -82,7 +82,7 @@ def wallet_home():
 @wallet_routes.route("/wallet/logout", methods=["GET"])
 def logout():
     session_id = session.get("session_id", "")
-    logger.info(f"✅ Effettuato logout (sessione cancellata id={session_id}).")
+    logger.info("✅ Effettuato logout (sessione cancellata id=%s).", sanitize_for_logging(session_id))
 
     # Svuota la sessione
     session.clear()

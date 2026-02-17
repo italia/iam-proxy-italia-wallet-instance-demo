@@ -7,6 +7,8 @@ from urllib.parse import urlparse
 
 import requests
 
+from utils.utils import sanitize_for_logging
+
 logger = logging.getLogger(__name__)
 
 
@@ -134,7 +136,11 @@ def http_request_with_retry(
             response = _execute_request(method, url, req_kwargs)
             return _process_response(response, url, parse_response, handle_redirect)
         except requests.ConnectionError as ce:
-            logger.error("❌ Tentativo %d - Errore di connessione: %s", attempt, ce)
+            logger.error(
+                "❌ Tentativo %d - Errore di connessione: %s",
+                attempt,
+                sanitize_for_logging(str(ce)),
+            )
             if attempt >= max_retries:
                 raise ConnectionError(
                     f"Impossibile stabilire la connessione verso {url} dopo ripetuti tentativi"

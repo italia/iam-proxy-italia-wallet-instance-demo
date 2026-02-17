@@ -10,7 +10,7 @@ from constants import JWT_PREFIX, MSO_MDOC_PREFIX, SD_JWT_PREFIX
 from routes.itwallet_routes import itwallet_routes
 from routes.main_routes import main_routes
 from routes.wallet_routes import wallet_routes
-from utils.utils import remove_str_prefix
+from utils.utils import remove_str_prefix, sanitize_for_logging
 
 # Configura la codifica stdout
 sys.stdout.reconfigure(encoding="utf-8")
@@ -37,7 +37,11 @@ def from_json_filter(value):
     try:
         return json.loads(value)
     except (TypeError, json.JSONDecodeError) as e:
-        logging.getLogger(__name__).error(f"Errore parsing JSON nel filtro: {e}, valore: {value}")
+        logging.getLogger(__name__).error(
+            "Errore parsing JSON nel filtro: %s, valore: %s",
+            sanitize_for_logging(str(e)),
+            sanitize_for_logging(value),
+        )
         return []
 
 
@@ -138,7 +142,7 @@ try:
 except Exception as e:
     logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger(__name__)
-    logger.error(f"❌ Errore caricamento configurazione: {e}")
+    logger.error("❌ Errore caricamento configurazione: %s", sanitize_for_logging(str(e)))
 
 # Registrazione dei blueprint
 app.register_blueprint(main_routes)
@@ -151,6 +155,10 @@ if __name__ == "__main__":
     port = int(os.environ.get("FLASK_RUN_PORT", 8080))
 
     logger.info("🚀 Avvio dell'app Flask...")
-    logger.info(f"🌐 L'app è accessibile all'indirizzo: http://localhost:{port} (o http://<docker-host-ip>:{port})")
+    logger.info(
+        "🌐 L'app è accessibile all'indirizzo: http://localhost:%s (o http://<docker-host-ip>:%s)",
+        sanitize_for_logging(port),
+        sanitize_for_logging(port),
+    )
 
     app.run(host=host, port=port, debug=True, use_reloader=False)

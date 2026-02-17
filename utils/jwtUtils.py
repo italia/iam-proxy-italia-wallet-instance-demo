@@ -6,7 +6,7 @@ from typing import Union
 import jwt
 from cryptography.hazmat.primitives.asymmetric.utils import decode_dss_signature
 
-from utils.utils import base64url_decode, base64url_encode, pem_public_key_from_jwk_dict
+from utils.utils import base64url_decode, base64url_encode, pem_public_key_from_jwk_dict, sanitize_for_logging
 
 logger = logging.getLogger(__name__)
 
@@ -38,35 +38,35 @@ def verify_with_keys(main_key, other_keys, kid, try_verify):
     errors = []
 
     for candidate_kid, key in candidate_keys:
-        logger.debug(f"🔑 Provo a verificare il JWT con chiave kid={candidate_kid}")
+        logger.debug("🔑 Provo a verificare il JWT con chiave kid=%s", sanitize_for_logging(candidate_kid))
         try:
             result = try_verify(key)
             if result:
-                logger.debug(f"✅ JWT verificato con chiave kid={candidate_kid}")
+                logger.debug("✅ JWT verificato con chiave kid=%s", sanitize_for_logging(candidate_kid))
                 return result
         except jwt.InvalidSignatureError:
             msg = f"kid={candidate_kid}: Firma JWT non valida"
             errors.append(msg)
-            logger.debug(f"❌ {msg}")
+            logger.debug("❌ %s", sanitize_for_logging(msg))
 
         except jwt.ExpiredSignatureError:
             msg = f"kid={candidate_kid}: JWT scaduto"
             errors.append(msg)
-            logger.debug(f"❌ {msg}")
+            logger.debug("❌ %s", sanitize_for_logging(msg))
 
         except jwt.InvalidTokenError as e:
             msg = f"kid={candidate_kid}: JWT non valido ({e})"
             errors.append(msg)
-            logger.debug(f"❌ {msg}")
+            logger.debug("❌ %s", sanitize_for_logging(msg))
 
         except Exception as e:
             msg = f"kid={candidate_kid}: Errore imprevisto ({e})"
             errors.append(msg)
-            logger.debug(f"❌ {msg}")
+            logger.debug("❌ %s", sanitize_for_logging(msg))
 
     # se siamo qui → tutte le chiavi hanno fallito
     error_msg = "JWT non validato con nessuna chiave. Motivi: " + "; ".join(errors)
-    logger.error(f"🚫 {error_msg}")
+    logger.error("🚫 %s", sanitize_for_logging(error_msg))
     raise ValueError(error_msg)
 
 
@@ -120,10 +120,13 @@ def decode_and_verify_jwt(signed_jwt: str, jwks: dict = None):
     - Se la firma fallisce, prova a validare con le altre chiavi usando verify_with_keys.
     """
     try:
-        logger.debug("🔐 JWT firmato in input da validare e decodificare: %s", signed_jwt[:80] + "...")
+        logger.debug(
+            "🔐 JWT firmato in input da validare e decodificare: %s",
+            sanitize_for_logging(signed_jwt[:80] + "..."),
+        )
         header, payload, h_b64, p_b64, s_b64 = _decode_jwt_parts(signed_jwt)
-        logger.debug("📦 Header: %s", json.dumps(header, indent=2))
-        logger.debug("📦 Payload: %s", json.dumps(payload, indent=2))
+        logger.debug("📦 Header: %s", sanitize_for_logging(json.dumps(header, indent=2)))
+        logger.debug("📦 Payload: %s", sanitize_for_logging(json.dumps(payload, indent=2)))
 
         signed_jwt = _convert_der_signature_if_needed(signed_jwt, header, h_b64, p_b64, s_b64)
         jwks = _resolve_jwks(jwks, payload)
@@ -161,10 +164,10 @@ def decode_and_verify_jwt(signed_jwt: str, jwks: dict = None):
         logger.debug("✅ JWT verificato con successo!")
         return payload_verified
     except ValueError as ve:
-        logger.error("❌ JWT non valido: %s", ve)
+        logger.error("❌ JWT non valido: %s", sanitize_for_logging(str(ve)))
         raise
     except Exception as e:
-        logger.error("❌ Errore interno durante la decodifica/verifica del JWT: %s", e)
+        logger.error("❌ Errore interno durante la decodifica/verifica del JWT: %s", sanitize_for_logging(str(e)))
         raise
 
 
@@ -172,7 +175,7 @@ def extract_key_for_enc(jwks: dict) -> str:
     """
     Estrae la prima chiave JWK trovata in jwks con 'use' == 'enc' e se non la trova, prende la prima senza il claim 'use'
     """
-    logger.debug(f"📦 JWKS in input: {json.dumps(jwks, indent=2)}")
+    logger.debug("📦 JWKS in input: %s", sanitize_for_logging(json.dumps(jwks, indent=2)))
 
     # Trova la chiave EC
     keys = jwks.get("keys", [])
@@ -201,7 +204,11 @@ def extract_key_for_enc(jwks: dict) -> str:
         logger.debug("❌ La chiave scelta non ha kty")
         return None
 
-    logger.debug(f"🗝️  Chiave scelta per cifrare (kid={kid}): {json.dumps(enc_key, indent=2)}")
+    logger.debug(
+        "🗝️  Chiave scelta per cifrare (kid=%s): %s",
+        sanitize_for_logging(kid),
+        sanitize_for_logging(json.dumps(enc_key, indent=2)),
+    )
 
     enc_key_string = json.dumps(enc_key)
 

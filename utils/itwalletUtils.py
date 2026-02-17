@@ -20,7 +20,7 @@ from constants import (
 )
 from utils.http_utils import http_request_with_retry
 from utils.sdJwtUtils import issue_sd_jwt
-from utils.utils import base64url_encode, priv_ec_key_obj_to_jwk, pub_ec_key_obj_to_jwk
+from utils.utils import base64url_encode, priv_ec_key_obj_to_jwk, pub_ec_key_obj_to_jwk, sanitize_for_logging
 
 logger = logging.getLogger(__name__)
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -32,14 +32,14 @@ def _parse_json_for_par(response: requests.Response) -> dict:
 
     result = _parse_json_response(response, str(response.url))
     logger.info("✅ Risposta OK:")
-    logger.info(json.dumps(result, indent=2))
+    logger.info("%s", sanitize_for_logging(json.dumps(result, indent=2)))
     return result
 
 
 def _parse_text_response(response: requests.Response) -> str:
     """Return response body as stripped text."""
     text = response.text.strip()
-    logger.info("✅ Risposta: %s", text[:200] + "..." if len(text) > 200 else text)
+    logger.info("✅ Risposta: %s", sanitize_for_logging(text[:200] + "..." if len(text) > 200 else text))
     return text
 
 
@@ -51,7 +51,7 @@ def _parse_jwt_response(expected_ct: str):
         if expected_ct not in ct:
             raise RuntimeError(f"Risposta non {expected_ct} ma {ct}")
         text = response.text.strip()
-        logger.info("✅ JWT ricevuto: %s", text)
+        logger.info("✅ JWT ricevuto: %s", sanitize_for_logging(text))
         return text
 
     return parser
@@ -90,9 +90,9 @@ def request_as_par(
         "OAuth-Client-Attestation-PoP": wallet_attestation_dpop_jwt,
     }
     data = {"client_id": client_id, "request": request_object_jwt}
-    logger.info(">>>> Invio POST a %s", url)
-    logger.info("📦 Header:\n%s", json.dumps(headers, indent=2))
-    logger.info("📦 Payload:\n%s", json.dumps(data, indent=2))
+    logger.info(">>>> Invio POST a %s", sanitize_for_logging(url))
+    logger.info("📦 Header:\n%s", sanitize_for_logging(json.dumps(headers, indent=2)))
+    logger.info("📦 Payload:\n%s", sanitize_for_logging(json.dumps(data, indent=2)))
     return http_request_with_retry(
         "POST",
         url,
@@ -129,7 +129,7 @@ def request_authorize(
         In caso di errore, rilancia un'eccezione.
     """
     full_url = url + query_string
-    logger.info(">>>> Invio GET %s", full_url)
+    logger.info(">>>> Invio GET %s", sanitize_for_logging(full_url))
     return http_request_with_retry(
         "GET",
         full_url,
@@ -182,9 +182,9 @@ def request_token(
         "DPoP": dpop_proof_jwt,
     }
     data = {"grant_type": grant_type, "code": code, "redirect_uri": redirect_uri, "code_verifier": code_verifier}
-    logger.info(">>>> Invio POST a %s", url)
-    logger.info("📦 Header:\n%s", json.dumps(headers, indent=2))
-    logger.info("📦 Payload:\n%s", json.dumps(data, indent=2))
+    logger.info(">>>> Invio POST a %s", sanitize_for_logging(url))
+    logger.info("📦 Header:\n%s", sanitize_for_logging(json.dumps(headers, indent=2)))
+    logger.info("📦 Payload:\n%s", sanitize_for_logging(json.dumps(data, indent=2)))
     return http_request_with_retry(
         "POST",
         url,
@@ -232,9 +232,9 @@ def request_credential(
         "DPoP": dpop_proof_jwt,
     }
     data = {"credential_identifier": credential_id, "proof": {"proof_type": "jwt", "jwt": proof_jwt}}
-    logger.info(">>>> Invio POST a %s", url)
-    logger.info("📦 Header:\n%s", json.dumps(headers, indent=2))
-    logger.info("📦 Payload:\n%s", json.dumps(data, indent=2))
+    logger.info(">>>> Invio POST a %s", sanitize_for_logging(url))
+    logger.info("📦 Header:\n%s", sanitize_for_logging(json.dumps(headers, indent=2)))
+    logger.info("📦 Payload:\n%s", sanitize_for_logging(json.dumps(data, indent=2)))
     return http_request_with_retry(
         "POST",
         url,
@@ -258,7 +258,7 @@ def _parse_nonce_response(response: requests.Response) -> str:
     c_nonce = result.get("c_nonce")
     if c_nonce is None:
         raise ValueError("Il JSON ricevuto non contiene la chiave 'c_nonce'")
-    logger.info("✅ c_nonce estratto: %s", c_nonce)
+    logger.info("✅ c_nonce estratto: %s", sanitize_for_logging(c_nonce))
     return c_nonce
 
 
@@ -279,8 +279,8 @@ def request_nonce(
         In caso di errore, rilancia un'eccezione.
     """
     headers = {"Content-Type": "application/json; charset=utf-8", "Accept": "application/json; charset=UTF-8"}
-    logger.info(">>>> Invio POST a %s", url)
-    logger.info("📦 Header:\n%s", json.dumps(headers, indent=2))
+    logger.info(">>>> Invio POST a %s", sanitize_for_logging(url))
+    logger.info("📦 Header:\n%s", sanitize_for_logging(json.dumps(headers, indent=2)))
     return http_request_with_retry(
         "POST",
         url,
@@ -314,7 +314,7 @@ def request_request_uri(
         Dizionario JSON della risposta, o eccezione in caso di errore.
     """
     full_url = url + query_string
-    logger.info(">>>> Invio GET %s", full_url)
+    logger.info(">>>> Invio GET %s", sanitize_for_logging(full_url))
     return http_request_with_retry(
         "GET",
         full_url,
@@ -351,9 +351,9 @@ def request_response_uri(
     """
     headers = {"Content-Type": "application/x-www-form-urlencoded", "Accept": "application/json; charset=utf-8"}
     data = {"response": response_uri_request_jwt, "state": state}
-    logger.info(">>>> Invio POST a %s", url)
-    logger.info("📦 Header:\n%s", json.dumps(headers, indent=2))
-    logger.info("📦 Payload:\n%s", json.dumps(data, indent=2))
+    logger.info(">>>> Invio POST a %s", sanitize_for_logging(url))
+    logger.info("📦 Header:\n%s", sanitize_for_logging(json.dumps(headers, indent=2)))
+    logger.info("📦 Payload:\n%s", sanitize_for_logging(json.dumps(data, indent=2)))
     return http_request_with_retry(
         "POST",
         url,
@@ -370,7 +370,7 @@ def request_response_uri(
 def _handle_presentation_redirect(response: requests.Response) -> str:
     """Extract redirect URL from 3xx response for presentation callback."""
     redirect_url = response.headers["Location"]
-    logger.info("➡️  Redirect verso: %s", redirect_url)
+    logger.info("➡️  Redirect verso: %s", sanitize_for_logging(redirect_url))
     return redirect_url
 
 
@@ -394,13 +394,16 @@ def request_presentation_callback(
         ConnectionError: se la connessione fallisce dopo max_retries tentativi
         RuntimeError: se la risposta non è OK
     """
-    logger.info(">>>> Invio GET %s", url)
+    logger.info(">>>> Invio GET %s", sanitize_for_logging(url))
 
     def _log_and_parse(response: requests.Response) -> str:
         logger.info("📍 Risposta: %s", response.status_code)
-        logger.info("📍 Body: %s", response.text[:500] + ("..." if len(response.text) > 500 else ""))
+        logger.info(
+            "📍 Body: %s",
+            sanitize_for_logging(response.text[:500] + ("..." if len(response.text) > 500 else "")),
+        )
         text = response.text.strip()
-        logger.info("✅ Risposta finale: %s", text)
+        logger.info("✅ Risposta finale: %s", sanitize_for_logging(text))
         return text
 
     return http_request_with_retry(
@@ -441,9 +444,9 @@ def request_status(
     """
     headers = {"Content-Type": "application/json; charset=utf-8", "Accept": "application/json; charset=UTF-8"}
     data = {"status_assertion_requests": status_assertion_requests}
-    logger.info(">>>> Invio POST a %s", url)
-    logger.info("📦 Header:\n%s", json.dumps(headers, indent=2))
-    logger.info("📦 Payload:\n%s", json.dumps(data, indent=2))
+    logger.info(">>>> Invio POST a %s", sanitize_for_logging(url))
+    logger.info("📦 Header:\n%s", sanitize_for_logging(json.dumps(headers, indent=2)))
+    logger.info("📦 Payload:\n%s", sanitize_for_logging(json.dumps(data, indent=2)))
     return http_request_with_retry(
         "POST",
         url,
@@ -1040,8 +1043,12 @@ def generate_response_uri_request_jwe(
         logger.error("❌ La chiave per cifrare il JWE non presenta il claim 'kty'")
         return None
 
-    logger.debug(f"🗝️  Chiave per cifrare il JWE (kid={kid}, kty={kty}):")
-    logger.debug(json.dumps(enc_key, indent=2))
+    logger.debug(
+        "🗝️  Chiave per cifrare il JWE (kid=%s, kty=%s):",
+        sanitize_for_logging(kid),
+        sanitize_for_logging(kty),
+    )
+    logger.debug("%s", sanitize_for_logging(json.dumps(enc_key, indent=2)))
 
     # Seleziona algoritmi in base a kty
     if kty == "EC":
@@ -1067,8 +1074,8 @@ def generate_response_uri_request_jwe(
         )
         return None
 
-    logger.debug(f"🔑 Algoritmo di cifratura chiave: {key_encryption_alg}")
-    logger.debug(f"🛡  Algoritmo di cifratura contenuto: {content_encryption_alg}")
+    logger.debug("🔑 Algoritmo di cifratura chiave: %s", sanitize_for_logging(key_encryption_alg))
+    logger.debug("🛡  Algoritmo di cifratura contenuto: %s", sanitize_for_logging(content_encryption_alg))
 
     # Converte la JWK in oggetto JWK per jose
     pub_key = jwk.JWK.from_json(enc_key_json_str)
@@ -1087,7 +1094,10 @@ def generate_response_uri_request_jwe(
     # Crea il payload JWE
     payload = {"vp_token": vp_token, "state": state}
 
-    logger.debug(f"🔓 Payload JWT prima della cifratura:\n{json.dumps(payload, indent=2)}")
+    logger.debug(
+        "🔓 Payload JWT prima della cifratura:\n%s",
+        sanitize_for_logging(json.dumps(payload, indent=2)),
+    )
 
     # Payload JWT claims
     jwe_payload = json.dumps(payload, separators=(",", ":"))
@@ -1099,7 +1109,7 @@ def generate_response_uri_request_jwe(
     # Serializza in formato compatto
     encrypted = jwetoken.serialize(compact=True)
 
-    logger.debug(f"✅ JWE prodotto compatto: {encrypted}")
+    logger.debug("✅ JWE prodotto compatto: %s", sanitize_for_logging(encrypted))
 
     response_uri_request_jwe = encrypted
 
