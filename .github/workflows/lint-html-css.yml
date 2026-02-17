@@ -22,13 +22,23 @@ on:
       - ".stylelintrc.json"
       - ".github/workflows/lint-html-css.yml"
 
-# Avoid duplicate runs when both push and pull_request trigger for the same commit
-concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.head.sha || github.sha }}
-  cancel-in-progress: true
-
 jobs:
+  skip_check:
+    name: Skip duplicate runs
+    runs-on: ubuntu-latest
+    outputs:
+      should_skip: ${{ steps.skip.outputs.should_skip }}
+    steps:
+      - id: skip
+        uses: fkirc/skip-duplicate-actions@v5
+        with:
+          concurrent_skipping: "same_content_newer"
+          skip_after_successful_duplicate: "true"
+          do_not_skip: '["workflow_dispatch", "schedule", "merge_group"]'
+
   changes:
+    needs: skip_check
+    if: needs.skip_check.outputs.should_skip != 'true'
     name: Detect changes
     runs-on: ubuntu-latest
     outputs:
