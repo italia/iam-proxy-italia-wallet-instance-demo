@@ -31,6 +31,7 @@ from cryptography.hazmat.primitives.serialization import (
     load_pem_public_key,
 )
 from jwcrypto import jwk
+import unicodedata
 
 from constants import CONTENT_PDF_BASE_64_PREFIX
 
@@ -472,13 +473,26 @@ def estrai_parametro_query_string(url: str, parametro: str) -> str | None:
 def sanitize_for_logging(value) -> str:
     """
     Sanitize a value for safe logging to prevent log injection.
-    Replaces newlines and control characters that could be used to forge log entries.
+    - Removes/replaces newline and control characters (including Unicode controls/separators).
+    - Truncates excessively long values to avoid log flooding.
     """
     if value is None:
         return ""
     s = str(value)
-    # Replace newlines, carriage returns, and other control chars
-    return "".join(c if ord(c) >= 32 and c not in "\n\r\t" else " " for c in s)
+    cleaned_chars = []
+    for c in s:
+        # Unicode category starting with "C" = control, "Z" = separator
+        cat = unicodedata.category(c)
+        if c in "\n\r\t" or cat.startswith("C") or cat.startswith("Z"):
+            cleaned_chars.append(" ")
+        else:
+            cleaned_chars.append(c)
+    cleaned = "".join(cleaned_chars)
+    # Truncate to a safe maximum length to avoid log injection via very long input
+    max_len = 1024
+    if len(cleaned) > max_len:
+        return cleaned[:max_len] + "...[truncated]"
+    return cleaned
 
 
 def remove_str_prefix(raw: str, prefixes: list[str]) -> str:
