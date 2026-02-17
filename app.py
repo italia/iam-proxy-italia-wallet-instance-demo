@@ -6,7 +6,8 @@ import sys
 
 from flask import Flask, g, has_app_context
 
-from constants import JWT_PREFIX, MSO_MDOC_PREFIX, SD_JWT_PREFIX
+from settings import JWT_PREFIX, MSO_MDOC_PREFIX, SD_JWT_PREFIX
+from settings import CONFIG_DIR, CORRELATION_ID_FALLBACK, SECRET_KEY
 from routes.itwallet_routes import itwallet_routes
 from routes.main_routes import main_routes
 from routes.wallet_routes import wallet_routes
@@ -16,8 +17,7 @@ from utils.utils import remove_str_prefix, sanitize_for_logging
 sys.stdout.reconfigure(encoding="utf-8")
 
 app = Flask(__name__)
-app.secret_key = "s3cr3t"
-CONFIG_DIR = "config"
+app.secret_key = SECRET_KEY
 
 # Filtri personalizzati da usare nei template Jinja2
 
@@ -116,9 +116,9 @@ class CorrelationIdFilter(logging.Filter):
     def filter(self, record):
         # Prova a leggere la correlation_id dalla request, altrimenti None
         if has_app_context():
-            record.correlation_id = getattr(g, "correlation_id", "N/A")
+            record.correlation_id = getattr(g, "correlation_id", CORRELATION_ID_FALLBACK)
         else:
-            record.correlation_id = "N/A"
+            record.correlation_id = CORRELATION_ID_FALLBACK
         return True
 
 
@@ -153,8 +153,10 @@ app.register_blueprint(itwallet_routes)
 
 if __name__ == "__main__":
     # Recupera host e porta dalle variabili d'ambiente Flask se presenti, altrimenti usa default
-    host = os.environ.get("FLASK_RUN_HOST", "0.0.0.0")
-    port = int(os.environ.get("FLASK_RUN_PORT", 8080))
+    from settings import DEFAULT_HOST, DEFAULT_PORT
+
+    host = os.environ.get("FLASK_RUN_HOST", DEFAULT_HOST)
+    port = int(os.environ.get("FLASK_RUN_PORT", str(DEFAULT_PORT)))
 
     logger.info("🚀 Avvio dell'app Flask...")
     # codeql[py/log-injection]

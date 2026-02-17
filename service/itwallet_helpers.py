@@ -62,7 +62,7 @@ def get_trust_root_and_eaa_provider_ec(
     credential_configuration_id: str,
 ) -> tuple[str, str, dict]:
     """Get trust_root_url, eaa_provider_url, eaa_provider_ec for given credential_configuration_id. Raises ValueError if not found."""
-    from constants import METADATA_TYPE_CREDENTIAL_ISSUER
+    from settings import METADATA_TYPE_CREDENTIAL_ISSUER
 
     country = app_state.selected_country
     trust_root_url = extract_claim(current_app.config, f"ms_trust_configuration.{country}.trust_root")
@@ -85,7 +85,7 @@ def get_trust_root_and_eaa_provider_ec(
 
 def validate_credential_and_presentation_flow() -> None:
     """Validate credential_flow and presentation_flow response_mode/response_type from config."""
-    from constants import (
+    from settings import (
         AUTH_RESPONSE_MODE_FORM_POST_JWT,
         AUTH_RESPONSE_MODE_QUERY,
         AUTH_RESPONSE_TYPE_CODE,
@@ -171,7 +171,7 @@ def _validate_ec_authority_hints(ec_payload: dict, expected_hint: Any) -> None:
 
 def _validate_ec_metadata_and_jwks(ec_payload: dict, expected_metadata_types: list) -> None:
     """Validate EC has required metadata types and jwks. Raises ValueError."""
-    from constants import METADATA_TYPE_FEDERATION_ENTITY
+    from settings import METADATA_TYPE_FEDERATION_ENTITY
 
     actual = ec_payload.get("metadata", {})
     missing = [t for t in expected_metadata_types if t not in actual]

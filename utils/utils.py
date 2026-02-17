@@ -33,7 +33,7 @@ from cryptography.hazmat.primitives.serialization import (
 )
 from jwcrypto import jwk
 
-from constants import CONTENT_PDF_BASE_64_PREFIX
+from settings import CONTENT_PDF_BASE_64_PREFIX
 
 
 def base64url_encode(data: bytes) -> str:

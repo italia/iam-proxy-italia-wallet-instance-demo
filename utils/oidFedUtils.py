@@ -5,6 +5,7 @@ import requests
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.asymmetric import ec
 
+from settings import OID_FED_LIST_PATH, OID_FED_WELL_KNOWN_PATH
 from utils.http_utils import http_request_with_retry
 from utils.utils import sanitize_for_logging
 
@@ -47,7 +48,7 @@ def oid_fed_list(
         Una lista di stringhe (federation entity identifier) ottenute da un JSON array.
         In caso di errore, rilancia un'eccezione.
     """
-    url = base_url.rstrip("/") + "/list" + query_string
+    url = base_url.rstrip("/") + OID_FED_LIST_PATH + query_string
     headers = {"Accept": "application/json"}
     # codeql[py/log-injection]
     logger.debug(">>>> Invio GET %s", sanitize_for_logging(url))
@@ -93,7 +94,7 @@ def oid_fed_fetch_openid_configuration(
         Il JWT rappresentnte l'entity statement.
         In caso di errore, rilancia un'eccezione.
     """
-    url = base_url.rstrip("/") + "/.well-known/openid-federation"
+    url = base_url.rstrip("/") + OID_FED_WELL_KNOWN_PATH
     headers = {"Accept": "application/entity-statement+jwt"}
     # codeql[py/log-injection]
     logger.debug(">>>> Invio GET %s", sanitize_for_logging(url))

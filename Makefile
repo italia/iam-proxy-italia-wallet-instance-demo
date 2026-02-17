@@ -27,15 +27,15 @@ ruff:
 
 radon:
 	@echo "--- Radon CC (complexity) ---"
-	radon cc app.py routes/ service/ utils/ state.py constants.py -a -s --total-average
+	radon cc app.py routes/ service/ utils/ state.py settings.py settings_utils.py -a -s --total-average
 	@echo "--- Radon MI (maintainability) ---"
-	radon mi app.py routes/ service/ utils/ state.py constants.py -s -n B
+	radon mi app.py routes/ service/ utils/ state.py settings.py settings_utils.py -s -n B
 	@echo "--- Xenon (fail on CC > B) ---"
 	xenon --max-absolute B --max-modules B --max-average B app.py routes/ service/ utils/
 
 bandit:
 	@echo "--- Bandit (security lint) ---"
-	bandit -r app.py routes/ service/ utils/ state.py constants.py -ll -c pyproject.toml
+	bandit -r app.py routes/ service/ utils/ state.py settings_utils.py -ll -c pyproject.toml
 
 pip-audit:
 	@echo "--- pip-audit (dependency vulnerabilities) ---"

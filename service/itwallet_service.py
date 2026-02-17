@@ -35,7 +35,7 @@ from bs4 import BeautifulSoup
 from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePrivateKey, EllipticCurvePublicKey
 from flask import current_app
 
-from constants import (
+from settings import (
     AAL_VALUE_HIGH,
     AUTH_RESPONSE_MODE_FORM_POST_JWT,
     AUTH_RESPONSE_MODE_QUERY,
