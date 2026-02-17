@@ -15,13 +15,34 @@ METADATA_TYPE_CREDENTIAL_ISSUER = "openid_credential_issuer"
 METADATA_TYPE_CREDENTIAL_VERIFIER = "openid_credential_verifier"
 # Lista ISO alpha‑2 dei 27 Stati membri EU
 EU_COUNTRIES = {
-    "AT","BE","BG","CZ","CY","DK","DE","EE","ES","FR",
-    "FI","GR","HU","IE","IT","LV","LT","LU","MT","NL",
-    "PL","PT","RO","SK","SI","SE"
+    "AT",
+    "BE",
+    "BG",
+    "CZ",
+    "CY",
+    "DK",
+    "DE",
+    "EE",
+    "ES",
+    "FR",
+    "FI",
+    "GR",
+    "HU",
+    "IE",
+    "IT",
+    "LV",
+    "LT",
+    "LU",
+    "MT",
+    "NL",
+    "PL",
+    "PT",
+    "RO",
+    "SK",
+    "SI",
+    "SE",
 }
-IDP_VALID = {
-    "CIE3","CIE2","SPID2"
-}
+IDP_VALID = {"CIE3", "CIE2", "SPID2"}
 CREDENTIAL_VALID = "0x00"
 CREDENTIAL_INVALID = "0x01"
 CREDENTIAL_SUSPENDED = "0x02"

@@ -363,7 +363,7 @@ async function confirmAddCredential() {
 
           credPopupBody.innerHTML = `
             <div class="custom-confirm-wrapper">
-              <div class="confirmText">${frase}</div>
+              <div class="confirm-text">${frase}</div>
               <div class="button-wrapper">
                 <button id="continuePresentCredential" class="popup-btn confirm" onclick="continueAddCredential()">Continua</button>
                 <button id="cancelPresentCredential" class="popup-btn cancel" onclick="closeCredPopup()">Annulla</button>
@@ -505,7 +505,7 @@ async function loginToRelyingParty() {
 
         credPopupBody.innerHTML = `
           <div class="custom-confirm-wrapper">
-            <div class="confirmText">${frase}</div>
+            <div class="confirm-text">${frase}</div>
             <div class="button-wrapper">
               <button id="continuePresentCredential" class="popup-btn confirm" onclick="loginContinueCredPopup()">Continua</button>
               <button id="cancelPresentCredential" class="popup-btn cancel" onclick="closeCredPopup()">Annulla</button>

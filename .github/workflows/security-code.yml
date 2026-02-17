@@ -1,0 +1,62 @@
+# Security audit on code: CodeQL analysis for Python
+# https://docs.github.com/en/code-security/code-scanning/automatically-scanning-your-code-for-vulnerabilities-and-errors
+# Runs only when Python files are touched (+ weekly schedule)
+name: Security audit (code)
+
+on:
+  push:
+    branches: ["**"]
+    paths:
+      - "**/*.py"
+      - ".github/workflows/security-code.yml"
+  pull_request:
+    branches: ["**"]
+    paths:
+      - "**/*.py"
+      - ".github/workflows/security-code.yml"
+  schedule:
+    # Run weekly on Mondays at 00:00 UTC
+    - cron: '0 0 * * 1'
+
+permissions:
+  security-events: write
+  actions: read
+  contents: read
+
+jobs:
+  skip_check:
+    name: Skip duplicate runs
+    runs-on: ubuntu-latest
+    outputs:
+      should_skip: ${{ steps.skip.outputs.should_skip }}
+    steps:
+      - id: skip
+        uses: fkirc/skip-duplicate-actions@v5
+        with:
+          concurrent_skipping: "same_content_newer"
+          skip_after_successful_duplicate: "true"
+          do_not_skip: '["workflow_dispatch", "schedule", "merge_group"]'
+
+  codeql:
+    needs: skip_check
+    if: needs.skip_check.outputs.should_skip != 'true'
+    name: CodeQL
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: python
+          queries: security-extended
+          config-file: .github/codeql/codeql-config.yml
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: '/language:python'

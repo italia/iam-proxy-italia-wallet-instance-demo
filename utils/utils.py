@@ -1,44 +1,49 @@
 import base64
 import binascii
-from datetime import datetime, timezone
+import hashlib
+import io
 import json
 import secrets
-import hashlib
-import secrets
 import string
-import fitz
-import io
-import jmespath
-from jwcrypto import jwk
-from cryptography.hazmat.primitives.asymmetric import ec
-from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePrivateNumbers
-from cryptography.hazmat.primitives import serialization, hashes
-from cryptography.exceptions import InvalidSignature
-from cryptography.hazmat.primitives.serialization import Encoding, PrivateFormat, NoEncryption
-from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePrivateKey
-from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePublicKey
-from cryptography.hazmat.primitives.serialization import load_pem_private_key
-from cryptography.hazmat.primitives.serialization import load_pem_public_key
-from cryptography.hazmat.backends import default_backend
+import unicodedata
+from datetime import datetime, timezone
+from typing import Tuple, Union
+from urllib.parse import parse_qs, urlparse
 
+import fitz
+import jmespath
+from cryptography.exceptions import InvalidSignature
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives.asymmetric.ec import (
-    EllipticCurvePrivateKey,
-    EllipticCurvePublicKey,
     SECP256R1,
     SECP384R1,
     SECP521R1,
+    EllipticCurvePrivateKey,
+    EllipticCurvePrivateNumbers,
+    EllipticCurvePublicKey,
 )
-
-from typing import Union, Tuple
+from cryptography.hazmat.primitives.serialization import (
+    Encoding,
+    NoEncryption,
+    PrivateFormat,
+    load_pem_private_key,
+    load_pem_public_key,
+)
+from jwcrypto import jwk
 
 from constants import CONTENT_PDF_BASE_64_PREFIX
 
+
 def base64url_encode(data: bytes) -> str:
-    return base64.urlsafe_b64encode(data).rstrip(b'=').decode('utf-8')
+    return base64.urlsafe_b64encode(data).rstrip(b"=").decode("utf-8")
+
 
 def base64url_decode(data: str) -> bytes:
-    padding = '=' * (-len(data) % 4)
+    padding = "=" * (-len(data) % 4)
     return base64.urlsafe_b64decode(data + padding)
+
 
 def pem_private_key_from_jwk_dict(jwk_dict: dict) -> bytes:
     """
@@ -46,11 +51,12 @@ def pem_private_key_from_jwk_dict(jwk_dict: dict) -> bytes:
     """
     # Filtro solo i campi standard
     filtered = {k: jwk_dict[k] for k in ["kty", "crv", "x", "y", "d"] if k in jwk_dict}
-    
+
     jwk_obj = jwk.JWK(**filtered)
 
     pem = jwk_obj.export_to_pem(private_key=True, password=None)
     return pem  # formato bytes
+
 
 def pem_public_key_from_jwk_dict(jwk_dict: dict) -> bytes:
     """
@@ -58,79 +64,70 @@ def pem_public_key_from_jwk_dict(jwk_dict: dict) -> bytes:
     """
     # Filtro solo i campi standard
     filtered = {k: jwk_dict[k] for k in ["kty", "crv", "x", "y"] if k in jwk_dict}
-    
+
     jwk_obj = jwk.JWK(**filtered)
-    
+
     pem = jwk_obj.export_to_pem(private_key=False, password=None)
     return pem  # formato bytes
+
 
 def ec_private_key_from_pem_file(pem_path: str) -> EllipticCurvePrivateKey:
     """
     Carica una chiave privata EC da un file PEM e restituisce un oggetto EllipticCurvePrivateKey.
     """
-    with open(pem_path, 'rb') as f:
+    with open(pem_path, "rb") as f:
         pem_data = f.read()
 
-    private_key = serialization.load_pem_private_key(
-        pem_data,
-        password=None,
-        backend=default_backend()
-    )
+    private_key = serialization.load_pem_private_key(pem_data, password=None, backend=default_backend())
 
     if not isinstance(private_key, EllipticCurvePrivateKey):
         raise ValueError("La chiave caricata non è una chiave privata EC valida.")
 
     return private_key
+
 
 def ec_private_key_from_pem_bytes(pem_bytes: bytes) -> EllipticCurvePrivateKey:
     """
     Carica una chiave privata EC da dati PEM in formato bytes e restituisce un oggetto EllipticCurvePrivateKey.
     """
-    private_key = load_pem_private_key(
-        pem_bytes,
-        password=None,
-        backend=default_backend()
-    )
+    private_key = load_pem_private_key(pem_bytes, password=None, backend=default_backend())
 
     if not isinstance(private_key, EllipticCurvePrivateKey):
         raise ValueError("La chiave caricata non è una chiave privata EC valida.")
 
     return private_key
 
+
 def ec_public_key_from_pem_file(pem_path: str) -> EllipticCurvePublicKey:
     """
     Carica una chiave pubblica EC da un file PEM e restituisce un oggetto EllipticCurvePublicKey.
     """
-    with open(pem_path, 'rb') as f:
+    with open(pem_path, "rb") as f:
         pem_data = f.read()
 
-    public_key = serialization.load_pem_public_key(
-        pem_data,
-        backend=default_backend()
-    )
+    public_key = serialization.load_pem_public_key(pem_data, backend=default_backend())
 
     if not isinstance(public_key, EllipticCurvePublicKey):
         raise ValueError("La chiave caricata non è una chiave pubblica EC valida.")
 
     return public_key
+
 
 def ec_public_key_from_pem_bytes(pem_bytes: bytes) -> EllipticCurvePublicKey:
     """
     Carica una chiave pubblica EC da dati PEM in formato bytes e restituisce un oggetto EllipticCurvePublicKey.
     """
-    public_key = load_pem_public_key(
-        pem_bytes,
-        backend=default_backend()
-    )
+    public_key = load_pem_public_key(pem_bytes, backend=default_backend())
 
     if not isinstance(public_key, EllipticCurvePublicKey):
         raise ValueError("La chiave caricata non è una chiave pubblica EC valida.")
 
     return public_key
 
+
 def ec_private_key_from_jwk_file(jwk_path: str) -> EllipticCurvePrivateKey:
     """Carica una chiave privata EC da un file JWK e restituisce un oggetto EllipticCurvePrivateKey."""
-    with open(jwk_path, 'r') as f:
+    with open(jwk_path, "r") as f:
         jwk = json.load(f)
 
     # Verifica che sia una EC key
@@ -163,31 +160,31 @@ def ec_private_key_from_jwk_file(jwk_path: str) -> EllipticCurvePrivateKey:
 
     return private_numbers.private_key(backend=default_backend())
 
+
 def pub_ec_key_obj_to_jwk(pub_ec_key: EllipticCurvePublicKey) -> jwk.JWK:
     """Converte una chiave pubblica EC in formato JWK"""
-    pub_jwk  = jwk.JWK.from_pem(
+    pub_jwk = jwk.JWK.from_pem(
         pub_ec_key.public_bytes(
-            encoding=serialization.Encoding.PEM,
-            format=serialization.PublicFormat.SubjectPublicKeyInfo
+            encoding=serialization.Encoding.PEM, format=serialization.PublicFormat.SubjectPublicKeyInfo
         )
     )
-    
+
     return pub_jwk
+
 
 def priv_ec_key_obj_to_jwk(priv_ec_key: EllipticCurvePrivateKey) -> jwk.JWK:
     """Converte una chiave privata EC in formato JWK"""
     priv_pem = priv_ec_key.private_bytes(
         encoding=serialization.Encoding.PEM,
         format=serialization.PrivateFormat.PKCS8,
-        encryption_algorithm=serialization.NoEncryption()
+        encryption_algorithm=serialization.NoEncryption(),
     )
 
     priv_jwk = jwk.JWK.from_pem(priv_pem)
     return priv_jwk
 
-def check_curve_supported(
-    key: Union[EllipticCurvePrivateKey, EllipticCurvePublicKey]
-) -> Tuple[bool, str]:
+
+def check_curve_supported(key: Union[EllipticCurvePrivateKey, EllipticCurvePublicKey]) -> Tuple[bool, str]:
     """
     Controlla se la chiave ECC usa una curva supportata (P-256, P-384, P-521).
 
@@ -208,6 +205,7 @@ def check_curve_supported(
 
     return (curve_name != "UNKNOWN", curve_name)
 
+
 def generate_pem_keys(pvt_key_path: str, pub_key_path: str, curve_name: str = "P-256"):
     """Genera una coppia di chiavi EC in PEM, con curva parametrica (P-256, P-384, P-521)"""
     # Mappa nome curva → oggetto curva cryptography
@@ -224,19 +222,21 @@ def generate_pem_keys(pvt_key_path: str, pub_key_path: str, curve_name: str = "P
     private_key = ec.generate_private_key(curve, default_backend())
 
     # Salva chiave privata
-    with open(pvt_key_path, 'wb') as f:
-        f.write(private_key.private_bytes(
-            encoding=Encoding.PEM,
-            format=PrivateFormat.PKCS8,
-            encryption_algorithm=NoEncryption()
-        ))
+    with open(pvt_key_path, "wb") as f:
+        f.write(
+            private_key.private_bytes(
+                encoding=Encoding.PEM, format=PrivateFormat.PKCS8, encryption_algorithm=NoEncryption()
+            )
+        )
 
     # Salva chiave pubblica PEM
-    with open(pub_key_path, 'wb') as f:
-        f.write(private_key.public_key().public_bytes(
-            encoding=Encoding.PEM,
-            format=serialization.PublicFormat.SubjectPublicKeyInfo
-        ))
+    with open(pub_key_path, "wb") as f:
+        f.write(
+            private_key.public_key().public_bytes(
+                encoding=Encoding.PEM, format=serialization.PublicFormat.SubjectPublicKeyInfo
+            )
+        )
+
 
 def generate_pkce_pair(length: int = 64) -> dict:
     """
@@ -260,11 +260,8 @@ def generate_pkce_pair(length: int = 64) -> dict:
     sha256 = hashlib.sha256(code_verifier.encode("ascii")).digest()
     code_challenge = base64.urlsafe_b64encode(sha256).rstrip(b"=").decode("ascii")
 
-    return {
-        "code_verifier": code_verifier,
-        "code_challenge": code_challenge,
-        "code_challenge_method": "S256"
-    }
+    return {"code_verifier": code_verifier, "code_challenge": code_challenge, "code_challenge_method": "S256"}
+
 
 def get_thumbprint_from_private_key(pvt_key: EllipticCurvePrivateKey) -> str:
     # Estrai la chiave pubblica
@@ -272,8 +269,7 @@ def get_thumbprint_from_private_key(pvt_key: EllipticCurvePrivateKey) -> str:
 
     # Serializza in formato PEM
     pem = pub_key.public_bytes(
-        encoding=serialization.Encoding.PEM,
-        format=serialization.PublicFormat.SubjectPublicKeyInfo
+        encoding=serialization.Encoding.PEM, format=serialization.PublicFormat.SubjectPublicKeyInfo
     )
 
     # Crea un JWK dalla chiave pubblica
@@ -281,6 +277,7 @@ def get_thumbprint_from_private_key(pvt_key: EllipticCurvePrivateKey) -> str:
 
     # Calcola il thumbprint (SHA-256 base64url)
     return jwk_key.thumbprint()
+
 
 def determine_alg(key_jwk: jwk.JWK) -> str:
     """
@@ -293,6 +290,7 @@ def determine_alg(key_jwk: jwk.JWK) -> str:
         raise ValueError(f"❌ Curva '{crv}' non supportata per la firma SD-JWT")
     return alg
 
+
 def generate_nonce(length: int = 32) -> str:
     """
     Genera un nonce alfanumerico sicuro, composto da lettere e numeri.
@@ -304,7 +302,8 @@ def generate_nonce(length: int = 32) -> str:
         str: Stringa nonce alfanumerica sicura.
     """
     characters = string.ascii_letters + string.digits  # A-Z, a-z, 0-9
-    return ''.join(secrets.choice(characters) for _ in range(length))
+    return "".join(secrets.choice(characters) for _ in range(length))
+
 
 def guess_credential_configuration_icon(credential_configuration_id):
     credential_configuration_id_lower = credential_configuration_id.lower()
@@ -321,6 +320,7 @@ def guess_credential_configuration_icon(credential_configuration_id):
     else:
         return "📜"
 
+
 def has_claim(entity: dict, jmes_query: str) -> bool:
     """
     Controlla se il dizionario JSON ha un claim specifico usando una query JMESPath.
@@ -331,7 +331,7 @@ def has_claim(entity: dict, jmes_query: str) -> bool:
 
     Returns:
         bool: True se il valore esiste ed è non nullo, False altrimenti.
-    
+
     Esempi:
         has_claim(entity, "metadata.openid_credential_verifier.client_id")  # True
         has_claim(entity, "metadata.federation_entity.contacts[0]")         # True
@@ -342,6 +342,7 @@ def has_claim(entity: dict, jmes_query: str) -> bool:
         return result is not None
     except Exception:
         return False
+
 
 def extract_claim(entity: dict, jmes_query: str):
     """
@@ -363,12 +364,13 @@ def extract_claim(entity: dict, jmes_query: str):
     """
     try:
         # DEBUG
-        #print("🔍 JMESPath query:", jmes_query)
-        #print("🔍 Contenuto config:", entity)
+        # print("🔍 JMESPath query:", jmes_query)
+        # print("🔍 Contenuto config:", entity)
         return jmespath.search(jmes_query, entity)
     except Exception:
         return None
-    
+
+
 def estrai_testo_from_pdf(path: str) -> str:
     doc = fitz.open(path)
     full_text = ""
@@ -376,19 +378,20 @@ def estrai_testo_from_pdf(path: str) -> str:
         full_text += page.get_text()
     return full_text
 
+
 def estrai_testo_from_dati_pdf_base64(data_uri: str) -> list[str]:
     if data_uri and data_uri.startswith(CONTENT_PDF_BASE_64_PREFIX):
         b64_data = data_uri.split(",", 1)[1]
     else:
         raise ValueError(f"La stringa non contiene un prefisso valido ({CONTENT_PDF_BASE_64_PREFIX})")
-    
+
     # Correggi la lunghezza per il base64 (padding con '=')
     missing_padding = len(b64_data) % 4
     if missing_padding:
-        b64_data += '=' * (4 - missing_padding)
-        
+        b64_data += "=" * (4 - missing_padding)
+
     pdf_bytes = base64.b64decode(b64_data)
-    
+
     testi_per_pagina = []
     with fitz.open(stream=pdf_bytes, filetype="pdf") as doc:
         for page in doc:
@@ -401,14 +404,15 @@ def check_required_claims(claims: dict, expected_claims: set) -> None:
     """
     Verifica che tutte le chiavi attese siano presenti nel dict claims.
     Solleva ValueError se mancano dei claim.
-    
+
     :param claims: dict contenente i claims.
     :param expected_claims: set di chiavi attese.
     """
     missing = expected_claims - claims.keys()
     if missing:
         raise ValueError(f"Mancano i seguenti claim obbligatori: {', '.join(sorted(missing))}")
-    
+
+
 def is_hex(s: str) -> bool:
     try:
         int(s, 16)
@@ -417,30 +421,32 @@ def is_hex(s: str) -> bool:
     # opzionale: controlla che abbia lunghezza pari, se rappresenta byte interi
     return len(s) % 2 == 0
 
+
 def is_base64(s: str) -> bool:
     try:
         # rimuove eventuali newline/spazi
         sb = s.strip()
         decoded = base64.b64decode(sb, validate=True)
-        return base64.b64encode(decoded).decode('ascii') == sb.rstrip('=')
+        return base64.b64encode(decoded).decode("ascii") == sb.rstrip("=")
     except Exception:
         return False
-    
+
+
 def hex_to_base64(hex_str: str) -> str:
     # rimuovi spazi/newline
     h = hex_str.strip()
     data = binascii.unhexlify(h)
-    return base64.b64encode(data).decode('ascii')
+    return base64.b64encode(data).decode("ascii")
+
 
 def to_datetime(value):
     if isinstance(value, datetime):
         return value
     try:
         return datetime.fromtimestamp(value, tz=timezone.utc)
-    except Exception as e:
+    except Exception:
         raise ValueError("Errore in to_utc_datetime: {e}")
 
-from urllib.parse import urlparse, parse_qs
 
 def estrai_parametro_query_string(url: str, parametro: str) -> str | None:
     """
@@ -462,3 +468,37 @@ def estrai_parametro_query_string(url: str, parametro: str) -> str | None:
         return query_params.get(parametro, [None])[0]
     except Exception:
         return None
+
+
+def sanitize_for_logging(value) -> str:
+    """
+    Sanitize a value for safe logging to prevent log injection.
+    - Removes/replaces newline and control characters (including Unicode controls/separators).
+    - Truncates excessively long values to avoid log flooding.
+    """
+    if value is None:
+        return ""
+    s = str(value)
+    cleaned_chars = []
+    for c in s:
+        # Unicode category starting with "C" = control, "Z" = separator
+        cat = unicodedata.category(c)
+        if c in "\n\r\t" or cat.startswith("C") or cat.startswith("Z"):
+            cleaned_chars.append(" ")
+        else:
+            cleaned_chars.append(c)
+    cleaned = "".join(cleaned_chars)
+    # Truncate to a safe maximum length to avoid log injection via very long input
+    max_len = 1024
+    if len(cleaned) > max_len:
+        return cleaned[:max_len] + "...[truncated]"
+    return cleaned
+
+
+def remove_str_prefix(raw: str, prefixes: list[str]) -> str:
+    """Delete a prefix from a string if it exists."""
+    value_lower = raw.lower()
+    for prefix in prefixes:
+        if value_lower.startswith(prefix.lower()):
+            return raw[len(prefix) :]
+    return raw

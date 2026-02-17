@@ -1,5 +1,6 @@
-import json
 import base64
+import json
+
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes
@@ -13,10 +14,11 @@ OID_MAP = {
     NameOID.EMAIL_ADDRESS: "emailAddress",
 }
 
+
 def certificate_der_to_json(der_bytes: bytes) -> str:
     """
     Converte un certificato X.509 in formato DER in un JSON leggibile.
-    
+
     :param der_bytes: bytes del certificato in formato DER
     :return: stringa JSON con le informazioni principali
     """
@@ -26,10 +28,11 @@ def certificate_der_to_json(der_bytes: bytes) -> str:
     fingerprint_sha256 = cert.fingerprint(hashes.SHA256()).hex()
 
     # Serializza la chiave pubblica in PEM
-    public_key_pem = cert.public_key().public_bytes(
-        encoding=x509.Encoding.PEM,
-        format=x509.PublicFormat.SubjectPublicKeyInfo
-    ).decode('utf-8')
+    public_key_pem = (
+        cert.public_key()
+        .public_bytes(encoding=x509.Encoding.PEM, format=x509.PublicFormat.SubjectPublicKeyInfo)
+        .decode("utf-8")
+    )
 
     cert_info = {
         "subject": {format_name(cert.subject)},
@@ -40,7 +43,7 @@ def certificate_der_to_json(der_bytes: bytes) -> str:
         "version": cert.version.name,
         "signature_algorithm_oid": cert.signature_algorithm_oid.dotted_string,
         "fingerprint_sha256": fingerprint_sha256,
-        "der_base64": base64.b64encode(der_bytes).decode('utf-8'),
+        "der_base64": base64.b64encode(der_bytes).decode("utf-8"),
         "public_key_pem": public_key_pem,
     }
 

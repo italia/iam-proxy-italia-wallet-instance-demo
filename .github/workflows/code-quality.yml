@@ -1,0 +1,108 @@
+# Code quality, complexity, and Python linting
+# - Ruff: fast Python linter and formatter
+# - Radon: cyclomatic complexity and maintainability index
+# Runs only when Python files are touched (pip-audit in security-dependencies)
+name: Code quality & linting
+
+on:
+  push:
+    branches: ["**"]
+    paths:
+      - "**/*.py"
+      - ".github/workflows/code-quality.yml"
+  pull_request:
+    branches: ["**"]
+    paths:
+      - "**/*.py"
+      - ".github/workflows/code-quality.yml"
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  skip_check:
+    name: Skip duplicate runs
+    runs-on: ubuntu-latest
+    outputs:
+      should_skip: ${{ steps.skip.outputs.should_skip }}
+    steps:
+      - id: skip
+        uses: fkirc/skip-duplicate-actions@v5
+        with:
+          concurrent_skipping: "same_content_newer"
+          skip_after_successful_duplicate: "true"
+          do_not_skip: '["workflow_dispatch", "schedule", "merge_group"]'
+
+  lint:
+    needs: skip_check
+    if: needs.skip_check.outputs.should_skip != 'true'
+    name: Python lint (Ruff)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Ruff
+        run: pip install ruff
+
+      - name: Run Ruff linter
+        run: ruff check .
+
+      - name: Run Ruff format check
+        run: ruff format --check .
+
+  complexity:
+    needs: skip_check
+    if: needs.skip_check.outputs.should_skip != 'true'
+    name: Code complexity (Radon)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Radon
+        run: pip install radon
+
+      - name: Cyclomatic complexity (CC)
+        run: |
+          radon cc app.py routes/ service/ utils/ state.py constants.py -a -s --total-average
+
+      - name: Maintainability index (MI)
+        run: |
+          radon mi app.py routes/ service/ utils/ state.py constants.py -s -n B
+
+      - name: Fail on high complexity (Xenon)
+        run: |
+          pip install xenon
+          xenon --max-absolute B --max-modules B --max-average B app.py routes/ service/ utils/
+
+  security-bandit:
+    needs: skip_check
+    if: needs.skip_check.outputs.should_skip != 'true'
+    name: Security (Bandit)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Bandit
+        run: pip install bandit
+
+      - name: Run Bandit
+        run: bandit -r app.py routes/ service/ utils/ state.py constants.py -ll -c pyproject.toml

@@ -1,9 +1,13 @@
 # state.py
 import logging
+from typing import Optional, Tuple
+
+import jmespath
+
+from utils.utils import sanitize_for_logging
+
 logger = logging.getLogger(__name__)
 
-from typing import Optional, Tuple
-import jmespath
 
 class CredentialStore:
     def __init__(self):
@@ -14,21 +18,18 @@ class CredentialStore:
         Aggiunge o aggiorna una credenziale.
         Salva un dizionario strutturato come valore.
         """
-        
-        entry = {
-            "data_row": data_row,
-            "vct": vct
-        }
-        
+
+        entry = {"data_row": data_row, "vct": vct}
+
         if claims is not None:
             entry["claims"] = claims
 
         if status_assertion is not None:
             entry["status_assertion"] = status_assertion
-        
+
         if status is not None:
             entry["status"] = status
-        
+
         self._store[key] = entry
 
     def get(self, key) -> dict:
@@ -49,11 +50,11 @@ class CredentialStore:
     def exists(self, key) -> bool:
         """Verifica se una credenziale è presente."""
         return key in self._store
-    
+
     def keys(self) -> list[str]:
         """Restituisce una lista di tutte le chiavi presenti nello store."""
         return list(self._store.keys())
-    
+
     def keys_with_vct(self) -> list[str]:
         """
         Restituisce una lista di stringhe del tipo "chiave:vct".
@@ -70,7 +71,7 @@ class CredentialStore:
         Restituisce tutti i valori dello store.
         """
         return list(self._store.values())
-    
+
     def all(self) -> list[dict]:
         """
         Restituisce tutti gli elementi dello store come lista di dizionari,
@@ -81,7 +82,7 @@ class CredentialStore:
     def clear(self) -> None:
         """Pulisce completamente lo store."""
         self._store.clear()
-    
+
     def find_by_prefix(self, prefix: str) -> Optional[dict]:
         """
         Restituisce la prima credenziale trovata la cui chiave inizia con il prefisso dato (case insensitive),
@@ -89,7 +90,11 @@ class CredentialStore:
         Restituisce il dizionario {"data_row": ..., "vct": ..., "claims": ..., "status_assertion": ..., "status": ... } o None.
         """
         prefix_lower = prefix.lower()
-        logger.debug(f"🔍 Ricerca nel wallet crededenziale la cui chiave ha come prefisso: {repr(prefix_lower)}")
+        # codeql[py/log-injection]
+        logger.debug(
+            "🔍 Ricerca nel wallet crededenziale la cui chiave ha come prefisso: %s",
+            sanitize_for_logging(repr(prefix_lower)),
+        )
         for k, v in self._store.items():
             if isinstance(k, str) and k.lower().startswith(prefix_lower):
                 return v
@@ -107,23 +112,24 @@ class CredentialStore:
             if isinstance(k, str) and k.lower().startswith(prefix_lower):
                 return (k, v)
         return None
-        
+
     def find_by_vct(self, vct: str) -> Optional[Tuple[str, dict]]:
         """
         Cerca una credenziale per vct (restituisce la prima che trova)
         Restituisce una tupla (chiave, valore) o None.
         Valore è il dizionario {"data_row": ..., "vct": ..., "claims": ..., "status_assertion": ..., "status": ... } o None.
         """
-        logger.debug(f"🔍 Ricerca nel wallet crededenziale il cui vct è: {vct}")
+        # codeql[py/log-injection]
+        logger.debug("🔍 Ricerca nel wallet crededenziale il cui vct è: %s", sanitize_for_logging(vct))
         for k, entry in self._store.items():
             if entry.get("vct") == vct:
                 return (k, entry)
         return None
-    
+
     def update_status(self, key: str, new_status_assertion: str, new_status: str) -> bool:
         """
         Aggiorna lo status della credenziale identificata dalla chiave.
-        
+
         Args:
             key: La chiave della credenziale da aggiornare.
             new_status_assertion: La nuova status assertion
@@ -138,6 +144,7 @@ class CredentialStore:
             return True
         return False
 
+
 class EntityConfigurationStore:
     def __init__(self):
         self._store = {}
@@ -147,7 +154,7 @@ class EntityConfigurationStore:
         Aggiunge o aggiorna un EntityConfiguration.
         """
         self._store[key] = value
-        
+
     def get(self, key) -> dict:
         """
         Cerca un EntityConfiguration.
@@ -164,7 +171,7 @@ class EntityConfigurationStore:
     def exists(self, key) -> bool:
         """Verifica se un EntityConfiguration è presente."""
         return key in self._store
-    
+
     def keys(self) -> list[str]:
         """Restituisce una lista di tutte le chiavi presenti nello store."""
         return list(self._store.keys())
@@ -172,7 +179,7 @@ class EntityConfigurationStore:
     def clear(self) -> None:
         """Pulisce completamente lo store."""
         self._store.clear()
-    
+
     def all_values(self, jmes_query: str = None) -> list[dict]:
         """
         Restituisce tutti i valori dello store.
@@ -189,14 +196,14 @@ class EntityConfigurationStore:
             if result:
                 filtered_values.append(v)
         return filtered_values
-    
+
     def all(self) -> list[dict]:
         """
         Restituisce tutti gli elementi dello store come lista di dizionari,
         includendo sia le chiavi che i valori.
         """
         return [{"key": k, "value": v} for k, v in self._store.items()]
-    
+
     def update_claim_by_path(self, key: str, json_path: str, new_value) -> bool:
         """
         Aggiorna il valore individuato da un json_path dentro l'oggetto JSON
@@ -265,7 +272,7 @@ class AppState:
         self.selected_idp = ""
         self.credential_store = CredentialStore()
         self.ec_store = EntityConfigurationStore()
-    
+
     def get_store_types(self) -> list[str]:
         """
         Restituisce solo i tipi di oggetti 'store' presenti in memoria.
@@ -275,14 +282,14 @@ class AppState:
             if isinstance(attr_value, (CredentialStore, EntityConfigurationStore)):
                 types.append(type(attr_value).__name__)
         return types
-    
+
     def get_store(self, name: str):
         """
         Restituisce il contenuto dello store richiesto (lista di valori).
-        
+
         Args:
             name (str): Nome dello store. Può essere "CredentialStore" o "EntityConfigurationStore".
-        
+
         Returns:
             list: Contenuto dello store, oppure [] se non trovato.
         """
@@ -292,6 +299,7 @@ class AppState:
             return self.ec_store.all()
         else:
             return []
+
 
 # Creazione istanza globale dello stato
 app_state = AppState()
