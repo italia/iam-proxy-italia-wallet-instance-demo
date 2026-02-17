@@ -2,6 +2,7 @@ import os
 
 from flask import Blueprint, current_app, redirect, render_template, send_from_directory, session, url_for
 
+from settings import CHROME_DEVTOOLS_PATH, FAVICON_MIMETYPE, FAVICON_SUBPATH, STATIC_FOLDER
 from state import app_state
 
 main_routes = Blueprint("main_routes", __name__)
@@ -10,7 +11,9 @@ main_routes = Blueprint("main_routes", __name__)
 @main_routes.route("/favicon.ico")
 def favicon():
     return send_from_directory(
-        os.path.join(current_app.root_path, "static"), "images/wallet_logo.svg", mimetype="image/svg+xml"
+        os.path.join(current_app.root_path, STATIC_FOLDER),
+        FAVICON_SUBPATH,
+        mimetype=FAVICON_MIMETYPE,
     )
 
 
@@ -24,7 +27,7 @@ def internal_error(e):
     return (render_template("500.html"),)
 
 
-@main_routes.route("/.well-known/appspecific/com.chrome.devtools.json")
+@main_routes.route(CHROME_DEVTOOLS_PATH)
 def devtools_config():
     return "", 204  # No Content, ma evita il 404
 

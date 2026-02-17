@@ -35,7 +35,21 @@ from bs4 import BeautifulSoup
 from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePrivateKey, EllipticCurvePublicKey
 from flask import current_app
 
-from constants import (
+from service.itwallet_helpers import (
+    apply_credential_issuer_overrides,
+    apply_replace_values,
+    get_proxies_from_config,
+    get_trust_root_and_eaa_provider_ec,
+    parse_rp_authorization_request,
+    require_jwt_claim,
+    require_session_key,
+    validate_access_token,
+    validate_credential_and_presentation_flow,
+    validate_ec,
+    validate_response_mode,
+    validate_response_type,
+)
+from settings import (
     AAL_VALUE_HIGH,
     AUTH_RESPONSE_MODE_FORM_POST_JWT,
     AUTH_RESPONSE_MODE_QUERY,
@@ -53,20 +67,6 @@ from constants import (
     PRESENTATION_RESPONSE_TYPE_VP_TOKEN,
     SD_JWT_PREFIX,
     WALLET_ATTESTATION_NAME,
-)
-from service.itwallet_helpers import (
-    apply_credential_issuer_overrides,
-    apply_replace_values,
-    get_proxies_from_config,
-    get_trust_root_and_eaa_provider_ec,
-    parse_rp_authorization_request,
-    require_jwt_claim,
-    require_session_key,
-    validate_access_token,
-    validate_credential_and_presentation_flow,
-    validate_ec,
-    validate_response_mode,
-    validate_response_type,
 )
 from state import app_state
 from utils.cborUtils import decode_and_verify_issuer_signed

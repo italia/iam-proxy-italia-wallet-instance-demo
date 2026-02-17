@@ -13,7 +13,7 @@ from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePrivateKey
 from flask import current_app
 from jwcrypto import jwe, jwk
 
-from constants import (
+from settings import (
     CREDENTIAL_INVALID,
     CREDENTIAL_SUSPENDED,
     CREDENTIAL_VALID,

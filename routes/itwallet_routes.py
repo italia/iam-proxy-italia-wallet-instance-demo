@@ -5,15 +5,16 @@ from urllib.parse import urlparse
 
 from flask import Blueprint, current_app, g, jsonify, render_template, request, session
 
-from constants import (
+from service.itwallet_service import ItWalletService
+from settings import (
     CONTENT_PDF_BASE_64_PREFIX,
+    DEFAULT_CORRELATION_ID,
     EU_COUNTRIES,
     IDP_VALID,
     ISO_18013_5_NAME,
     MSO_MDOC_PREFIX,
     SD_JWT_PREFIX,
 )
-from service.itwallet_service import ItWalletService
 from state import app_state
 from utils.itwalletUtils import get_status_description
 from utils.utils import (
@@ -32,7 +33,7 @@ itwallet_routes = Blueprint("itwallet_routes", __name__)
 # Esempio di middleware per impostare la correlation_id per ogni request
 @itwallet_routes.before_request
 def set_correlation_id():
-    g.correlation_id = request.headers.get("X-Correlation-ID", "default-id")
+    g.correlation_id = request.headers.get("X-Correlation-ID", DEFAULT_CORRELATION_ID)
 
 
 @itwallet_routes.after_request

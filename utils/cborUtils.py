@@ -16,7 +16,7 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import ec, utils
 from cryptography.hazmat.primitives.asymmetric.utils import encode_dss_signature
 
-from constants import HASH_ALGORITHM
+from settings import HASH_ALGORITHM
 
 # Assicurati che 'make_issuer_key_callback' sia definito in utils/utils.py oppure qui stesso
 from utils.utils import base64url_decode, base64url_encode, check_required_claims, sanitize_for_logging
