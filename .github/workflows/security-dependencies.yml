@@ -62,7 +62,15 @@ jobs:
 
       - name: Run pip-audit
         run: |
-          pip install pip-audit
+          echo ""
+          echo "##############################################################################"
+          echo "#  ⚠️  WARNING: CVE-2024-23342 (ecdsa) IS WHITELISTED IN THIS AUDIT  ⚠️     #"
+          echo "#  ecdsa Minerva timing side-channel has NO upstream fix.                   #"
+          echo "#  python-ecdsa considers side-channel attacks out of scope.                #"
+          echo "#  Whitelisted per pymdoccbor documentation — risk is accepted.             #"
+          echo "##############################################################################"
+          echo ""
+          pip install pip-audit --ignore-vuln CVE-2024-23342
           pip-audit .
 
   # Optional: OSSF Scorecard for supply-chain security (repo-level)
