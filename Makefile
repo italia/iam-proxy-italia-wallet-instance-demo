@@ -38,8 +38,14 @@ bandit:
 	bandit -r app.py routes/ service/ utils/ state.py settings_utils.py -ll -c pyproject.toml
 
 pip-audit:
-	@echo "--- pip-audit (dependency vulnerabilities) ---"
-	PIP_NO_CACHE_DIR=1 pip-audit .
+	@echo "--- pip-audit (dependency vulnerabilities) ---"@echo "--- pip-audit (dependency vulnerabilities) ---"
+		@echo ""
+		@echo "##############################################################################"
+		@echo "#  ⚠️  WARNING: CVE-2024-23342 (ecdsa) IS WHITELISTED IN THIS AUDIT  ⚠️     #"
+		@echo "#  Whitelisted per pymdoccbor documentation — risk is accepted.             #"
+		@echo "##############################################################################"
+		@echo ""
+	PIP_NO_CACHE_DIR=1 pip-audit . --ignore-vuln CVE-2024-23342
 
 html:
 	@echo "--- HTML (HTMLHint) ---"
