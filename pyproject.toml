@@ -45,7 +45,7 @@ dependencies = [
     "PyYAML==6.0.2",
     "pyzbar==0.1.7",
     "requests==2.32.4",
-    "sd-jwt @ git+https://github.com/openwallet-foundation-labs/sd-jwt-python.git@cde613902c4e23ae7160aa30966a6a5e7c658535",
+    "pyeudiw==2.1.0",
     "six==1.17.0",
     "soupsieve==2.7",
     "typing_extensions==4.14.1",

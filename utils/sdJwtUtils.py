@@ -1,12 +1,10 @@
 import json
 import logging
 
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePrivateKey
 from jwcrypto import jwk
-from sd_jwt.holder import SDJWTHolder
-from sd_jwt.issuer import SDJWTIssuer, SDObj
-from sd_jwt.verifier import SDJWTVerifier
+from pyeudiw.sd_jwt.holder import SDJWTHolder
+from pyeudiw.sd_jwt.issuer import SDJWTIssuer, SDObj
+from pyeudiw.sd_jwt.verifier import SDJWTVerifier
 
 from utils.utils import base64url_decode, sanitize_for_logging
 
@@ -305,7 +303,7 @@ def _make_issuer_key_callback(jwk_dict: dict):
     jwk_obj = jwk.JWK()
     jwk_obj.import_key(**jwk_dict)
 
-    def get_issuer_key(issuer: str, headers: dict) -> jwk.JWK:
-        return jwk_obj  # ✅ restituisce direttamente oggetto JWK
+    def get_issuer_key(issuer: str, headers: dict) -> list[jwk.JWK]:
+        return [jwk_obj]  # ✅ restituisce direttamente oggetto JWK
 
     return get_issuer_key
