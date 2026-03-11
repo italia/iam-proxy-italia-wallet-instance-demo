@@ -74,6 +74,7 @@ from utils.itwalletUtils import (
     generate_dpop_jwt,
     generate_proof_jwt,
     generate_request_object_jwt,
+    generate_par_request_object_jwt,
     generate_response_uri_request_jwe,
     generate_response_uri_request_jws,
     generate_status_assertion_request_object_jwt,
@@ -494,7 +495,7 @@ class ItWalletService:
         # codeql[py/log-injection]
         logger.info("➡️  Richiesta di rimozione dal wallet della credenziale %s", sanitize_for_logging(credential_id))
 
-        # Recupera la tipologia di credenziale riservata all'inizializazzione del wallet
+        # Recupera la tipologia di credenziale riservata all'inizalizazzione del wallet
         CREDENTIAL_CONFIGURATION_ID_FOR_INITIALIZING = extract_claim(
             current_app.config, "metadata.initialize_flow.credential_configuration_id"
         )
@@ -538,115 +539,90 @@ class ItWalletService:
              self.session["rp_state"]
              self.session["rp_response_uri"]
         """
-        # codeql[py/log-injection]
-        logger.info(
-            "➡️  Richiesta di aggiunta al wallet di una credenziale di tipo %s",
-            sanitize_for_logging(credential_configuration_id),
-        )
-        # codeql[py/log-injection]
-        logger.info(
-            "ℹ️  Nel wallet hai al momento: %s",
-            sanitize_for_logging(app_state.credential_store.keys_with_vct()),
-        )
+
+        logger.info(f"Entering method: add_credential_wallet. Params: [credential_configuration_id: {sanitize_for_logging(credential_configuration_id)}]")
+
+        logger.info(f"credential_store: {sanitize_for_logging(app_state.credential_store.keys_with_vct())}")
 
         if app_state.credential_store.find_by_prefix_with_key(credential_configuration_id):
-            raise ValueError(f"La credenziale {credential_configuration_id} è già presente nel wallet")
-        # codeql[py/log-injection]
-        logger.info("✅ La credenziale %s non è presente nel wallet", sanitize_for_logging(credential_configuration_id))
+            raise ValueError(f"The credential {credential_configuration_id} is already present in the wallet")
 
         validate_credential_and_presentation_flow()
 
-        trust_root_url, eaa_provider_url, eaa_provider_ec = get_trust_root_and_eaa_provider_ec(
-            credential_configuration_id
-        )
-        # codeql[py/log-injection]
-        logger.info("ℹ️  Trust root: %s", sanitize_for_logging(trust_root_url))
-        logger.info(
-            "✅ Trovata entità %s che rilascia credenziali di tipo %s", eaa_provider_url, credential_configuration_id
-        )
+        trust_root_url, eaa_provider_url, eaa_provider_ec = get_trust_root_and_eaa_provider_ec(credential_configuration_id)
+
+        logger.info(f"Trust_root_url: {trust_root_url}, eaa_provider_url: {eaa_provider_url}, credential_configuration_id: {credential_configuration_id}")
 
         wallet_provider_url = extract_claim(current_app.config, "metadata.wallet_provider.id")
+
         wallet_provider_pvt_key_jwk_dict = extract_claim(current_app.config, "metadata.wallet_provider.key")
 
-        # Salvo in sessione credential_configuration_id e eaa_provider_url
         self.session["credential_configuration_id"] = credential_configuration_id
+
         self.session["eaa_provider_url"] = eaa_provider_url
 
-        # Lettura coppia di chiavi pvt e pub del wallet
         wallet_private_key, wallet_public_key = self._inizializza_wallet_keys(CONFIG_DIR)
+
         if not wallet_private_key or not wallet_public_key:
-            raise ValueError("Non è stato possibile leggere la coppia di chiavi pvt e pub del wallet")
-        logger.debug("🔑🔑 Lettura coppie di chiavi pvt e pub del wallet in formato PEM")
+            raise ValueError("Private or Public key not present in wallet configuration")
 
-        # Calcola client_id (thumbprint)
         wallet_client_id = get_thumbprint_from_private_key(wallet_private_key)
-        # codeql[py/log-injection]
-        logger.debug(
-            "ℹ️  Calcolato client id del wallet come thumbprint della sua chiave pvt: %s",
-            sanitize_for_logging(wallet_client_id),
-        )
 
-        # Generazione Wallet Attestation PoP jwt
-        logger.info("Generazione nuova Wallet Attestation PoP JWT per il wallet...")
-        client_attestation_pop_jwt = generate_wallet_attestation_pop_jwt(
-            private_key=wallet_private_key, audience=eaa_provider_url
-        )
+        logger.info(f"wallet_client_id: {wallet_client_id}",sanitize_for_logging(wallet_client_id))
+
+        client_attestation_pop_jwt = generate_wallet_attestation_pop_jwt(private_key=wallet_private_key, audience=eaa_provider_url)
         if not client_attestation_pop_jwt:
-            raise ValueError("Fallita generazione Wallet Attestation PoP JWT")
-        logger.info("📄 Wallet Attestation PoP JWT generata.")
+            raise ValueError("Cant generate the Wallet Attestation PoP JWT")
+        logger.info(f"client_attestation_pop_jwt: {client_attestation_pop_jwt}.")
+        wallet_attestation_jwt = self._get_or_create_wallet_attestation(trust_root_url, wallet_provider_url, wallet_public_key, wallet_provider_pvt_key_jwk_dict)
 
-        wallet_attestation_jwt = self._get_or_create_wallet_attestation(
-            trust_root_url, wallet_provider_url, wallet_public_key, wallet_provider_pvt_key_jwk_dict
-        )
-
-        # Generazione PKCE
         pkce = generate_pkce_pair()
-        logger.info("🧪 PKCE Info")
-        # codeql[py/log-injection]
-        logger.info(" 🔐 code_verifier: %s", sanitize_for_logging(pkce.get("code_verifier", "")))
-        # codeql[py/log-injection]
-        logger.info(" 🧠 code_challenge: %s", sanitize_for_logging(pkce.get("code_challenge", "")))
-        # codeql[py/log-injection]
-        logger.info(" 🔧 method: %s", sanitize_for_logging(pkce.get("code_challenge_method", "")))
 
-        # Salvataggio in sessione del PKCE code verifier
+        logger.info(f" code_verifier: {sanitize_for_logging(pkce.get("code_verifier", ""))}")
+
+        logger.info(f"code_challenge: {sanitize_for_logging(pkce.get("code_challenge", ""))}")
+
+        logger.info(f"method: {sanitize_for_logging(pkce.get("code_challenge_method", ""))}")
+
         self.session["code_verifier"] = pkce["code_verifier"]
 
-        # Generazione Request Object JWT per richiedere la credenziale
-        logger.info("Generazione Request Object JWT per il wallet...")
+        logger.info("Generate Request Object JWT ")
         authorization_details = [
             {"type": "openid_credential", "credential_configuration_id": credential_configuration_id}
         ]
 
         credential_flow_response_type = extract_claim(current_app.config, "metadata.credential_flow.response_type")
-        credential_flow_response_mode = extract_claim(current_app.config, "metadata.credential_flow.response_mode")
+
+        # DEPRECATED
+        # credential_flow_response_mode = extract_claim(current_app.config, "metadata.credential_flow.response_mode")
+
         credential_flow_redirect_uri = extract_claim(current_app.config, "metadata.credential_flow.redirect_uri")
 
-        session_id = require_session_key(self.session, "session_id", "Sessione non inizializzata")
+        session_id = require_session_key(self.session, "session_id", "Session not present")
 
-        request_object_jwt = generate_request_object_jwt(
+        logger.info(f"session_id: {session_id}")
+
+        request_object_jwt = generate_par_request_object_jwt(
             issuer_private_key=wallet_private_key,
             audience=eaa_provider_url,
             state=session_id,
             code_challenge=pkce["code_challenge"],
             code_challenge_method=pkce["code_challenge_method"],
             response_type=credential_flow_response_type,
-            response_mode=credential_flow_response_mode,
             redirect_uri=credential_flow_redirect_uri,
             authorization_details=authorization_details,
         )
         if not request_object_jwt:
-            raise ValueError("Fallita generazione Request Object JWT")
-
-        logger.info("📄 Request Object JWT generato.")
+            raise ValueError("PAR Request Generate Exception")
 
         query_filter = f"metadata.{METADATA_TYPE_AUTHORIZATION_SERVER}.pushed_authorization_request_endpoint"
+
+        logger.info(f"query_filter: {query_filter}")
+
         eaa_provider_as_par_url = extract_claim(eaa_provider_ec, query_filter)
 
-        # codeql[py/log-injection]
-        logger.info("🚀 Invio PAR request al PAR endpoint: %s", sanitize_for_logging(eaa_provider_as_par_url))
+        logger.info(f"sanitize_for_logging(eaa_provider_as_par_url): {sanitize_for_logging(eaa_provider_as_par_url)}")
 
-        # Effettua una par request
         as_par_response = request_as_par(
             url=eaa_provider_as_par_url,
             wallet_attestation_jwt=wallet_attestation_jwt,
@@ -657,31 +633,26 @@ class ItWalletService:
             no_proxy_domains=self.no_proxy_domains,
         )
 
-        # codeql[py/log-injection]
-        logger.info("✅ Ricevuta risposta dal PAR endpoint: %s", sanitize_for_logging(eaa_provider_as_par_url))
-        # codeql[py/log-injection]
-        logger.info("%s", sanitize_for_logging(as_par_response))
+        logger.info(f"Par response: {as_par_response}")
 
         request_uri = as_par_response.get("request_uri")
+
         if not request_uri:
-            raise ValueError("PAR Response ricevuta dall'EAA Provider non contiene un claim 'request_uri'")
+            raise ValueError("PAR Response from EAA Provider 'request_uri' not present")
 
         query_filter = f"metadata.{METADATA_TYPE_AUTHORIZATION_SERVER}.authorization_endpoint"
-        eaa_provider_authorization_url = extract_claim(eaa_provider_ec, query_filter)
 
-        # Build authorization query string
+        eaa_provider_authorization_url = extract_claim(eaa_provider_ec, query_filter)
         params = {
             "client_id": wallet_client_id,
             "request_uri": request_uri,
         }
         authorization_query_string = f"?{urlencode(params)}"
 
-        logger.info(
-            "🚀 Invio AUTHORIZE request all'AUTHORIZE endpoint %s",
-            sanitize_for_logging(eaa_provider_authorization_url),
-        )
+        logger.info(f"authorization_query_string: {authorization_query_string}")
 
-        # Effettua un'authorize request verso l'authorization server dell'EAA Provider
+        logger.info(f"authorization endpoint: {eaa_provider_authorization_url}")
+
         authorize_response = request_authorize(
             url=eaa_provider_authorization_url,
             query_string=authorization_query_string,
@@ -689,154 +660,144 @@ class ItWalletService:
             no_proxy_domains=self.no_proxy_domains,
         )
 
-        logger.info(
-            "✅ Ricevuta risposta dall'AUTHORIZE endpoint %s",
-            sanitize_for_logging(eaa_provider_authorization_url),
-        )
-        logger.info("%s", sanitize_for_logging(authorize_response))
+        logger.info(f"authorize_response: {authorize_response}")
 
-        # l'authorize response ricevuta l'authorization server dell'EAA Provider è in realtà la
-        # Request_uri response trasmessa dal Verifier dell'EAA Provider
         if not is_jwt(authorize_response):
-            raise ValueError(
-                "La Request_uri response del Relying Party / Verifier dell'EAA Provider ricevuta tramite lo stesso EAA Provider non contiene un JWT"
-            )
+            raise ValueError("Response from Authoriza dont contain JWT")
 
-        # Recupero JWK da usare per validare il jwt
         query_filter = f"metadata.{METADATA_TYPE_CREDENTIAL_VERIFIER}.jwks"
         eaa_provider_verifier_jwks = extract_claim(eaa_provider_ec, query_filter)
-        if not eaa_provider_verifier_jwks:
-            raise ValueError(
-                f"Non trovata in memoria alcuna chiave JWK dell'EAA Provider relativa al servizio {METADATA_TYPE_CREDENTIAL_VERIFIER}"
-            )
 
-        logger.debug("🔑 JWKs trovato:")
-        logger.debug("%s", sanitize_for_logging(json.dumps(eaa_provider_verifier_jwks, indent=2, ensure_ascii=False)))
+        if not eaa_provider_verifier_jwks:
+            raise ValueError(f" JWK key for EAA provider not found in memory for service: {METADATA_TYPE_CREDENTIAL_VERIFIER}")
+
+        logger.info(f"eaa_provider_verifier_jwks: {json.dumps(eaa_provider_verifier_jwks, indent=2, ensure_ascii=False)}")
 
         try:
             jwt_payload = decode_and_verify_jwt(authorize_response, eaa_provider_verifier_jwks)
-            credentialsRequested, rp_state, rp_nonce, rp_response_uri = parse_rp_authorization_request(
+            credentials_requested, rp_state, rp_nonce, rp_response_uri = parse_rp_authorization_request(
                 jwt_payload, eaa_provider_url
             )
-
-            logger.info("✅ Validato con successo il JWT contenuto nel Request_uri response dell'EAA Provider")
-            logger.info(
-                f"ℹ️  Questo JWT rappresenta la richiesta di autorizzazione che l'EAA Provider ha fatto al wallet per accedere a specifiche credenziali del wallet prima di rilasciargli la credenziale {credential_configuration_id} richiesta"
-            )
             logger.info("📄 Request_uri response JWT payload:")
-            logger.info("%s", sanitize_for_logging(json.dumps(jwt_payload, indent=2, ensure_ascii=False)))
+            logger.info(f"jwt_payload {json.dumps(jwt_payload, indent=2, ensure_ascii=False)}")
         except ValueError as ve:
-            raise ValueError(
-                f"Fallita validazione del JWT contenuto nella Request_uri response dell'EAA Provider: {ve}"
-            )
+            raise ValueError(f"Validation JWT failed: {ve}")
 
         # Memorizzazione in sessione del relying party state, nonce e response_uri
         self.session["rp_state"] = rp_state
         self.session["rp_nonce"] = rp_nonce
         self.session["rp_response_uri"] = rp_response_uri
 
-        return {"success": True, "data": credentialsRequested}
+        return {"success": True, "data": credentials_requested}
 
     def complete_add_credential_wallet(self, credentials_presenting: list[dict]):
         """
         Metodo pubblico per completare l'aggiunta della credenziale
         """
-        logger.info("➡️  Richiesta di completamento dell'operazione di aggiunta al wallet di una credenziale")
+        logger.info(f"Entering method: complete_add_credential_wallet. Params [credentials_presenting: {credentials_presenting}]")
 
-        # codeql[py/log-injection]
-        logger.info("➡️  %s", sanitize_for_logging(credentials_presenting))
-
-        # recupero selected_country dalla memoria
         country = app_state.selected_country
 
-        # recupero wallet provider url dalla configurazione
+        logger.info(f"country: {country}")
+
         wallet_provider_url = extract_claim(current_app.config, "metadata.wallet_provider.id")
 
-        # recupero del response_mode relativo al credentialflow dalla configurazione
+        logger.info(f"wallet_provider_url: {wallet_provider_url}")
+
         credential_flow_response_mode = extract_claim(current_app.config, "metadata.credential_flow.response_mode")
 
-        # recupero trust_root_url dalla memoria
+        logger.info(f"credential_flow_response_mode: {credential_flow_response_mode}")
+
         query_trust_root = f"ms_trust_configuration.{country}.trust_root"
+
+        logger.info(f"query_trust_root: {query_trust_root}")
+
         trust_root_url = extract_claim(current_app.config, query_trust_root)
 
+        logger.info(f"trust_root_url: {trust_root_url}")
+
         if not trust_root_url:
-            raise ValueError(f"Nessun Trust root per il paese {country}")
+            raise ValueError(f"Trust root empty for {country}")
 
         session_id = self.session.get("session_id")
         if not session_id:
-            raise ValueError("Sessione non inizializzata")
+            raise ValueError("Session empty")
 
-        # recupero credential_configuration_id dalla sessione
         credential_configuration_id = self.session.get("credential_configuration_id")
-        if not credential_configuration_id:
-            raise ValueError("Nessun credential_configuration_id trovato nella memoria")
 
-        # recupero code_verifier dalla sessione
+        if not credential_configuration_id:
+            raise ValueError("Credential_configuration_id not found in memory")
+
         pkce_code_verifier = self.session.get("code_verifier")
         if not pkce_code_verifier:
-            raise ValueError("Non trovato il PKCE code verifier nella sessione")
+            raise ValueError("PKCE code verifier not fount in session")
 
-        # recupero i dati del RP Authorization Request dalla sessione
         rp_state = self.session.get("rp_state")
         rp_nonce = self.session.get("rp_nonce")
         rp_response_uri = self.session.get("rp_response_uri")
 
         if not rp_state:
-            raise ValueError("Nessun rp_state trovato nella memoria")
+            raise ValueError("rp_state not found in memory")
 
         if not rp_nonce:
-            raise ValueError("Nessun rp_nonce trovato nella memoria")
+            raise ValueError("rp_nonce not found in memory")
 
         if not rp_response_uri:
-            raise ValueError("Nessun rp_response_uri trovato nella memoria")
+            raise ValueError("rp_response_uri not found in memory")
 
-        # recupero eaa provider url dalla sessione
+        logger.info(f"rp_state: {rp_state}, rp_nonce: {rp_nonce}, rp_response_uri: {rp_response_uri}")
+
         eaa_provider_url = self.session.get("eaa_provider_url")
         if not eaa_provider_url:
-            raise ValueError("Non trovato l'URL dell'EAA provider nella sessione")
+            raise ValueError("URL EAA provider not found in memory")
 
-        # recupero EC dell'EAA provider dalla memoria usando come chiave di ricerca l'eaa provider url
+        logger.info(f"eaa_provider_url: {eaa_provider_url}")
+
         eaa_provider_ec = app_state.ec_store.get(eaa_provider_url)
         if not eaa_provider_ec:
-            raise ValueError(f"Non trovato in memoria l'Entity Configuration dell'entità {eaa_provider_url}")
+            raise ValueError(f"Entity-configuration not found in memory for {eaa_provider_url}")
 
-        # recupero della URL dell'Authorization Server dall'EC
         query_filter = f"metadata.{METADATA_TYPE_AUTHORIZATION_SERVER}.issuer"
         authorization_server_url = extract_claim(eaa_provider_ec, query_filter)
 
-        # recupero del token endpoint dell'Authorization Server dall'EC
+        logger.info(f"authorization_server_url: {authorization_server_url}")
+
         query_filter = f"metadata.{METADATA_TYPE_AUTHORIZATION_SERVER}.token_endpoint"
         authorization_server_token_url = extract_claim(eaa_provider_ec, query_filter)
 
-        # recupero del jwks dell'Authorization Server dall'EC
+        logger.info(f"authorization_server_token_url: {authorization_server_token_url}")
+
         query_filter = f"metadata.{METADATA_TYPE_AUTHORIZATION_SERVER}.jwks"
         authorization_server_jwks = extract_claim(eaa_provider_ec, query_filter)
 
-        # recupero della URL del Credential Issuer dall'EC
-        # query_filter = f"metadata.{METADATA_TYPE_CREDENTIAL_ISSUER}.credential_issuer"
-        # credential_issuer_url = extract_claim(eaa_provider_ec, query_filter)
+        logger.info(f"authorization_server_jwks: {authorization_server_jwks}")
 
-        # recupero del nonce endpoint del Credential Issuer dall'EC
         query_filter = f"metadata.{METADATA_TYPE_CREDENTIAL_ISSUER}.nonce_endpoint"
         credential_issuer_nonce_url = extract_claim(eaa_provider_ec, query_filter)
 
-        # recupero del credential endpoint del Credential Issuer dall'EC
+        logger.info(f"credential_issuer_nonce_url: {credential_issuer_nonce_url}")
+
         query_filter = f"metadata.{METADATA_TYPE_CREDENTIAL_ISSUER}.credential_endpoint"
         credential_issuer_credential_url = extract_claim(eaa_provider_ec, query_filter)
 
-        # recupero dello status assertion endpoint del Credential Issuer dall'EC
+        logger.info(f"credential_issuer_credential_url: {credential_issuer_credential_url}")
+
         query_filter = f"metadata.{METADATA_TYPE_CREDENTIAL_ISSUER}.status_assertion_endpoint"
         credential_issuer_status_assertion_url = extract_claim(eaa_provider_ec, query_filter)
 
-        # recupero del jwks del Credential Issuer dall'EC
+        logger.info(f"credential_issuer_status_assertion_url: {credential_issuer_status_assertion_url}")
+
         query_filter = f"metadata.{METADATA_TYPE_CREDENTIAL_ISSUER}.jwks"
         credential_issuer_jwks = extract_claim(eaa_provider_ec, query_filter)
 
-        # recupero redirect_uri dalla configurazione dell'app
+        logger.info(f"credential_issuer_jwks: {credential_issuer_jwks}")
+
         redirect_uri = extract_claim(current_app.config, "metadata.credential_flow.redirect_uri")
 
-        # gestisco la fase di presentazione
-        authorization_response = self._presentation_management(
+        logger.info(f"redirect_uri: {redirect_uri}")
+
+        # @TODO Chiedere a di clemente
+        authorization_response = self._presentation_management_v133(
             enc=False,
             credentials_presenting=credentials_presenting,
             rp_state=rp_state,
@@ -846,7 +807,7 @@ class ItWalletService:
             response_mode=credential_flow_response_mode,
         )
 
-        # gestisco l'Authorization Response ritornato dalla fase di presentazione
+        # @TODO che serve la fase di authorization?
         authorization_response_code, _, _ = self._authorization_response_management(
             authorization_response=authorization_response,
             state_expected=session_id,
@@ -867,7 +828,6 @@ class ItWalletService:
             redirect_uri=redirect_uri,
         )
 
-        # gestione rilascio della credenziale
         credential_id = self._credential_issuing_management(
             credential_issuer_nonce_url=credential_issuer_nonce_url,
             credential_issuer_credential_url=credential_issuer_credential_url,
@@ -878,7 +838,6 @@ class ItWalletService:
             dpop_bound_access_token=dpop_bound_access_token,
         )
 
-        # Stampo i dati in sessione
         self._print_session_data()
 
         return {"success": True, "data": {"credential_id": credential_id}}
@@ -1093,43 +1052,38 @@ class ItWalletService:
         self, authorization_response: dict, state_expected: Optional[str] = None, iss_expected: Optional[str] = None
     ) -> Tuple[str, str, str]:
         """Validate auth response, return (code, state, iss). Raises on error or mismatch."""
-        if not authorization_response:
-            raise ValueError("Nessun Authorization Response ricevuto")
+        logger.info(f"Entering method: _authorization_response_management. Params [authorization_response: {authorization_response}]")
 
-        logger.info("✅  Authorization Response ricevuto")
+        if not authorization_response:
+            raise ValueError("authorization_response empty")
 
         authorization_response_code = authorization_response.get("code")
+
         authorization_response_state = authorization_response.get("state")
+
         authorization_response_iss = authorization_response.get("iss")
+
         authorization_response_error = authorization_response.get("error")
+
         authorization_response_error_description = authorization_response.get("error_description")
 
-        logger.info("- code: %s", sanitize_for_logging(authorization_response_code))
-        logger.info("- state: %s", sanitize_for_logging(authorization_response_state))
-        logger.info("- iss: %s", sanitize_for_logging(authorization_response_iss))
-        logger.info("- error: %s", sanitize_for_logging(authorization_response_error))
-        logger.info(
-            "- error_description: %s",
-            sanitize_for_logging(authorization_response_error_description),
-        )
+        logger.info(f"authorization_response_code: {authorization_response_code}")
+        logger.info(f"authorization_response_state: {authorization_response_state}")
+        logger.info(f"authorization_response_iss: {authorization_response_iss}")
+        logger.info(f"authorization_response_error: {authorization_response_error}")
+        logger.info(f"authorization_response_error_description: {authorization_response_error_description}")
 
         if state_expected is not None and authorization_response_state != state_expected:
-            raise ValueError(
-                f"Il parametro 'state' dell'Authorization Response ricevuto non è valido: atteso '{state_expected}', trovato '{authorization_response_state}'"
-            )
+            raise ValueError(f"state_expected: {state_expected}, authorization_response_state: {authorization_response_state}")
 
         if authorization_response_error:
-            raise ValueError(
-                f"L'Authorization Response ricevuto presenta l'errore: {authorization_response_error} {authorization_response_error_description}"
-            )
+            raise ValueError(f"authorization_response_error: {authorization_response_error}, authorization_response_error_description: {authorization_response_error_description}")
         else:
             if not authorization_response_code:
-                raise ValueError("L'Authorization Response ricevuto non presenta il parametro 'code")
+                raise ValueError("authorization_response_code empty")
 
             if iss_expected is not None and authorization_response_iss != iss_expected:
-                raise ValueError(
-                    f"Il parametro 'iss' dell'Authorization Response ricevuto non è valido: atteso '{iss_expected}', trovato '{authorization_response_iss}'"
-                )
+                raise ValueError(f"iss_expected: '{iss_expected}'but found: '{authorization_response_iss}'")
 
         return authorization_response_code, authorization_response_state, authorization_response_iss
 
@@ -1141,6 +1095,7 @@ class ItWalletService:
         wallet_provider_pvt_key_jwk_dict: dict,
     ) -> Tuple[str, str]:
         """Create JWT and SD-JWT Wallet Attestations, store in credential_store. Returns (jwt, sd_jwt)."""
+
         wallet_provider_pvt_key = ec_private_key_from_pem_bytes(
             pem_private_key_from_jwk_dict(wallet_provider_pvt_key_jwk_dict)
         )
@@ -1225,52 +1180,34 @@ class ItWalletService:
         redirect_uri: str,
     ) -> Tuple[str, list]:
         """Exchange auth code for DPoP access token, validate, return token and credential_identifiers."""
-        # Generazione/letturia coppia di chiavi pvt e pub del wallet
+
+        logger.info(f"Entering method: _token_issuing_management. Params [wallet_provider_url: {wallet_provider_url}, trust_root_url: {trust_root_url}]")
+
         wallet_private_key, wallet_public_key = self._inizializza_wallet_keys(CONFIG_DIR)
+
         if not wallet_private_key or not wallet_public_key:
-            raise ValueError("Fallita generazione coppia di chiavi pvt e pub del wallet")
+            raise ValueError("Exception generation wallet key")
 
-        logger.debug("🔑🔑 Generate coppie di chiavi pvt e pub del wallet in formato PEM")
-
-        # Calcola client_id (thumbprint)
         wallet_client_id = get_thumbprint_from_private_key(wallet_private_key)
-        # codeql[py/log-injection]
-        logger.debug(
-            "ℹ️  Calcolato client id del wallet come thumbprint della sua chiave pvt: %s",
-            sanitize_for_logging(wallet_client_id),
-        )
 
-        # Generazione Wallet Attestation PoP jwt
-        logger.info("Generazione nuova Wallet Attestation PoP JWT per il wallet...")
-        client_attestation_pop_jwt = generate_wallet_attestation_pop_jwt(
-            private_key=wallet_private_key, audience=authorization_server_url
-        )
-        logger.info("📄 Wallet Attestation PoP JWT generata.")
+        logger.info(f"wallet_client_id: {wallet_client_id}")
 
-        # Recupera chiave privata wallet provider dalla configurazione del wallet
+        client_attestation_pop_jwt = generate_wallet_attestation_pop_jwt(private_key=wallet_private_key, audience=authorization_server_url)
+        logger.info(f"client_attestation_pop_jwt: {client_attestation_pop_jwt}")
+
         wallet_provider_pvt_key_jwk_dict = extract_claim(current_app.config, "metadata.wallet_provider.key")
+
         if not wallet_provider_pvt_key_jwk_dict:
-            raise ValueError("Fallito recupero della chiave privata JWK del wallet provider")
-        logger.debug("🔑 Recuperata chiave privata del wallet provider in formato JWK")
+            raise ValueError("Exception: Private Key JWK not found")
 
-        wallet_attestation_jwt = self._get_or_create_wallet_attestation(
-            trust_root_url, wallet_provider_url, wallet_public_key, wallet_provider_pvt_key_jwk_dict
-        )
+        wallet_attestation_jwt = self._get_or_create_wallet_attestation(trust_root_url, wallet_provider_url, wallet_public_key, wallet_provider_pvt_key_jwk_dict)
 
-        # Generazione DPoP for the Token Endpoint
-        logger.info(
-            f"Generazione DPoP JWT per il wallet da presentare al TOKEN endpoint {authorization_server_token_url}..."
-        )
-        dpop_token_request = generate_dpop_jwt(
-            issuer_private_key=wallet_private_key, http_method="POST", http_url=authorization_server_token_url
-        )
-        logger.info("📄 DPoP JWT generato.")
+        logger.info(f"authorization_server_token_url: {authorization_server_token_url}")
 
-        logger.info(
-            "🚀 Invio TOKEN request al TOKEN endpoint %s",
-            sanitize_for_logging(authorization_server_token_url),
-        )
-        # Effettua una token request
+        dpop_token_request = generate_dpop_jwt(issuer_private_key=wallet_private_key, http_method="POST", http_url=authorization_server_token_url)
+
+        logger.info(f"dpop_token_request: {dpop_token_request}.")
+
         token_response = request_token(
             url=authorization_server_token_url,
             wallet_attestation_jwt=wallet_attestation_jwt,
@@ -1284,18 +1221,16 @@ class ItWalletService:
             no_proxy_domains=self.no_proxy_domains,
         )
 
-        logger.info(
-            "✅ Ricevuta risposta dal TOKEN endpoint %s",
-            sanitize_for_logging(authorization_server_token_url),
-        )
-        require_jwt_claim(token_response, "token_type", expected="DPoP", msg="token_type deve essere DPoP")
-        dpop_bound_access_token = require_jwt_claim(token_response, "access_token", msg="access_token mancante")
-        authorization_details_claim = require_jwt_claim(
-            token_response, "authorization_details", msg="authorization_details mancante"
-        )
-        require_jwt_claim(token_response, "expires_in", msg="expires_in mancante")
+        logger.info(f"token_response: {token_response}")
 
-        # Controllo Access Token
+        require_jwt_claim(token_response, "token_type", expected="DPoP", msg="token_type must be DPoP")
+
+        dpop_bound_access_token = require_jwt_claim(token_response, "access_token", msg="access_token not found")
+
+        authorization_details_claim = require_jwt_claim(token_response, "authorization_details", msg="authorization_details not found")
+
+        require_jwt_claim(token_response, "expires_in", msg="expires_in not found")
+
         try:
             dpop_bound_access_token_claims = decode_and_verify_jwt(dpop_bound_access_token, authorization_server_jwks)
             validate_access_token(
@@ -1304,55 +1239,40 @@ class ItWalletService:
                 wallet_client_id,
                 wallet_client_id,
             )
-
-            logger.info("✅ L'access token contenuto nella TOKEN Response è risultato essere valido")
-            logger.info("📄 Access token payload:")
-            logger.info(
-                "%s",
-                sanitize_for_logging(json.dumps(dpop_bound_access_token_claims, indent=2, ensure_ascii=False)),
-            )
+            logger.info(f"The access token is valid: {json.dumps(dpop_bound_access_token_claims, indent=2, ensure_ascii=False)} ")
         except ValueError as ve:
-            raise ValueError(f"Fallita validazione dell'access token contenuto nella TOKEN Response: {ve}")
+            raise ValueError(f"The access token is invalid: {ve}")
 
-        # Estrai tutti i credential_identifiers da tutti i dettagli
         all_identifiers = [
             identifier
             for detail in authorization_details_claim
             for identifier in detail.get("credential_identifiers", [])
         ]
 
-        logger.info(
-            f"ℹ️  L'access token contenuto nella TOKEN Response consente di richiedere i credential identifiers: {all_identifiers}"
-        )
+        logger.info(f"all_identifiers: {all_identifiers}")
 
-        # Estrai solo gli identifiers per uno specifico credential_configuration_id
         matching_identifiers = next(
             (
                 detail.get("credential_identifiers", [])
                 for detail in authorization_details_claim
                 if detail.get("credential_configuration_id") == credential_configuration_id
             ),
-            [],  # default se non trovato
+            [],
         )
 
         if not matching_identifiers:
-            logger.error(
-                f"❌ Nessun credential identifiers trovato nella TOKEN Response che appartiene al credential configuration id '{credential_configuration_id}' richiesto nella PAR Request"
-            )
-            raise ValueError(
-                f"L'access token contenuto nella TOKEN Response non consente di richiedere alcun credential identifiers appartenente al credential configuration id '{credential_configuration_id}' richiesto nella PAR Request"
-            )
+            logger.error(f"credential_configuration_id not found: {credential_configuration_id}")
+            raise ValueError(f"credential_configuration_id not found: {credential_configuration_id}")
 
-        logger.info(
-            f"ℹ️  Il numero di credential identifiers che appartengono al credential configuration id '{credential_configuration_id}' richiesto nella PAR Request è {len(matching_identifiers)}"
-        )
+        logger.info(f"{credential_configuration_id} len: {len(matching_identifiers)}")
 
         return dpop_bound_access_token, matching_identifiers
 
     def _get_or_create_wallet_attestation(
         self, trust_root_url: str, wallet_provider_url: str, wallet_public_key, wallet_provider_pvt_key_jwk_dict: dict
     ) -> str:
-        """Get wallet attestation JWT from store, or create if missing/expired. Returns JWT string."""
+        logger.info(f"Entering method: _get_or_create_wallet_attestation. Params [trust_root_url: {trust_root_url}, wallet_provider_url: {wallet_provider_url}")
+
         wa_id = JWT_PREFIX + "_" + WALLET_ATTESTATION_NAME
         jwt_val = app_state.ec_store.get(wa_id)
         if not jwt_val:
@@ -1403,14 +1323,19 @@ class ItWalletService:
         dpop_bound_access_token: str,
     ) -> list:
         """Fetch credentials for given credential_id via nonce+proof+request. Returns list of credential dicts."""
+        logger.info(f"Entering method: _fetch_credentials_for_id. Params [credential_id: {credential_id}, nonce_url: {nonce_url}, credential_url: {credential_url}]")
+
         nonce_resp = request_nonce(url=nonce_url, proxies=self.proxies, no_proxy_domains=self.no_proxy_domains)
+
         proof_jwt = generate_proof_jwt(issuer_private_key=wallet_private_key, audience=credential_url, nonce=nonce_resp)
+
         dpop_req = generate_dpop_jwt(
             issuer_private_key=wallet_private_key,
             http_method="POST",
             http_url=credential_url,
             access_token=dpop_bound_access_token,
         )
+
         cred_resp = request_credential(
             url=credential_url,
             credential_id=credential_id,
@@ -1420,9 +1345,11 @@ class ItWalletService:
             proxies=self.proxies,
             no_proxy_domains=self.no_proxy_domains,
         )
+
         credentials = cred_resp.get("credentials", [])
+
         if not credentials:
-            raise ValueError("Nessuna credenziale rilasciata")
+            raise ValueError("credentials empty")
         return credentials
 
     def _credential_issuing_management(
@@ -1436,22 +1363,18 @@ class ItWalletService:
         dpop_bound_access_token: str,
     ) -> str:
         """Request credentials via nonce+proof, decode/validate, store in credential_store. Returns credential_id."""
-        # Generazione/letturia coppia di chiavi pvt e pub del wallet
+        logger.info(f"Entering method: _credential_issuing_management. Params [credential_issuer_nonce_url: {credential_issuer_nonce_url}]")
+
         wallet_private_key, wallet_public_key = self._inizializza_wallet_keys(CONFIG_DIR)
         if not wallet_private_key or not wallet_public_key:
-            raise ValueError("Fallita generazione coppia di chiavi pvt e pub del wallet")
+            raise ValueError("Generation Key Exception: wallet_private_key or wallet_public_key empty")
 
-        logger.debug("🔑🔑 Generate coppie di chiavi pvt e pub del wallet in formato PEM")
-
-        # Calcola client_id (thumbprint)
         wallet_client_id = get_thumbprint_from_private_key(wallet_private_key)
-        # codeql[py/log-injection]
-        logger.debug(
-            "ℹ️  Calcolato client id del wallet come thumbprint della sua chiave pvt: %s",
-            sanitize_for_logging(wallet_client_id),
-        )
+
+        logger.debug(f"wallet_client_id: {wallet_client_id}")
 
         last_valid_credential = None
+
         last_valid_credential_claims = None
 
         for credential_id in credential_identifiers:
@@ -1624,19 +1547,18 @@ class ItWalletService:
         self, enc: bool, vp_token_claims: dict, rp_state: str, rp_jwks: dict, wallet_private_key
     ) -> str:
         """Build JWE or JWS for response_uri request. Raises ValueError on failure."""
+        logger.info(f"Entering method: _build_response_uri_request. Params []")
+
         if enc:
             enc_key_jwk = extract_key_for_enc(rp_jwks)
             if not enc_key_jwk:
-                raise ValueError("Non trovata la chiave per firmare il JWE contenente il vp_token")
-            jwt = generate_response_uri_request_jwe(
-                enc_key_json_str=enc_key_jwk, vp_token=vp_token_claims, state=rp_state
-            )
+                raise ValueError("Key not found for sign JWE")
+
+            jwt = generate_response_uri_request_jwe(enc_key_json_str=enc_key_jwk, vp_token=vp_token_claims, state=rp_state)
         else:
-            jwt = generate_response_uri_request_jws(
-                private_key=wallet_private_key, vp_token=vp_token_claims, state=rp_state
-            )
+            jwt = generate_response_uri_request_jws(private_key=wallet_private_key, vp_token=vp_token_claims, state=rp_state)
         if not jwt:
-            raise ValueError("Fallita generazione Response_uri request JWE/JWS")
+            raise ValueError("Exception generation Response_uri request JWE/JWS")
         return jwt
 
     def _presentation_management(
@@ -1672,6 +1594,9 @@ class ItWalletService:
             "ℹ️  Calcolato client id del wallet come thumbprint della sua chiave pvt: %s",
             sanitize_for_logging(wallet_client_id),
         )
+
+        # Salva wallet_client_id in sessione per validazione successiva
+        self.session["wallet_client_id"] = wallet_client_id
 
         vp_token_claims = {}
         for item in credentials_presenting:
@@ -1744,6 +1669,81 @@ class ItWalletService:
             logger.info("%s", sanitize_for_logging(json.dumps(response_uri_response, indent=2)))
             return response_uri_response
 
+    def _presentation_management_v133(
+        self,
+        enc: bool,
+        credentials_presenting: list[dict],
+        rp_state: str,
+        rp_nonce: str,
+        rp_response_uri: str,
+        rp_jwks: dict,
+        response_mode: str,
+    ) -> dict:
+        """Build vp_token from credentials_presenting, send response_uri request, return auth response."""
+        logger.info(f"Entering method: _presentation_management_v133. Params [enc: {enc}, credentials_presenting: {credentials_presenting}, rp_state: {rp_state}]")
+
+        presentation_status_assertion_supported = extract_claim(current_app.config, "metadata.presentation_flow.status_assertion_supported")
+
+        wallet_private_key, wallet_public_key = self._inizializza_wallet_keys(CONFIG_DIR)
+
+        if not wallet_private_key or not wallet_public_key:
+            raise ValueError("Public and private Key not found for wallet")
+
+        wallet_private_key_jwk = priv_ec_key_obj_to_jwk(wallet_private_key)
+
+        wallet_private_key_jwk_dict = wallet_private_key_jwk.export(as_dict=True)
+
+        wallet_client_id = get_thumbprint_from_private_key(wallet_private_key)
+        logger.info(f"wallet_client_id: {wallet_client_id}")
+
+        self.session["wallet_client_id"] = wallet_client_id
+
+        vp_token_claims = {}
+
+        for item in credentials_presenting:
+            self._add_credential_presentation_to_vp(
+                item,
+                vp_token_claims,
+                rp_response_uri,
+                rp_nonce,
+                wallet_private_key_jwk_dict,
+                presentation_status_assertion_supported,
+            )
+
+        if len(vp_token_claims) == 0:
+            raise ValueError("vp_token empty claim")
+
+        logger.info(f"vp_token: {(list(vp_token_claims.keys()))}")
+
+        response_uri_request_jwt = self._build_response_uri_request(enc, vp_token_claims, rp_state, rp_jwks, wallet_private_key)
+
+        logger.info(f"rp_response_uri: {rp_response_uri}")
+
+        response_uri_response = request_response_uri(
+            url=rp_response_uri,
+            response_uri_request_jwt=response_uri_request_jwt,
+            state=rp_state,
+            proxies=self.proxies,
+            no_proxy_domains=self.no_proxy_domains,
+        )
+
+        logger.info(f"response_uri_response: {response_uri_response}")
+
+        redirect_uri = response_uri_response.get("redirect_uri")
+
+        if redirect_uri:
+            logger.info(f"redirect_uri: {redirect_uri}")
+
+            callback_response = request_presentation_callback(url=redirect_uri, proxies=self.proxies, no_proxy_domains=self.no_proxy_domains)
+
+            logger.info(f"callback_response: {callback_response}")
+
+            return self.__parse_presentation_callback_v133(callback_response, response_mode, redirect_uri, rp_jwks)
+        else:
+            logger.warning(f"redirect_uri empty, json: {json.dumps(response_uri_response, indent=2)}")
+
+            return response_uri_response
+
     def _parse_presentation_callback(
         self, callback_response: str, response_mode: str, redirect_uri: str, rp_jwks: dict
     ) -> dict:
@@ -1759,6 +1759,125 @@ class ItWalletService:
             return decode_and_verify_jwt(jwt_val, rp_jwks)
         parsed = urlparse(callback_response)
         return {k: (v[0] if v else "") for k, v in parse_qs(parsed.query).items()}
+
+    # V1.3.3
+    def __parse_presentation_callback_v133(self, callback_response: str, response_mode: str, redirect_uri: str, rp_jwks: dict) -> dict:
+        logger.info(f"Entering method: _parse_presentation_callback_v133. Params [callback_response: {callback_response}, response_mode: {response_mode}]")
+
+        if response_mode == AUTH_RESPONSE_MODE_FORM_POST_JWT:
+            return self.__parse_form_post_jwt_response(callback_response, redirect_uri, rp_jwks)
+        elif response_mode == PRESENTATION_RESPONSE_MODE_DIRECT_POST_JWT:
+            return self.__parse_direct_post_jwt_response(callback_response, redirect_uri, rp_jwks)
+        else:
+            return self.__parse_query_string_response(callback_response, redirect_uri)
+
+    # V1.3.3
+    def __parse_form_post_jwt_response(self, callback_response: str, redirect_uri: str, rp_jwks: dict) -> dict:
+        logger.info(f"Entering method: _parse_form_post_jwt_response. Params [callback_response: {callback_response}, redirect_uri: {redirect_uri}]")
+
+        bea_soup = BeautifulSoup(callback_response, "html.parser")
+
+        input = bea_soup.find("input", {"type": "hidden", "name": "response"})
+
+        if not input or not input.has_attr("value"):
+            raise ValueError( f"Hidden response not found.")
+
+        jwt_val = inp["value"]
+
+        if not is_jwt(jwt_val):
+            raise ValueError(f"Validation Exception: jwt_val not valid")
+
+        return self.__validate_authentication_response(jwt_val, rp_jwks, redirect_uri)
+
+    # V1.3.3
+    def __parse_direct_post_jwt_response(self, callback_response: str, redirect_uri: str, rp_jwks: dict)-> dict:
+        logger.info(f"Entering method: __parse_direct_post_jwt_response. Params [callback_response: {callback_response}]")
+
+        response_str = callback_response.strip()
+
+        if not is_jwt(response_str):
+            raise ValueError("JWT not valid")
+
+        return self.__validate_authentication_response(response_str, rp_jwks, redirect_uri)
+
+    def __parse_query_string_response(self, callback_response: str, redirect_uri: str) -> dict:
+        logger.info(f"Entering method: __parse_query_string_response. Params [callback_response: {callback_response}, redirect_uri: {redirect_uri}]")
+
+        parsed = urlparse(callback_response)
+
+        result = {k: (v[0] if v else "") for k, v in parse_qs(parsed.query).items()}
+
+        logger.info(f"list(result.keys(): {list(result.keys())}")
+
+        return result
+
+    def __validate_authentication_response(self, jwt_response: str, rp_jwks: dict, redirect_uri: str) -> dict:
+
+        logger.info(f"Entering method: _validate_authentication_response. Params [jwt_response: {jwt_response}, rp_jwks: {rp_jwks}]")
+
+        try:
+            auth_response_payload = decode_and_verify_jwt(jwt_response, rp_jwks)
+            logger.info("JWT signature valid")
+        except ValueError as e:
+            raise ValueError(f"JWT not valid, cause: {e}")
+
+        self.__validate_auth_response_claims(auth_response_payload, redirect_uri)
+
+        self.__check_auth_response_errors(auth_response_payload, redirect_uri)
+
+        logger.info(f"auth_response_payload: {json.dumps(auth_response_payload, indent=2, ensure_ascii=False)}")
+
+        return auth_response_payload
+
+    def __validate_auth_response_claims(self, payload: dict, redirect_uri: str) -> None:
+        logger.info(f"Entering method: _validate_auth_response_claims. Params [payload: {payload}, redirect_uri: {redirect_uri}]")
+
+        iss = payload.get("iss")
+
+        if not iss:
+            raise ValueError("iss not found")
+
+        logger.info(f"iss: {iss}")
+
+        aud = payload.get("aud")
+
+        if not aud:
+            raise ValueError(f"aud not found")
+
+        logger.debug(f"aud: {aud}")
+
+        wallet_client_id = self.session.get("wallet_client_id")
+
+        logger.info(f"wallet_client_id: {wallet_client_id}")
+
+        if not wallet_client_id:
+            raise ValueError("Exception: wallet_client_id not found")
+
+        if isinstance(aud, list) and wallet_client_id not in aud:
+            raise ValueError(f"Exception: expected {wallet_client_id} in {aud}")
+
+        if isinstance(aud, str) and aud != wallet_client_id:
+            raise ValueError(f"Exception: expected {wallet_client_id} found {aud}")
+
+        state = payload.get("state")
+
+        if not state:
+            raise ValueError("Exception: state not found")
+
+        rp_state = self.session.get("rp_state")
+
+        logger.info(f"state: {state}, rp_state: {rp_state}")
+
+        if state != rp_state:
+            raise ValueError(f"Exception: {rp_state} != {state}")
+
+    def __check_auth_response_errors(self, payload: dict, redirect_uri: str) -> None:
+        logger.info(f"Entering method: __check_auth_response_errors. Params: [payload: {payload}, redirect_uri: {redirect_uri}]")
+
+        error = payload.get("error")
+        if error:
+            raise ValueError(f"Exception {redirect_uri}: {error}")
+
 
     def _entity_configuration_management(
         self, issuer_url: str, expectedMetadataTypes: list[str], expected_hint=None
@@ -1801,26 +1920,25 @@ class ItWalletService:
         Metodo privato per generare le chiavi del wallet e salvarle su config dir.
         Ritorna una tupla: (chiave_privata, chiave_pubblica)
         """
-        # Se non esiste la cartella config_dir, la creo
+        logger.info(f"Entering method: _inizializza_wallet_keys. Params [config_dir: {config_dir}]")
+
         if not os.path.exists(config_dir):
             os.makedirs(config_dir)
 
         private_key_path = os.path.join(config_dir, "pvt_key.pem")
+
         public_key_path = os.path.join(config_dir, "pub_key.pem")
 
-        # Genera le chiavi della wallet instance se non esistono
         if not os.path.isfile(private_key_path) or not os.path.isfile(public_key_path):
-            logger.info("🔐 Generazione nuova coppia di chiavi EC P-256 per il wallet...")
             generate_pem_keys(private_key_path, public_key_path, "P-256")
-            logger.info("✅ Chiavi generate.")
+            logger.info("Key generated.")
         else:
-            logger.info("ℹ️  Le chiavi del wallet esistono già. Nessuna generazione necessaria.")
+            logger.info("Key found, we dont need new generation.")
 
-        # Carica chiavi della wallet instance
         wallet_private_key = ec_private_key_from_pem_file(private_key_path)
+
         wallet_public_key = ec_public_key_from_pem_file(public_key_path)
 
-        # Ritorna la tupla
         return wallet_private_key, wallet_public_key
 
     def _recupera_wallet_keys(self, config_dir) -> Tuple[EllipticCurvePrivateKey, EllipticCurvePublicKey]:
@@ -1911,6 +2029,119 @@ class ItWalletService:
                 )
 
         return result
+
+    def _validate_audience_claim(self, aud: str | list, wallet_client_id: str, redirect_uri: str) -> None:
+        """
+        Validate audience claim matches wallet client_id.
+        Supports both string and list formats per JWT spec.
+        """
+        logger.debug("🔍 Validazione claim 'aud'...")
+
+        if isinstance(aud, list):
+            if not aud:
+                raise ValueError("Il claim 'aud' è una lista vuota")
+            if wallet_client_id not in aud:
+                raise ValueError(
+                    f"Il wallet client_id '{wallet_client_id}' non trovato nell'audience: {aud}"
+                )
+            logger.debug("✅ Wallet client_id trovato nell'audience list")
+        elif isinstance(aud, str):
+            if aud != wallet_client_id:
+                raise ValueError(
+                    f"Il claim 'aud' non corrisponde: atteso '{wallet_client_id}', trovato '{aud}'"
+                )
+            logger.debug("✅ Audience string matches wallet client_id")
+        else:
+            raise ValueError(f"Il claim 'aud' ha tipo non valido: {type(aud)}")
+
+    def _validate_state_claim(self, response_state: str, redirect_uri: str) -> None:
+        """Validate state claim prevents CSRF attacks."""
+        logger.debug("🔍 Validazione claim 'state' (anti-CSRF)...")
+
+        session_state = self.session.get("rp_state")
+        if not session_state:
+            raise ValueError("Non trovato 'rp_state' in sessione (errore interno)")
+
+        if response_state != session_state:
+            logger.error(
+                "❌ POTENZIALE ATTACCO CSRF: state mismatch da %s",
+                sanitize_for_logging(redirect_uri),
+            )
+            raise ValueError(
+                f"State mismatch (CSRF protection): atteso '{session_state}', ricevuto '{response_state}'"
+            )
+
+        logger.debug("✅ State claim valido (CSRF protection OK)")
+
+    def _validate_response_code_claim(self, response_code: str | None, redirect_uri: str) -> None:
+        """Validate response_code indicates successful authentication."""
+        logger.debug("🔍 Validazione claim 'response_code'...")
+
+        if not response_code:
+            logger.warning(
+                "⚠️  Response code mancante da %s (potrebbe essere OK dipende da RP)",
+                sanitize_for_logging(redirect_uri),
+            )
+            return
+
+        # Codici di successo comuni
+        success_codes = ["0", "200", "ok", "success", "completed"]
+        if response_code.lower() not in success_codes:
+            logger.warning(
+                "⚠️  Response code non riconosciuto come successo: %s",
+                sanitize_for_logging(response_code),
+            )
+        else:
+            logger.debug("✅ Response code indica successo: %s", sanitize_for_logging(response_code))
+
+    def _validate_timestamp_claims(self, payload: dict, redirect_uri: str) -> None:
+        """Validate JWT timestamp claims (iat, exp) for time-based attacks."""
+        import time
+
+        logger.debug("🔍 Validazione timestamp claims (iat, exp)...")
+
+        iat = payload.get("iat")
+        exp = payload.get("exp")
+        current_time = int(time.time())
+
+        if iat:
+            # Verifica che iat non sia nel futuro (clock skew tolerance: 60 secondi)
+            if iat > current_time + 60:
+                raise ValueError(
+                    f"Il claim 'iat' è nel futuro (iat={iat}, now={current_time}), possibile attacco temporale"
+                )
+            if current_time - iat > 3600:  # Più di 1 ora fa
+                logger.warning(
+                    "⚠️  Il JWT è stato emesso più di 1 ora fa (iat=%s, now=%s)",
+                    iat,
+                    current_time,
+                )
+            logger.debug("✅ Claim 'iat' valido")
+
+        if exp:
+            # Verifica scadenza JWT (clock skew tolerance: 60 secondi)
+            if current_time > exp + 60:
+                raise ValueError(
+                    f"Il JWT è scaduto (exp={exp}, now={current_time})"
+                )
+            logger.debug("✅ JWT non scaduto (exp valida)")
+
+    def _log_auth_response_summary(self, payload: dict) -> None:
+        """Log summary of authentication response for debugging."""
+        logger.info("📊 RIASSUNTO Authentication Response:")
+        logger.info("  - iss: %s", sanitize_for_logging(payload.get("iss", "N/A")))
+        logger.info("  - aud: %s", sanitize_for_logging(str(payload.get("aud", "N/A"))))
+        logger.info("  - sub: %s", sanitize_for_logging(payload.get("sub", "N/A")))
+        logger.info("  - state: %s", sanitize_for_logging(payload.get("state", "N/A")[:20]))
+        logger.info("  - response_code: %s", sanitize_for_logging(payload.get("response_code", "N/A")))
+
+        # Informazioni aggiuntive se presenti
+        if payload.get("acr"):
+            logger.info("  - acr (Authentication Context): %s", sanitize_for_logging(payload.get("acr")))
+        if payload.get("amr"):
+            logger.info("  - amr (Auth Methods): %s", sanitize_for_logging(str(payload.get("amr"))))
+        if payload.get("auth_time"):
+            logger.info("  - auth_time: %s", payload.get("auth_time"))
 
     def _print_session_data(self):
         """Log session data for debugging (JSON or key-value fallback)."""

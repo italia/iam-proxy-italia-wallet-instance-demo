@@ -7,11 +7,10 @@ requests are centralized here to keep the main service file maintainable.
 
 import logging
 from typing import Any
-
 from flask import current_app
-
 from state import app_state
 from utils.utils import extract_claim, sanitize_for_logging
+from settings import METADATA_TYPE_CREDENTIAL_ISSUER  # ?_?
 
 logger = logging.getLogger(__name__)
 
@@ -62,29 +61,37 @@ def get_trust_root_and_eaa_provider_ec(
     credential_configuration_id: str,
 ) -> tuple[str, str, dict]:
     """Get trust_root_url, eaa_provider_url, eaa_provider_ec for given credential_configuration_id. Raises ValueError if not found."""
-    from settings import METADATA_TYPE_CREDENTIAL_ISSUER
-
+    logger.info(f"Entering method: get_trust_root_and_eaa_provider_ec. Params: [credential_configuration_id: {credential_configuration_id}]")
     country = app_state.selected_country
+
     trust_root_url = extract_claim(current_app.config, f"ms_trust_configuration.{country}.trust_root")
+
     if not trust_root_url:
         raise ValueError(f"Nessun Trust root per il paese {country}")
     query = (
         f"metadata.{METADATA_TYPE_CREDENTIAL_ISSUER}.credential_configurations_supported.{credential_configuration_id}"
     )
+
     ec_list = app_state.ec_store.all_values(query)
+
     if not ec_list:
         raise ValueError(
             f"Nessun {METADATA_TYPE_CREDENTIAL_ISSUER} trovato che supporti credenziali di tipo {credential_configuration_id}"
         )
+
     ec = ec_list[0]
+
     eaa_url = extract_claim(ec, "iss")
+
     if not eaa_url:
         raise ValueError(f"EC dell'entità che rilascia {credential_configuration_id} non presenta il claim 'iss'")
+
     return trust_root_url, eaa_url, ec
 
 
 def validate_credential_and_presentation_flow() -> None:
     """Validate credential_flow and presentation_flow response_mode/response_type from config."""
+    logger.info("Entering method: validate_credential_and_presentation_flow. ")
     from settings import (
         AUTH_RESPONSE_MODE_FORM_POST_JWT,
         AUTH_RESPONSE_MODE_QUERY,
@@ -127,19 +134,25 @@ def apply_credential_issuer_overrides(entity_id: str, config_prefix: str) -> Non
 
 def require_session_key(session: dict, key: str, msg: str = "") -> Any:
     """Get key from session. Raise ValueError if missing or empty."""
+    logger.info(f"Entering method: require_session_key. Params [ session: {session}, key: {key}]")
     val = session.get(key)
     if val is None or val == "":
-        raise ValueError(msg or f"Session key '{key}' mancante")
+        raise ValueError(msg or f"Session key '{key}' not present in session")
     return val
 
 
 def require_jwt_claim(payload: dict, key: str, expected: Any = None, msg: str = "") -> Any:
     """Get claim from payload. Raise ValueError if missing or (if expected given) mismatch."""
+    logger.info(f"Entering method: require_jwt_claim. Params [ payload: {payload}, key: {key}, expected:{expected}]")
+
     val = payload.get(key)
+
     if val is None or val == "":
-        raise ValueError(msg or f"Claim '{key}' mancante")
+        raise ValueError(msg or f"Claim '{key}' not found")
+
     if expected is not None and val != expected:
-        raise ValueError(msg or f"Claim '{key}' non valido: atteso '{expected}', trovato '{val}'")
+        raise ValueError(msg or f"Claim '{key}' not valid: expected '{expected}', found '{val}'")
+
     return val
 
 
@@ -202,29 +215,29 @@ def validate_access_token(
     json_content: dict, expected_issuer_url: str, expected_client_id: str, expected_cnf_jkt_value: str
 ) -> None:
     """Validate DPoP access token claims (iss, client_id, sub, cnf.jkt). Raises ValueError."""
+    logger.info(f"Entering method: validate_access_token. Params [json_content: {json_content}, expected_issuer_url: {expected_issuer_url}, expected_client_id:{expected_client_id}, expected_cnf_jkt_value: {expected_cnf_jkt_value}]")
+
     if not json_content:
-        raise ValueError("Access Token non specificato")
+        raise ValueError("Access Token unspecified")
+
     if json_content.get("iss") != expected_issuer_url:
-        raise ValueError(
-            f"Il claim 'iss' dell'access token presenta un valore non valido: "
-            f"atteso '{expected_issuer_url}', trovato {json_content.get('iss')}"
-        )
+        raise ValueError(f"iss not valid: expected_issuer_url '{expected_issuer_url}', found {json_content.get('iss')}")
+
     if json_content.get("client_id") != expected_client_id:
-        raise ValueError(
-            f"Il claim 'client_id' dell'access token presenta un valore non valido: "
-            f"atteso '{expected_client_id}', trovato {json_content.get('client_id')}"
-        )
+        raise ValueError(f"Iclient id not vlaid: expected_client_id '{expected_client_id}', found {json_content.get('client_id')}")
+
     if json_content.get("sub") is None:
-        raise ValueError("Claim 'sub' non presente nell'access token")
+        raise ValueError("Sub not found")
+
     cnf = json_content.get("cnf")
+
     if not cnf or not isinstance(cnf, dict):
-        raise ValueError("Claim 'cnf' non presente nell'access token")
+        raise ValueError("cnf empty or not found into json_content")
+
     jkt = cnf.get("jkt")
+
     if jkt != expected_cnf_jkt_value:
-        raise ValueError(
-            f"Il claim 'cnf.jkt' dell'access token presenta un valore non valido: "
-            f"atteso '{expected_cnf_jkt_value}', trovato {jkt}"
-        )
+        raise ValueError(f"cnf.jkt not valid: expected '{expected_cnf_jkt_value}', found {jkt}")
 
 
 def parse_rp_authorization_request(json_content: dict, client_id: str) -> tuple[list, str, str, str]:
