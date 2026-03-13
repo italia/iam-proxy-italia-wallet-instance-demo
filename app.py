@@ -6,6 +6,7 @@ import sys
 
 from flask import Flask, g, has_app_context
 
+from routes.wallet_provider import provider_routes
 from routes.itwallet_routes import itwallet_routes
 from routes.main_routes import main_routes
 from routes.wallet_routes import wallet_routes
@@ -146,6 +147,7 @@ except Exception as e:
     logger.error("❌ Errore caricamento configurazione: %s", sanitize_for_logging(str(e)))
 
 # Registrazione dei blueprint
+app.register_blueprint(provider_routes)
 app.register_blueprint(main_routes)
 app.register_blueprint(wallet_routes)
 app.register_blueprint(itwallet_routes)
