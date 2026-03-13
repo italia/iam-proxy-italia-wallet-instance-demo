@@ -2,7 +2,7 @@ import json
 import logging
 import secrets
 
-from flask import Blueprint, Response, request
+from flask import Blueprint, Response, request, session
 
 from models.provider_config import ProviderConfig
 from service.ec_manager import ECBaseManager
@@ -52,6 +52,7 @@ def wallet_nonce():
     data = json.dumps(dict(nonce=nonce))
     status = 200
     mimetype = 'application/json'
+    session['active_nonce'] = nonce
     return Response(response=data, status=status, mimetype=mimetype)
 
 @provider_routes.route('/instance-initialization', methods=['POST'], strict_slashes=False)
