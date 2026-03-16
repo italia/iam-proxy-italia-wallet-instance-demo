@@ -12,67 +12,81 @@
     "correlation_id_fallback": "N/A",
     "default_correlation_id": "default-id"
   },
+  "wallet_instance": {
+    "wallet_link": "",
+    "wallet_name": "",
+    "key_storage": [
+      "iso_18045_basic"
+    ],
+    "user_authentication": [
+      "iso_18045_basic"
+    ]
+  },
   "wallet_provider": {
-      "ec_duration_seconds": 1980,
-      "spec_version": "1.3.3",
-      "public_url": "http://localhost:8080/provider",
-      "federation_jwks": [
-          {
-              "crv": "P-256",
-              "d": "at1IEMS_vm7N81zCm4uWW7QIfH6Mk20JgxnxdXVOHEA",
-              "kid": "4xkdLZaKjzu9ZLDGLfmB-97VKUUQ5LKrc2pyRcgeCV4",
-              "kty": "EC",
-              "use": "sig",
-              "x": "tyodfYlbu2Tm_oN40DMafZAe7eVxTdkFR7sCbStw8tw",
-              "y": "NmWzXDqlAf1_b4iJEqKXkYz_80qXkEJ865qQuAbd2Rc"
-          }
-      ],
-      "core_jwks": [
-          {
-              "crv": "P-256",
-              "d": "MF8HwtLaUZeknPsGGSh5-IuVBjyR4QwdlJV6udR1sdk",
-              "kid": "HFb6WmwssAGQA8333KO8e4LVkzDFLUpc0Aqp0xk4Pa8",
-              "kty": "EC",
-              "x": "TK4Mi0gchTAdZPUTRzT5wztKPklf8Qy9DWhZmDWVcO8",
-              "y": "xCvEBHO3TP3BWRXvOtzliPvnUOc69pPlnDMexyPnGGM"
-          }
-      ],
-      "authority_hints": [],
-      "metadata_group": {
-          "federation_entity": {
-              "organization_name": "IT-Wallet Provider",
-              "homepage_uri": "https://wallet-provider.example.org",
-              "policy_uri": "https://wallet-provider.example.org/privacy_policy",
-              "tos_uri": "https://wallet-provider.example.org/info_policy",
-              "logo_uri": "https://wallet-provider.example.org/logo.svg"
-          },
-          "wallet_solution": {
-              "logo_uri": "https://wallet-solution.example.org/compact-logo.svg",
-              "wallet_metadata": {
-                  "wallet_name": "Wallet X",
-                  "credential_offer_endpoint": "https://wallet-solution.digital-strategy.europa.eu/credential_offer",
-                  "authorization_endpoint": "https://wallet-solution.digital-strategy.europa.eu/authorization",
-                  "vp_formats_supported": {
-                    "dc+sd-jwt": {
-                      "sd-jwt_alg_values": [
-                        "ES256",
-                        "ES384"
-                      ]
-                    }
-                  },
-                  "client_id_prefixes_supported": ["openid_federation", "x509_hash"],
-                  "response_types_supported": [
-                      "vp_token"
-                      ],
-                  "response_modes_supported": [
-                      "query"
-                      ],
-                  "request_object_signing_alg_values_supported": [
-                      "ES256"
-                      ]
-              }
-          }
+    "ec_duration_seconds": 1980,
+    "spec_version": "1.3.3",
+    "public_url": "http://localhost:8080/provider",
+    "federation_jwks": [
+      {
+        "crv": "P-256",
+        "d": "at1IEMS_vm7N81zCm4uWW7QIfH6Mk20JgxnxdXVOHEA",
+        "kid": "4xkdLZaKjzu9ZLDGLfmB-97VKUUQ5LKrc2pyRcgeCV4",
+        "kty": "EC",
+        "use": "sig",
+        "x": "tyodfYlbu2Tm_oN40DMafZAe7eVxTdkFR7sCbStw8tw",
+        "y": "NmWzXDqlAf1_b4iJEqKXkYz_80qXkEJ865qQuAbd2Rc",
+        "x5c": []
       }
+    ],
+    "core_jwks": [
+      {
+        "crv": "P-256",
+        "d": "MF8HwtLaUZeknPsGGSh5-IuVBjyR4QwdlJV6udR1sdk",
+        "kid": "HFb6WmwssAGQA8333KO8e4LVkzDFLUpc0Aqp0xk4Pa8",
+        "kty": "EC",
+        "x": "TK4Mi0gchTAdZPUTRzT5wztKPklf8Qy9DWhZmDWVcO8",
+        "y": "xCvEBHO3TP3BWRXvOtzliPvnUOc69pPlnDMexyPnGGM"
+      }
+    ],
+    "authority_hints": [],
+    "metadata_group": {
+      "federation_entity": {
+        "organization_name": "IT-Wallet Provider",
+        "homepage_uri": "https://wallet-provider.example.org",
+        "policy_uri": "https://wallet-provider.example.org/privacy_policy",
+        "tos_uri": "https://wallet-provider.example.org/info_policy",
+        "logo_uri": "https://wallet-provider.example.org/logo.svg"
+      },
+      "wallet_solution": {
+        "logo_uri": "https://wallet-solution.example.org/compact-logo.svg",
+        "wallet_metadata": {
+          "wallet_name": "Wallet X",
+          "credential_offer_endpoint": "https://wallet-solution.digital-strategy.europa.eu/credential_offer",
+          "authorization_endpoint": "https://wallet-solution.digital-strategy.europa.eu/authorization",
+          "vp_formats_supported": {
+            "dc+sd-jwt": {
+              "sd-jwt_alg_values": [
+                "ES256",
+                "ES384"
+              ]
+            }
+          },
+          "client_id_prefixes_supported": [
+            "openid_federation",
+            "x509_hash"
+          ],
+          "response_types_supported": [
+            "vp_token"
+          ],
+          "response_modes_supported": [
+            "query"
+          ],
+          "request_object_signing_alg_values_supported": [
+            "ES256"
+          ]
+        }
+      }
+    }
   },
   "ms_trust_configuration": {
     "IT": {
