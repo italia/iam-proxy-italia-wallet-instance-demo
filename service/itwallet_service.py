@@ -21,7 +21,6 @@ Key components:
 - SD-JWT and mDL (ISO 18013-5) credential formats are supported
 """
 
-import copy
 import hashlib
 import json
 import logging
@@ -30,11 +29,15 @@ import re
 from typing import Optional, Tuple
 from urllib.parse import parse_qs, urlencode, urlparse
 
-import jmespath
 from bs4 import BeautifulSoup
 from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePrivateKey, EllipticCurvePublicKey
 from flask import current_app
+from jwcrypto.common import base64url_decode
 
+from models.provider_config import ProviderConfig
+from pyeudiw.jwt.exceptions import LifetimeException
+from pyeudiw.jwt.jws_helper import JWSHelper
+from pyeudiw.wallet_instance_attestations.issuers.wa_request import WaJswRequestIssuer
 from service.itwallet_helpers import (
     apply_credential_issuer_overrides,
     apply_replace_values,
@@ -50,7 +53,6 @@ from service.itwallet_helpers import (
     validate_response_type,
 )
 from settings import (
-    AAL_VALUE_HIGH,
     AUTH_RESPONSE_MODE_FORM_POST_JWT,
     AUTH_RESPONSE_MODE_QUERY,
     AUTH_RESPONSE_TYPE_CODE,
@@ -68,8 +70,9 @@ from settings import (
     SD_JWT_PREFIX,
     WALLET_ATTESTATION_NAME,
 )
-from state import app_state
+from store import app_state
 from utils.cborUtils import decode_and_verify_issuer_signed
+from utils.http_utils import http_request_with_retry, _parse_json_response
 from utils.itwalletUtils import (
     generate_dpop_jwt,
     generate_proof_jwt,
@@ -78,9 +81,7 @@ from utils.itwalletUtils import (
     generate_response_uri_request_jwe,
     generate_response_uri_request_jws,
     generate_status_assertion_request_object_jwt,
-    generate_wallet_attestation_jwt,
     generate_wallet_attestation_pop_jwt,
-    generate_wallet_attestation_sd_jwt,
     get_status_description,
     request_as_par,
     request_authorize,
@@ -92,20 +93,18 @@ from utils.itwalletUtils import (
     request_status,
     request_token,
 )
-from utils.jwtUtils import decode_and_verify_jwt, extract_key_for_enc, is_jwt, jwk_private_to_public, jwk_to_jwks
+from utils.jwtUtils import decode_and_verify_jwt, extract_key_for_enc, is_jwt
 from utils.oidFedUtils import oid_fed_fetch_openid_configuration, oid_fed_list
 from utils.sdJwtUtils import decode_and_verify_sd_jwt, paths_to_nested_dict, present_sd_jwt
 from utils.utils import (
-    ec_private_key_from_pem_bytes,
     ec_private_key_from_pem_file,
     ec_public_key_from_pem_file,
     extract_claim,
     generate_pem_keys,
     generate_pkce_pair,
     get_thumbprint_from_private_key,
-    pem_private_key_from_jwk_dict,
     priv_ec_key_obj_to_jwk,
-    sanitize_for_logging,
+    sanitize_for_logging, pub_ec_key_obj_to_jwk,
 )
 
 logger = logging.getLogger(__name__)
@@ -118,6 +117,10 @@ class ItWalletService:
         """Initialize service with Flask session. Loads proxies from config."""
         self.session = session
         self.proxies, self.no_proxy_domains = get_proxies_from_config()
+        self.provider_config = ProviderConfig(extract_claim(current_app.config, "wallet_provider"))
+        self._hw_private_jwk = None
+        self._hw_public_jwk = None
+        self._hw_key_tag = None
 
     def getOnboardedRelyingParties(self):
         """Return list of onboarded Relying Parties (Credential Verifiers) from trust root."""
@@ -210,9 +213,6 @@ class ItWalletService:
             sanitize_for_logging(trust_root_url),
         )
 
-        wallet_provider_url = extract_claim(current_app.config, "metadata.wallet_provider.id")
-        wallet_provider_pvt_key_jwk_dict = extract_claim(current_app.config, "metadata.wallet_provider.key")
-
         if not app_state.ec_store.exists(trust_root_url):
             trust_root_ec = self._entity_configuration_management(trust_root_url, [METADATA_TYPE_FEDERATION_ENTITY])
             app_state.ec_store.add(trust_root_url, trust_root_ec)
@@ -243,11 +243,10 @@ class ItWalletService:
         # Salvo in sessione il pid_provider_url estratto dall'EC individuato
         self.session["pid_provider_url"] = pid_provider_url
 
-        # Generazione coppia di chiavi pvt e pub del wallet
-        wallet_private_key, wallet_public_key = self._inizializza_wallet_keys(CONFIG_DIR)
+        # retrieve wallet instance hardware keys
+        wallet_private_key, wallet_public_key = self._retrieve_instance_hw_keys(CONFIG_DIR)
         if not wallet_private_key or not wallet_public_key:
             raise ValueError("Fallita generazione coppia di chiavi pvt e pub del wallet")
-        logger.debug("🔑🔑 Generate coppie di chiavi pvt e pub del wallet in formato PEM")
 
         # Calcola client_id (thumbprint)
         wallet_client_id = get_thumbprint_from_private_key(wallet_private_key)
@@ -267,9 +266,8 @@ class ItWalletService:
 
         logger.info("📄 Wallet Attestation PoP JWT generata.")
 
-        wallet_attestation_jwt = self._get_or_create_wallet_attestation(
-            trust_root_url, wallet_provider_url, wallet_public_key, wallet_provider_pvt_key_jwk_dict
-        )
+        #todo retrieve provider data from ec
+        wallet_attestation_jwt = self._get_or_create_app_attestation(self.provider_config.public_url, self.provider_config.public_fed_jwks[0])
 
         # Generazione PKCE
         pkce = generate_pkce_pair()
@@ -384,9 +382,6 @@ class ItWalletService:
         # recupero selected_country dalla memoria
         country = app_state.selected_country
 
-        # recupero wallet provider url dalla configurazione
-        wallet_provider_url = extract_claim(current_app.config, "metadata.wallet_provider.id")
-
         # recupero trust_root_url dalla configurazione
         query_trust_root = f"ms_trust_configuration.{country}.trust_root"
         trust_root_url = extract_claim(current_app.config, query_trust_root)
@@ -460,17 +455,10 @@ class ItWalletService:
 
         # gestione rilascio dell'access token
         dpop_bound_access_token, credential_identifiers = self._token_issuing_management(
-            wallet_provider_url=wallet_provider_url,
-            trust_root_url=trust_root_url,
-            authorization_server_url=authorization_server_url,
-            authorization_server_jwks=authorization_server_jwks,
-            authorization_server_token_url=authorization_server_token_url,
-            credential_issuer_credential_url=credential_issuer_credential_url,
-            pkce_code_verifier=pkce_code_verifier,
+            authorization_server_url=authorization_server_url, authorization_server_jwks=authorization_server_jwks,
+            authorization_server_token_url=authorization_server_token_url, pkce_code_verifier=pkce_code_verifier,
             authorization_response_code=authorization_response_code,
-            credential_configuration_id=CREDENTIAL_CONFIGURATION_ID_FOR_INITIALIZING,
-            redirect_uri=redirect_uri,
-        )
+            credential_configuration_id=CREDENTIAL_CONFIGURATION_ID_FOR_INITIALIZING, redirect_uri=redirect_uri)
 
         # gestione rilascio della credenziale
         credential_id = self._credential_issuing_management(
@@ -553,16 +541,12 @@ class ItWalletService:
 
         logger.info(f"Trust_root_url: {trust_root_url}, eaa_provider_url: {eaa_provider_url}, credential_configuration_id: {credential_configuration_id}")
 
-        wallet_provider_url = extract_claim(current_app.config, "metadata.wallet_provider.id")
-
-        wallet_provider_pvt_key_jwk_dict = extract_claim(current_app.config, "metadata.wallet_provider.key")
-
         self.session["credential_configuration_id"] = credential_configuration_id
 
         self.session["eaa_provider_url"] = eaa_provider_url
 
-        wallet_private_key, wallet_public_key = self._inizializza_wallet_keys(CONFIG_DIR)
-
+        # Lettura coppia di chiavi pvt e pub del wallet
+        wallet_private_key, wallet_public_key = self._retrieve_instance_hw_keys(CONFIG_DIR)
         if not wallet_private_key or not wallet_public_key:
             raise ValueError("Private or Public key not present in wallet configuration")
 
@@ -574,16 +558,20 @@ class ItWalletService:
         if not client_attestation_pop_jwt:
             raise ValueError("Cant generate the Wallet Attestation PoP JWT")
         logger.info(f"client_attestation_pop_jwt: {client_attestation_pop_jwt}.")
-        wallet_attestation_jwt = self._get_or_create_wallet_attestation(trust_root_url, wallet_provider_url, wallet_public_key, wallet_provider_pvt_key_jwk_dict)
 
+        # todo retrieve provider data from ec
+        wallet_attestation_jwt = self._get_or_create_app_attestation(self.provider_config.public_url,
+                                                                     self.provider_config.public_fed_jwks[0])
+
+        # Generazione PKCE
         pkce = generate_pkce_pair()
-
         logger.info(f" code_verifier: {sanitize_for_logging(pkce.get("code_verifier", ""))}")
 
         logger.info(f"code_challenge: {sanitize_for_logging(pkce.get("code_challenge", ""))}")
 
         logger.info(f"method: {sanitize_for_logging(pkce.get("code_challenge_method", ""))}")
 
+        # Salvataggio in sessione del PKCE code verifier
         self.session["code_verifier"] = pkce["code_verifier"]
 
         logger.info("Generate Request Object JWT ")
@@ -816,17 +804,10 @@ class ItWalletService:
 
         # gestione rilascio dell'access token
         dpop_bound_access_token, credential_identifiers = self._token_issuing_management(
-            wallet_provider_url=wallet_provider_url,
-            trust_root_url=trust_root_url,
-            authorization_server_url=authorization_server_url,
-            authorization_server_jwks=authorization_server_jwks,
-            authorization_server_token_url=authorization_server_token_url,
-            credential_issuer_credential_url=credential_issuer_credential_url,
-            pkce_code_verifier=pkce_code_verifier,
+            authorization_server_url=authorization_server_url, authorization_server_jwks=authorization_server_jwks,
+            authorization_server_token_url=authorization_server_token_url, pkce_code_verifier=pkce_code_verifier,
             authorization_response_code=authorization_response_code,
-            credential_configuration_id=credential_configuration_id,
-            redirect_uri=redirect_uri,
-        )
+            credential_configuration_id=credential_configuration_id, redirect_uri=redirect_uri)
 
         credential_id = self._credential_issuing_management(
             credential_issuer_nonce_url=credential_issuer_nonce_url,
@@ -1087,99 +1068,12 @@ class ItWalletService:
 
         return authorization_response_code, authorization_response_state, authorization_response_iss
 
-    def _wa_creation_management(
-        self,
-        trust_root_url: str,
-        wallet_provider_url: str,
-        wallet_public_key: EllipticCurvePublicKey,
-        wallet_provider_pvt_key_jwk_dict: dict,
-    ) -> Tuple[str, str]:
-        """Create JWT and SD-JWT Wallet Attestations, store in credential_store. Returns (jwt, sd_jwt)."""
-
-        wallet_provider_pvt_key = ec_private_key_from_pem_bytes(
-            pem_private_key_from_jwk_dict(wallet_provider_pvt_key_jwk_dict)
-        )
-        if not wallet_provider_pvt_key:
-            raise ValueError(
-                "Fallita conversione della chiave privata del wallet provider dal formato JWK al formato PEM"
-            )
-        logger.debug("🔑 Covertita la chiave privata del wallet provider dal formato JWK al formato PEM")
-
-        # Generazione Wallet Attestation in formato jwt
-        wallet_attestation_configuration_id = JWT_PREFIX + "_" + WALLET_ATTESTATION_NAME
-        wallet_attestation_vct = None
-
-        logger.info(
-            "Generazione nuova Wallet Attestation %s per il wallet...",
-            sanitize_for_logging(wallet_attestation_configuration_id),
-        )
-
-        wallet_attestation_jwt = generate_wallet_attestation_jwt(
-            issuer_private_key=wallet_provider_pvt_key,
-            client_public_key=wallet_public_key,
-            issuer=wallet_provider_url,
-            aal=AAL_VALUE_HIGH,
-        )
-        if not wallet_attestation_jwt:
-            raise ValueError(f"Fallita generazione Wallet Attestation {wallet_attestation_configuration_id}")
-
-        # Memorizzazione nella memoria della Wallet Attestation JWT
-        app_state.credential_store.add(
-            wallet_attestation_configuration_id, wallet_attestation_jwt, wallet_attestation_vct
-        )
-
-        logger.info(
-            "✅ Wallet Attestation %s generata e salvata nella memoria.",
-            sanitize_for_logging(wallet_attestation_configuration_id),
-        )
-
-        # Generazione Wallet Attestation in formato sd-jwt
-        wallet_attestation_configuration_id = SD_JWT_PREFIX + "_" + WALLET_ATTESTATION_NAME
-
-        logger.info(
-            "Generazione nuova Wallet Attestation %s per il wallet...",
-            sanitize_for_logging(wallet_attestation_configuration_id),
-        )
-
-        spec_version = extract_claim(current_app.config, "metadata.spec_version")
-        wallet_attestation_vct = trust_root_url + "/vct/" + spec_version + "/" + WALLET_ATTESTATION_NAME
-
-        wallet_attestation_sd_jwt = generate_wallet_attestation_sd_jwt(
-            vct=wallet_attestation_vct,
-            issuer_private_key=wallet_provider_pvt_key,
-            client_public_key=wallet_public_key,
-            issuer=wallet_provider_url,
-            aal=AAL_VALUE_HIGH,
-        )
-        if not wallet_attestation_sd_jwt:
-            raise ValueError(f"Fallita generazione Wallet Attestation {wallet_attestation_configuration_id}")
-
-        # Memorizzazione nella memoria della Wallet Attestation in formato sd-jwt
-        app_state.credential_store.add(
-            wallet_attestation_configuration_id, wallet_attestation_sd_jwt, wallet_attestation_vct
-        )
-
-        logger.info(
-            "✅ Wallet Attestation %s generata e salvata nella memoria.",
-            sanitize_for_logging(wallet_attestation_configuration_id),
-        )
-
-        return wallet_attestation_jwt, wallet_attestation_sd_jwt
-
-    def _token_issuing_management(
-        self,
-        wallet_provider_url: str,
-        trust_root_url: str,
-        authorization_server_url: str,
-        authorization_server_jwks: dict,
-        authorization_server_token_url: str,
-        credential_issuer_credential_url: str,
-        pkce_code_verifier: str,
-        authorization_response_code: str,
-        credential_configuration_id: str,
-        redirect_uri: str,
-    ) -> Tuple[str, list]:
+    def _token_issuing_management(self, authorization_server_url: str, authorization_server_jwks: dict,
+                                  authorization_server_token_url: str, pkce_code_verifier: str,
+                                  authorization_response_code: str, credential_configuration_id: str,
+                                  redirect_uri: str) -> Tuple[str, list]:
         """Exchange auth code for DPoP access token, validate, return token and credential_identifiers."""
+        wallet_private_key, wallet_public_key = self._retrieve_instance_hw_keys(CONFIG_DIR)
 
         logger.info(f"Entering method: _token_issuing_management. Params [wallet_provider_url: {wallet_provider_url}, trust_root_url: {trust_root_url}]")
 
@@ -1192,22 +1086,20 @@ class ItWalletService:
 
         logger.info(f"wallet_client_id: {wallet_client_id}")
 
-        client_attestation_pop_jwt = generate_wallet_attestation_pop_jwt(private_key=wallet_private_key, audience=authorization_server_url)
+        client_attestation_pop_jwt = generate_wallet_attestation_pop_jwt(
+            private_key=wallet_private_key, audience=authorization_server_url
+        )
         logger.info(f"client_attestation_pop_jwt: {client_attestation_pop_jwt}")
 
-        wallet_provider_pvt_key_jwk_dict = extract_claim(current_app.config, "metadata.wallet_provider.key")
+        # todo retrieve provider data from ec
+        wallet_attestation_jwt = self._get_or_create_app_attestation(self.provider_config.public_url,
+                                                                     self.provider_config.public_fed_jwks[0])
 
-        if not wallet_provider_pvt_key_jwk_dict:
-            raise ValueError("Exception: Private Key JWK not found")
 
-        wallet_attestation_jwt = self._get_or_create_wallet_attestation(trust_root_url, wallet_provider_url, wallet_public_key, wallet_provider_pvt_key_jwk_dict)
-
-        logger.info(f"authorization_server_token_url: {authorization_server_token_url}")
-
-        dpop_token_request = generate_dpop_jwt(issuer_private_key=wallet_private_key, http_method="POST", http_url=authorization_server_token_url)
-
+        dpop_token_request = generate_dpop_jwt(
+            issuer_private_key=wallet_private_key, http_method="POST", http_url=authorization_server_token_url
+        )
         logger.info(f"dpop_token_request: {dpop_token_request}.")
-
         token_response = request_token(
             url=authorization_server_token_url,
             wallet_attestation_jwt=wallet_attestation_jwt,
@@ -1268,27 +1160,32 @@ class ItWalletService:
 
         return dpop_bound_access_token, matching_identifiers
 
-    def _get_or_create_wallet_attestation(
-        self, trust_root_url: str, wallet_provider_url: str, wallet_public_key, wallet_provider_pvt_key_jwk_dict: dict
-    ) -> str:
-        logger.info(f"Entering method: _get_or_create_wallet_attestation. Params [trust_root_url: {trust_root_url}, wallet_provider_url: {wallet_provider_url}")
+    def _get_or_create_app_attestation(self, provider_url:str, provider_pubkey) -> str:
+        """Get wallet attestation JWT from store, or create if missing/expired. Returns JWT string."""
+        logger.info(f"Entering method: _get_or_create_wallet_attestation. Params [provider_url: {provider_url}]")
+
 
         wa_id = JWT_PREFIX + "_" + WALLET_ATTESTATION_NAME
         jwt_val = app_state.ec_store.get(wa_id)
-        if not jwt_val:
-            jwt_val, _ = self._wa_creation_management(
-                trust_root_url, wallet_provider_url, wallet_public_key, wallet_provider_pvt_key_jwk_dict
-            )
-            return jwt_val
-        try:
-            jwks = jwk_to_jwks(jwk_private_to_public(wallet_provider_pvt_key_jwk_dict))
-            decode_and_verify_jwt(jwt_val, jwks)
-            return jwt_val
-        except ValueError:
-            jwt_val, _ = self._wa_creation_management(
-                trust_root_url, wallet_provider_url, wallet_public_key, wallet_provider_pvt_key_jwk_dict
-            )
-            return jwt_val
+
+        def validate_jws(value):
+            try:
+                _helper = JWSHelper([provider_pubkey])
+                return _helper.verify(value)
+            except LifetimeException:
+                logger.error("App attestation jwt expired")
+                return None
+            except Exception:
+                logger.error("Validation of the app wallet attestation jwt failed")
+                return None
+
+        if not validate_jws(jwt_val):
+            attestations = self._retrieve_attestations_jws(provider_url)
+            if app_attestation := attestations.get("wallet_app_attestation"):
+                app_state.ec_store.add(wa_id, app_attestation)
+                jwt_val = app_attestation
+        return jwt_val
+
 
     def _decode_and_validate_single_credential(
         self, cred: dict, index: int, credential_id: str, credential_configuration_id: str, credential_issuer_jwks: dict
@@ -1439,11 +1336,9 @@ class ItWalletService:
     ):
         """Fetch status assertion for SD-JWT credential, update credential_store with status."""
         # Generazione/letturia coppia di chiavi pvt e pub del wallet
-        wallet_private_key, wallet_public_key = self._inizializza_wallet_keys(CONFIG_DIR)
+        wallet_private_key, wallet_public_key = self._retrieve_instance_hw_keys(CONFIG_DIR)
         if not wallet_private_key or not wallet_public_key:
             raise ValueError("Fallita generazione coppia di chiavi pvt e pub del wallet")
-
-        logger.debug("🔑🔑 Generate coppie di chiavi pvt e pub del wallet in formato PEM")
 
         idx = sd_jwt_compact.find("~")
         credential_before_tilde = sd_jwt_compact if idx == -1 else sd_jwt_compact[:idx]
@@ -1578,10 +1473,9 @@ class ItWalletService:
         )
 
         # Lettura coppia di chiavi pvt e pub del wallet
-        wallet_private_key, wallet_public_key = self._inizializza_wallet_keys(CONFIG_DIR)
+        wallet_private_key, wallet_public_key = self._retrieve_instance_hw_keys(CONFIG_DIR)
         if not wallet_private_key or not wallet_public_key:
             raise ValueError("Non è stato possibile leggere la coppia di chiavi pvt e pub del wallet")
-        logger.debug("🔑🔑 Lettura coppie di chiavi pvt e pub del wallet in formato PEM")
 
         # Converti la chiave privata in JWK dict
         wallet_private_key_jwk = priv_ec_key_obj_to_jwk(wallet_private_key)
@@ -1595,7 +1489,6 @@ class ItWalletService:
             sanitize_for_logging(wallet_client_id),
         )
 
-        # Salva wallet_client_id in sessione per validazione successiva
         self.session["wallet_client_id"] = wallet_client_id
 
         vp_token_claims = {}
@@ -1915,7 +1808,7 @@ class ItWalletService:
         except ValueError as ve:
             raise ValueError(f"Fallita validazione dell'Entity Configuration dell'entità {issuer_url}: {ve}")
 
-    def _inizializza_wallet_keys(self, config_dir) -> Tuple[EllipticCurvePrivateKey, EllipticCurvePublicKey]:
+    def _retrieve_instance_hw_keys(self, config_dir) -> Tuple[EllipticCurvePrivateKey, EllipticCurvePublicKey]:
         """
         Metodo privato per generare le chiavi del wallet e salvarle su config dir.
         Ritorna una tupla: (chiave_privata, chiave_pubblica)
@@ -1939,27 +1832,13 @@ class ItWalletService:
 
         wallet_public_key = ec_public_key_from_pem_file(public_key_path)
 
-        return wallet_private_key, wallet_public_key
-
-    def _recupera_wallet_keys(self, config_dir) -> Tuple[EllipticCurvePrivateKey, EllipticCurvePublicKey]:
-        """
-        Metodo privato per recuperare le chiavi del wallet.
-        Ritorna una tupla: (chiave_privata, chiave_pubblica)
-        """
-
-        # Se non esiste la cartella config_dir, la creo
-        if not os.path.exists(config_dir):
-            return None, None
-
-        private_key_path = os.path.join(config_dir, "pvt_key.pem")
-        public_key_path = os.path.join(config_dir, "pub_key.pem")
-
-        # Carica chiavi della wallet instance
-        wallet_private_key = ec_private_key_from_pem_file(private_key_path)
-        wallet_public_key = ec_public_key_from_pem_file(public_key_path)
+        self._hw_private_jwk = priv_ec_key_obj_to_jwk(wallet_private_key).export_private(as_dict=True)
+        self._hw_public_jwk = pub_ec_key_obj_to_jwk(wallet_public_key).export_public(as_dict=True)
+        self._hw_key_tag = base64url_decode(get_thumbprint_from_private_key(wallet_private_key)).hex() #generate fake hw key tag
 
         # Ritorna la tupla
         return wallet_private_key, wallet_public_key
+
 
     def _find_credential_by_dcql_item(self, item: dict) -> dict | None:
         """Find credential matching DCQL item (by format+id or vct). Returns (key, value) or None."""
@@ -2030,119 +1909,6 @@ class ItWalletService:
 
         return result
 
-    def _validate_audience_claim(self, aud: str | list, wallet_client_id: str, redirect_uri: str) -> None:
-        """
-        Validate audience claim matches wallet client_id.
-        Supports both string and list formats per JWT spec.
-        """
-        logger.debug("🔍 Validazione claim 'aud'...")
-
-        if isinstance(aud, list):
-            if not aud:
-                raise ValueError("Il claim 'aud' è una lista vuota")
-            if wallet_client_id not in aud:
-                raise ValueError(
-                    f"Il wallet client_id '{wallet_client_id}' non trovato nell'audience: {aud}"
-                )
-            logger.debug("✅ Wallet client_id trovato nell'audience list")
-        elif isinstance(aud, str):
-            if aud != wallet_client_id:
-                raise ValueError(
-                    f"Il claim 'aud' non corrisponde: atteso '{wallet_client_id}', trovato '{aud}'"
-                )
-            logger.debug("✅ Audience string matches wallet client_id")
-        else:
-            raise ValueError(f"Il claim 'aud' ha tipo non valido: {type(aud)}")
-
-    def _validate_state_claim(self, response_state: str, redirect_uri: str) -> None:
-        """Validate state claim prevents CSRF attacks."""
-        logger.debug("🔍 Validazione claim 'state' (anti-CSRF)...")
-
-        session_state = self.session.get("rp_state")
-        if not session_state:
-            raise ValueError("Non trovato 'rp_state' in sessione (errore interno)")
-
-        if response_state != session_state:
-            logger.error(
-                "❌ POTENZIALE ATTACCO CSRF: state mismatch da %s",
-                sanitize_for_logging(redirect_uri),
-            )
-            raise ValueError(
-                f"State mismatch (CSRF protection): atteso '{session_state}', ricevuto '{response_state}'"
-            )
-
-        logger.debug("✅ State claim valido (CSRF protection OK)")
-
-    def _validate_response_code_claim(self, response_code: str | None, redirect_uri: str) -> None:
-        """Validate response_code indicates successful authentication."""
-        logger.debug("🔍 Validazione claim 'response_code'...")
-
-        if not response_code:
-            logger.warning(
-                "⚠️  Response code mancante da %s (potrebbe essere OK dipende da RP)",
-                sanitize_for_logging(redirect_uri),
-            )
-            return
-
-        # Codici di successo comuni
-        success_codes = ["0", "200", "ok", "success", "completed"]
-        if response_code.lower() not in success_codes:
-            logger.warning(
-                "⚠️  Response code non riconosciuto come successo: %s",
-                sanitize_for_logging(response_code),
-            )
-        else:
-            logger.debug("✅ Response code indica successo: %s", sanitize_for_logging(response_code))
-
-    def _validate_timestamp_claims(self, payload: dict, redirect_uri: str) -> None:
-        """Validate JWT timestamp claims (iat, exp) for time-based attacks."""
-        import time
-
-        logger.debug("🔍 Validazione timestamp claims (iat, exp)...")
-
-        iat = payload.get("iat")
-        exp = payload.get("exp")
-        current_time = int(time.time())
-
-        if iat:
-            # Verifica che iat non sia nel futuro (clock skew tolerance: 60 secondi)
-            if iat > current_time + 60:
-                raise ValueError(
-                    f"Il claim 'iat' è nel futuro (iat={iat}, now={current_time}), possibile attacco temporale"
-                )
-            if current_time - iat > 3600:  # Più di 1 ora fa
-                logger.warning(
-                    "⚠️  Il JWT è stato emesso più di 1 ora fa (iat=%s, now=%s)",
-                    iat,
-                    current_time,
-                )
-            logger.debug("✅ Claim 'iat' valido")
-
-        if exp:
-            # Verifica scadenza JWT (clock skew tolerance: 60 secondi)
-            if current_time > exp + 60:
-                raise ValueError(
-                    f"Il JWT è scaduto (exp={exp}, now={current_time})"
-                )
-            logger.debug("✅ JWT non scaduto (exp valida)")
-
-    def _log_auth_response_summary(self, payload: dict) -> None:
-        """Log summary of authentication response for debugging."""
-        logger.info("📊 RIASSUNTO Authentication Response:")
-        logger.info("  - iss: %s", sanitize_for_logging(payload.get("iss", "N/A")))
-        logger.info("  - aud: %s", sanitize_for_logging(str(payload.get("aud", "N/A"))))
-        logger.info("  - sub: %s", sanitize_for_logging(payload.get("sub", "N/A")))
-        logger.info("  - state: %s", sanitize_for_logging(payload.get("state", "N/A")[:20]))
-        logger.info("  - response_code: %s", sanitize_for_logging(payload.get("response_code", "N/A")))
-
-        # Informazioni aggiuntive se presenti
-        if payload.get("acr"):
-            logger.info("  - acr (Authentication Context): %s", sanitize_for_logging(payload.get("acr")))
-        if payload.get("amr"):
-            logger.info("  - amr (Auth Methods): %s", sanitize_for_logging(str(payload.get("amr"))))
-        if payload.get("auth_time"):
-            logger.info("  - auth_time: %s", payload.get("auth_time"))
-
     def _print_session_data(self):
         """Log session data for debugging (JSON or key-value fallback)."""
         logger.debug("=== 🌐 Dati in sessione ===")
@@ -2156,3 +1922,34 @@ class ItWalletService:
                 # codeql[py/log-injection]
                 logger.debug("%s: %s", sanitize_for_logging(key), sanitize_for_logging(value))
         logger.debug("========================")
+
+
+    def _retrieve_attestations_jws(self, provider_url:str) -> dict[str, str]:
+        """This method retrieve a wallet app attestation and a wallet unit attestation from wallet provider endpoint.
+        Return: a dict with attestations as signed JWT
+        """
+
+        http_headers = {"Accept": "application/json"}
+        nonce_url = provider_url + "/nonce"
+        nonce_response = http_request_with_retry("GET", url=nonce_url, headers=http_headers)
+        nonce = _parse_json_response(nonce_response, nonce_url).get("nonce")
+        hardware_signature = "" #todo
+        integrity_assertion = ""
+        attested_key = ""
+
+        req = WaJswRequestIssuer(provider_url, self._hw_private_jwk, self._hw_key_tag,
+                                 nonce, hardware_signature, integrity_assertion, attested_key)
+        signed_jwt = req.generate_jws()
+        req_att_body = dict(assertion=signed_jwt)
+
+        att_url = provider_url + "/wallet-attestation"
+        attestations_resp = http_request_with_retry("POST",url=att_url, headers=http_headers, json_body=req_att_body)
+        attestations = _parse_json_response(attestations_resp, att_url).get("wallet_attestations") or []
+
+        res = {}
+        supported_attestations = ["wallet_app_attestation", "wallet_unit_attestation"]
+        for att in attestations:
+            for k,v in att.items():
+                if k in supported_attestations:
+                    res.update({k:v})
+        return res

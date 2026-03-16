@@ -7,8 +7,10 @@ requests are centralized here to keep the main service file maintainable.
 
 import logging
 from typing import Any
+
 from flask import current_app
-from state import app_state
+
+from store import app_state
 from utils.utils import extract_claim, sanitize_for_logging
 from settings import METADATA_TYPE_CREDENTIAL_ISSUER  # ?_?
 
@@ -63,7 +65,6 @@ def get_trust_root_and_eaa_provider_ec(
     """Get trust_root_url, eaa_provider_url, eaa_provider_ec for given credential_configuration_id. Raises ValueError if not found."""
     logger.info(f"Entering method: get_trust_root_and_eaa_provider_ec. Params: [credential_configuration_id: {credential_configuration_id}]")
     country = app_state.selected_country
-
     trust_root_url = extract_claim(current_app.config, f"ms_trust_configuration.{country}.trust_root")
 
     if not trust_root_url:
