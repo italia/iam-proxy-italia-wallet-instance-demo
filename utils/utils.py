@@ -1,7 +1,6 @@
 import base64
 import binascii
 import hashlib
-import io
 import json
 import secrets
 import string
@@ -12,9 +11,8 @@ from urllib.parse import parse_qs, urlparse
 
 import fitz
 import jmespath
-from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives.asymmetric.ec import (
     SECP256R1,
@@ -379,7 +377,7 @@ def estrai_testo_from_pdf(path: str) -> str:
     return full_text
 
 
-def estrai_testo_from_dati_pdf_base64(data_uri: str) -> list[str]:
+def extract_text_from_base64_pdf(data_uri: str) -> list[str]:
     if data_uri and data_uri.startswith(CONTENT_PDF_BASE_64_PREFIX):
         b64_data = data_uri.split(",", 1)[1]
     else:
@@ -502,3 +500,41 @@ def remove_str_prefix(raw: str, prefixes: list[str]) -> str:
         if value_lower.startswith(prefix.lower()):
             return raw[len(prefix) :]
     return raw
+
+
+def unix_ts_to_str_datetime(timestamp: int, fmt: str = "%d-%m-%Y %H:%M:%S", tmz: datetime.tzinfo = None) -> str | None:
+    """Convert a unix timestamp (`int`) into a timezone-aware datetime string.
+
+    Notes:
+    - The input timestamp is treated as UTC and converted to the target timezone.
+    """
+    if tmz is None:
+        tmz = datetime.now().astimezone().tzinfo
+
+    result = None
+    try:
+        dt = datetime.fromtimestamp(timestamp)
+        dt = dt.astimezone(tmz)
+        return dt.strftime(fmt)
+    except (TypeError, ValueError):
+        pass
+    return result
+
+
+def unescape_json(value):
+    """Unescapes JSON strings and converts to dict if necessary."""
+    if isinstance(value, str):
+        try:
+            # Attempt to parse string as JSON (if it contains escaped characters)
+            return json.loads(value)
+        except json.JSONDecodeError:
+            # Not a valid JSON string, return original value
+            return value
+    elif isinstance(value, dict):
+        # Recursively apply to dictionary values
+        return {k: unescape_json(v) for k, v in value.items()}
+    elif isinstance(value, list):
+        # Recursively apply to list elements
+        return [unescape_json(v) for v in value]
+    else:
+        return value

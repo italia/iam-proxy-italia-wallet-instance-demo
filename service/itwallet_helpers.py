@@ -10,7 +10,7 @@ from typing import Any
 
 from flask import current_app
 
-from state import app_state
+from store import app_state
 from utils.utils import extract_claim, sanitize_for_logging
 
 logger = logging.getLogger(__name__)

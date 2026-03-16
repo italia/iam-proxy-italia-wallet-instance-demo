@@ -76,11 +76,11 @@ jobs:
 
       - name: Cyclomatic complexity (CC)
         run: |
-          radon cc app.py routes/ service/ utils/ state.py constants.py -a -s --total-average
+          radon cc app.py routes/ service/ utils/ store/ constants.py -a -s --total-average
 
       - name: Maintainability index (MI)
         run: |
-          radon mi app.py routes/ service/ utils/ state.py constants.py -s -n B
+          radon mi app.py routes/ service/ utils/ store/ constants.py -s -n B
 
       - name: Fail on high complexity (Xenon)
         run: |
@@ -105,4 +105,4 @@ jobs:
         run: pip install bandit
 
       - name: Run Bandit
-        run: bandit -r app.py routes/ service/ utils/ state.py constants.py -ll -c pyproject.toml
+        run: bandit -r app.py routes/ service/ utils/ store/ constants.py -ll -c pyproject.toml

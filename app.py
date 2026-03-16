@@ -6,8 +6,8 @@ import sys
 
 from flask import Flask, g, has_app_context
 
-from routes.wallet_provider import provider_routes
-from routes.itwallet_routes import itwallet_routes
+from routes.wallet_provider import provider_bp
+from routes.itwallet_routes import wallet_api_bp
 from routes.main_routes import main_routes
 from routes.wallet_routes import wallet_routes
 from settings import CONFIG_DIR, CORRELATION_ID_FALLBACK, JWT_PREFIX, MSO_MDOC_PREFIX, SD_JWT_PREFIX, SECRET_KEY
@@ -147,10 +147,10 @@ except Exception as e:
     logger.error("❌ Errore caricamento configurazione: %s", sanitize_for_logging(str(e)))
 
 # Registrazione dei blueprint
-app.register_blueprint(provider_routes)
+app.register_blueprint(provider_bp)
 app.register_blueprint(main_routes)
 app.register_blueprint(wallet_routes)
-app.register_blueprint(itwallet_routes)
+app.register_blueprint(wallet_api_bp)
 
 if __name__ == "__main__":
     # Recupera host e porta dalle variabili d'ambiente Flask se presenti, altrimenti usa default
