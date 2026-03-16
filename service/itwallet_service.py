@@ -381,9 +381,6 @@ class ItWalletService:
         # recupero selected_country dalla memoria
         country = app_state.selected_country
 
-        # recupero wallet provider url dalla configurazione
-        wallet_provider_url = extract_claim(current_app.config, "metadata.wallet_provider.id")
-
         # recupero trust_root_url dalla configurazione
         query_trust_root = f"ms_trust_configuration.{country}.trust_root"
         trust_root_url = extract_claim(current_app.config, query_trust_root)
@@ -736,9 +733,6 @@ class ItWalletService:
 
         # recupero selected_country dalla memoria
         country = app_state.selected_country
-
-        # recupero wallet provider url dalla configurazione
-        wallet_provider_url = extract_claim(current_app.config, "metadata.wallet_provider.id")
 
         # recupero del response_mode relativo al credentialflow dalla configurazione
         credential_flow_response_mode = extract_claim(current_app.config, "metadata.credential_flow.response_mode")
@@ -1137,12 +1131,6 @@ class ItWalletService:
             private_key=wallet_private_key, audience=authorization_server_url
         )
         logger.info("📄 Wallet Attestation PoP JWT generata.")
-
-        # Recupera chiave privata wallet provider dalla configurazione del wallet
-        wallet_provider_pvt_key_jwk_dict = extract_claim(current_app.config, "metadata.wallet_provider.key")
-        if not wallet_provider_pvt_key_jwk_dict:
-            raise ValueError("Fallito recupero della chiave privata JWK del wallet provider")
-        logger.debug("🔑 Recuperata chiave privata del wallet provider in formato JWK")
 
         # todo retrieve provider data from ec
         wallet_attestation_jwt = self._get_or_create_app_attestation(self.provider_config.public_url,
