@@ -1775,7 +1775,7 @@ class ItWalletService:
     ) -> dict:
         """Fetch and validate EC for issuer_url. Returns EC payload. Raises on failure."""
         logger.info(
-            "🚀 Invio richiesta all'entità %s per scaricare il suo entity configuration",
+            "Invio richiesta all'entità %s per scaricare il suo entity configuration",
             sanitize_for_logging(issuer_url),
         )
         # Ottiene l'EC
@@ -1789,7 +1789,7 @@ class ItWalletService:
             raise ValueError(f"Fallito recupero dell'Entity Configuration dell'entità {issuer_url}")
 
         logger.info(
-            "✅ Ricevuto in risposta dall'entità %s il suo Entity Configuration",
+            "Ricevuto in risposta dall'entità %s il suo Entity Configuration",
             sanitize_for_logging(issuer_url),
         )
 
@@ -1798,7 +1798,7 @@ class ItWalletService:
             validate_ec(ec_payload, issuer_url, expectedMetadataTypes, expected_hint)
 
             logger.info(
-                "✅ L'Entity Configuration dell'entità %s è risultato essere valido",
+                "L'Entity Configuration dell'entità %s è risultato essere valido",
                 sanitize_for_logging(issuer_url),
             )
 
