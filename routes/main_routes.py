@@ -3,18 +3,9 @@ import os
 from flask import Blueprint, current_app, redirect, render_template, send_from_directory, session, url_for
 
 from settings import CHROME_DEVTOOLS_PATH, FAVICON_MIMETYPE, FAVICON_SUBPATH, STATIC_FOLDER
-from state import app_state
+from store import app_state
 
 main_routes = Blueprint("main_routes", __name__)
-
-
-@main_routes.route("/favicon.ico")
-def favicon():
-    return send_from_directory(
-        os.path.join(current_app.root_path, STATIC_FOLDER),
-        FAVICON_SUBPATH,
-        mimetype=FAVICON_MIMETYPE,
-    )
 
 
 @main_routes.app_errorhandler(404)
@@ -24,7 +15,16 @@ def page_not_found(e):
 
 @main_routes.app_errorhandler(500)
 def internal_error(e):
-    return (render_template("500.html"),)
+    return render_template("500.html"), 500
+
+
+@main_routes.route("/favicon.ico")
+def favicon():
+    return send_from_directory(
+        os.path.join(current_app.root_path, STATIC_FOLDER),
+        FAVICON_SUBPATH,
+        mimetype=FAVICON_MIMETYPE,
+    )
 
 
 @main_routes.route(CHROME_DEVTOOLS_PATH)

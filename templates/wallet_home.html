@@ -700,7 +700,7 @@
           await new Promise(resolve => setTimeout(resolve, 300));
 
           try {
-            const response = await executeFetch("/itwallet/template/" + button.id);
+            const response = await executeFetch("/wallet/template/" + button.id);
 
             if (!response.ok) {
               const errorMessage = await getErrorMessage(response);

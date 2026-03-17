@@ -86,6 +86,8 @@ def request_as_par(
     Returns:
         Dizionario JSON della risposta, o eccezione in caso di errore.
     """
+    logger.info(f"Entering method: request_as_par. Params: [client_id: {client_id}, url: {url}]")
+
     headers = {
         "Content-Type": "application/x-www-form-urlencoded",
         "Accept": "application/json; charset=utf-8",
@@ -93,12 +95,11 @@ def request_as_par(
         "OAuth-Client-Attestation-PoP": wallet_attestation_dpop_jwt,
     }
     data = {"client_id": client_id, "request": request_object_jwt}
-    # codeql[py/log-injection]
-    logger.info(">>>> Invio POST a %s", sanitize_for_logging(url))
-    # codeql[py/log-injection]
-    logger.info("📦 Header:\n%s", sanitize_for_logging(json.dumps(headers, indent=2)))
-    # codeql[py/log-injection]
-    logger.info("📦 Payload:\n%s", sanitize_for_logging(json.dumps(data, indent=2)))
+
+    logger.info(f"Header: {json.dumps(headers, indent=2)}")
+
+    logger.info(f"Payload: {json.dumps(data, indent=2)}")
+
     return http_request_with_retry(
         "POST",
         url,
@@ -134,9 +135,11 @@ def request_authorize(
         Il JWT rappresentnte l'entity statement.
         In caso di errore, rilancia un'eccezione.
     """
+
+    logger.info(f"Entering method: request_authorize. Params: [query_string: {query_string}, url: {url}]")
+
     full_url = url + query_string
-    # codeql[py/log-injection]
-    logger.info(">>>> Invio GET %s", sanitize_for_logging(full_url))
+
     return http_request_with_retry(
         "GET",
         full_url,
@@ -181,6 +184,7 @@ def request_token(
     Returns:
         Dizionario JSON della risposta, o eccezione in caso di errore.
     """
+    logger.info(f"Entering method: request_token. Params [url: {url}]")
     headers = {
         "Content-Type": "application/x-www-form-urlencoded",
         "Accept": "application/json; charset=utf-8",
@@ -189,12 +193,11 @@ def request_token(
         "DPoP": dpop_proof_jwt,
     }
     data = {"grant_type": grant_type, "code": code, "redirect_uri": redirect_uri, "code_verifier": code_verifier}
-    # codeql[py/log-injection]
-    logger.info(">>>> Invio POST a %s", sanitize_for_logging(url))
-    # codeql[py/log-injection]
-    logger.info("📦 Header:\n%s", sanitize_for_logging(json.dumps(headers, indent=2)))
-    # codeql[py/log-injection]
-    logger.info("📦 Payload:\n%s", sanitize_for_logging(json.dumps(data, indent=2)))
+
+    logger.info(f"Header: {json.dumps(headers, indent=2)}")
+
+    logger.info(f"Payload: {json.dumps(data, indent=2)}")
+
     return http_request_with_retry(
         "POST",
         url,
@@ -235,6 +238,8 @@ def request_credential(
     Returns:
         Dizionario JSON della risposta, o eccezione in caso di errore.
     """
+    logger.info(f"Entering method: request_credential. Params: [url: {url}]")
+
     headers = {
         "Content-Type": "application/json; charset=utf-8",
         "Accept": "application/json; charset=UTF-8",
@@ -242,12 +247,11 @@ def request_credential(
         "DPoP": dpop_proof_jwt,
     }
     data = {"credential_identifier": credential_id, "proof": {"proof_type": "jwt", "jwt": proof_jwt}}
-    # codeql[py/log-injection]
-    logger.info(">>>> Invio POST a %s", sanitize_for_logging(url))
-    # codeql[py/log-injection]
-    logger.info("📦 Header:\n%s", sanitize_for_logging(json.dumps(headers, indent=2)))
-    # codeql[py/log-injection]
-    logger.info("📦 Payload:\n%s", sanitize_for_logging(json.dumps(data, indent=2)))
+
+    logger.info(f"Header: {json.dumps(headers, indent=2)}")
+
+    logger.info(f"Payload: {json.dumps(data, indent=2)}")
+
     return http_request_with_retry(
         "POST",
         url,
@@ -552,163 +556,6 @@ def generate_wallet_attestation_pop_jwt(
     return pop_jwt
 
 
-def generate_wallet_attestation_jwt(
-    issuer_private_key: EllipticCurvePrivateKey,
-    client_public_key: EllipticCurvePublicKey,
-    issuer: str,
-    aal: str,
-    lifetime: int = 86400,
-) -> str:
-    """
-    Genera un client attestation JWT firmato con chiave EC nel rispetto
-    delle specifiche https://italia.github.io/eid-wallet-it-docs/versione-corrente/en/wallet-provider-endpoint.html#wallet-attestation-jwt
-
-    Args:
-        issuer_private_key: Chiave privata EC del wallet provider usata per la firma del JWT,
-        client_public_key: Chiave pubblica EC dell'app mobile a cui deve essere collegata l'attestazione,
-        issuer: URL dell'issuer del jwt
-        aal: livello di sicurezza dell'app mobile
-        lifetime: durata dell'access token in secondi (default 86400 secondi, cioè 24 ore)
-
-    Returns:
-        Stringa rappresentante il client attestation SD-JWT
-    """
-    # Converti la chiave privata dell'issuer in formato JWK
-    issuer_private_jwk = priv_ec_key_obj_to_jwk(issuer_private_key)
-
-    # Determina l'algoritmo di firma in base alla curva della chiave privata dell'issuer in formato JWK
-    crv = issuer_private_jwk.get("crv")
-    alg_map = {"P-256": "ES256", "P-384": "ES384", "P-521": "ES512"}
-    alg = alg_map.get(crv)
-    if not alg:
-        raise ValueError(f"Curva della chiave privata del wallet provider non supportata: {crv}")
-
-    # Estrai la chiave pubblica di firma da quella privata, convertila in formato JWK ed estrai il thumbprint come KID (RFC 7638)
-    issuer_public_key = issuer_private_key.public_key()
-    issuer_public_jwk = pub_ec_key_obj_to_jwk(issuer_public_key)
-    issuer_public_jwk_kid = issuer_public_jwk.thumbprint()
-
-    # Converti la chiave pubblica dell'app mobile a cui deve essere collegata l'attestazione in formato JWK ed estrai il thumbprint come KID (RFC 7638)
-    cnf_public_jwk = pub_ec_key_obj_to_jwk(client_public_key)
-    cnf_public_jwk_kid = cnf_public_jwk.thumbprint()
-
-    # Controlla l'algoritmo di firma della chiave pubblica dell'app mobile a cui deve essere collegata l'attestazionein
-    cnf_crv = cnf_public_jwk.get("crv")
-    cnf_alg_map = {"P-256": "ES256", "P-384": "ES384", "P-521": "ES512"}
-    cnf_alg = cnf_alg_map.get(crv)
-    if not cnf_alg:
-        raise ValueError(f"Curva della chiave pubblica del wallet non supportata: {cnf_crv}")
-
-    now = int(time.time())
-
-    headers = {"typ": "oauth-client-attestation+jwt", "alg": alg, "kid": issuer_public_jwk_kid}
-
-    payload = {
-        "iss": issuer,
-        "sub": cnf_public_jwk_kid,
-        "wallet_name": "IT Wallet",
-        "wallet_link": issuer + "/wallet/detail_info.html",
-        "aal": aal,
-        "iat": now,
-        "exp": now + int(lifetime),
-        "cnf": {"jwk": cnf_public_jwk},
-    }
-
-    # Serializza chiave privata in PEM
-    private_pem = issuer_private_key.private_bytes(
-        encoding=serialization.Encoding.PEM,
-        format=serialization.PrivateFormat.PKCS8,
-        encryption_algorithm=serialization.NoEncryption(),
-    )
-
-    signed_jwt = jwt.encode(payload, key=private_pem, algorithm=alg, headers=headers)
-
-    return signed_jwt
-
-
-def generate_wallet_attestation_sd_jwt(
-    vct: str,
-    issuer_private_key: EllipticCurvePrivateKey,
-    client_public_key: EllipticCurvePublicKey,
-    issuer: str,
-    aal: str,
-    lifetime: int = 86400,
-) -> str:
-    """
-    Genera un client attestation SD-JWT firmato con chiave EC nel rispetto
-    delle specifiche https://italia.github.io/eid-wallet-it-docs/versione-corrente/en/wallet-provider-endpoint.html#wallet-attestation-sd-jwt
-
-    Args:
-        vct: id della tipologia di attestazione
-        issuer_private_key: Chiave privata EC del wallet provider usata per la firma dell'attestazione JWT,
-        client_public_key: Chiave pubblica EC dell'app mobile a cui deve essere collegata l'attestazione,
-        issuer: URL dell'issuer del jwt
-        aal: livello di sicurezza dell'app mobile
-        lifetime: durata dell'access token in secondi (default 86400 secondi, cioè 24 ore)
-
-    Returns:
-        Stringa rappresentante il client attestation SD-JWT
-    """
-
-    # Converti la chiave privata dell'issuer in formato JWK
-    issuer_private_jwk = priv_ec_key_obj_to_jwk(issuer_private_key)
-    issuer_private_jwk_dict = issuer_private_jwk.export(as_dict=True)
-
-    # Determina l'algoritmo di firma in base alla curva della chiave privata dell'issuer in formato JWK
-    crv = issuer_private_jwk.get("crv")
-    alg_map = {"P-256": "ES256", "P-384": "ES384", "P-521": "ES512"}
-    alg = alg_map.get(crv)
-    if not alg:
-        raise ValueError(f"Curva della chiave privata del wallet provider non supportata: {crv}")
-
-    # Estrai la chiave pubblica di firma da quella privata, convertila in formato JWK ed estrai il thumbprint come KID (RFC 7638)
-    issuer_public_key = issuer_private_key.public_key()
-    issuer_public_jwk = pub_ec_key_obj_to_jwk(issuer_public_key)
-    issuer_public_jwk_kid = issuer_public_jwk.thumbprint()
-
-    # Converti la chiave pubblica dell'app mobile a cui deve essere collegata l'attestazione in formato JWK ed estrai il thumbprint come KID (RFC 7638)
-    cnf_public_jwk = pub_ec_key_obj_to_jwk(client_public_key)
-    cnf_public_jwk_kid = cnf_public_jwk.thumbprint()
-
-    # Controlla l'algoritmo di firma della chiave pubblica dell'app mobile a cui deve essere collegata l'attestazionein
-    cnf_crv = cnf_public_jwk.get("crv")
-    cnf_alg_map = {"P-256": "ES256", "P-384": "ES384", "P-521": "ES512"}
-    cnf_alg = cnf_alg_map.get(crv)
-    if not cnf_alg:
-        raise ValueError(f"Curva della chiave pubblica del wallet non supportata: {cnf_crv}")
-
-    now = int(time.time())
-
-    headers = {"typ": "dc+sd-jwt", "kid": issuer_public_jwk_kid}
-
-    claims = {
-        "iss": issuer,
-        "sub": cnf_public_jwk_kid,
-        "vct": vct,
-        "wallet_name": "IT Wallet",
-        "wallet_link": issuer + "/wallet/detail_info.html",
-        "aal": aal,
-        "iat": now,
-        "exp": now + int(lifetime),
-        "cnf": {"jwk": cnf_public_jwk},
-    }
-
-    # Claim che devono essere rivelati selettivamente
-    selectively_disclosable_claims = ["wallet_name", "wallet_link"]
-
-    # Genera la SD-JWT
-    sd_jwt = issue_sd_jwt(
-        vct=claims.get("vct"),
-        issuer_private_jwk_dict=issuer_private_jwk_dict,
-        claims=claims,
-        selectively_disclosable_claims=selectively_disclosable_claims,
-        extra_header_parameters=headers,
-        holder_public_jwk_dict=cnf_public_jwk,
-    )
-
-    return sd_jwt
-
-
 def generate_request_object_jwt(
     issuer_private_key: EllipticCurvePrivateKey,
     audience: str,
@@ -802,11 +649,109 @@ def generate_request_object_jwt(
     return jwt_token
 
 
+##
+#
+#   VERSION 1.3.3
+#
+##
+def generate_par_request_object_jwt(
+    issuer_private_key: EllipticCurvePrivateKey,
+    audience: str,
+    state: str,
+    code_challenge: str,
+    code_challenge_method: str,
+    response_type: str,
+    redirect_uri: str,
+    authorization_details: list = None,
+    lifetime: int = 300,
+) -> str:
+    """
+    Genera un Request Object JWT firmato con chiave EC per la versione 1.3.3
+
+    Args:
+        issuer_private_key: Chiave privata del wallet per firmare il request object JWT.
+        audience: audience del JWT (l'URL del destintario del request object JWT),
+        state: session id del wallet,
+        code_challenge: il challenge PKCE derivato dal code verifier PKCE prodotto dal wallet,
+        code_challenge_method: il metodo di hash usato per generare il challeng PKCE,
+        response_type: response type richiesto dal wallet al destintario del request object JWT,
+        response_mode: response mode richiesto dal wallet al destintario del request object JWT,
+        redirect_uri: redirect_uri wallet,
+        scope: scopo della credenziale che si vuol richiedere
+        authorization_details: elenco di credential_configuration_id delle credenziali che si vogliono richiedere
+        lifetime: durata del del request object JWT in secondi (default 300 secondi)
+
+    Returns:
+        Stringa rappresentante il request object JWT da inviare nell'header DPoP.
+    """
+    logger.info(
+        f"Entering method: generate_par_request_object_jwt. Params: [issuer_private_key: {issuer_private_key}] "
+    )
+
+    issuer_public_key = issuer_private_key.public_key()
+
+    public_jwk = jwk.JWK.from_pem(
+        issuer_public_key.public_bytes(
+            encoding=serialization.Encoding.PEM, format=serialization.PublicFormat.SubjectPublicKeyInfo
+        )
+    )
+
+    kid = public_jwk.thumbprint()
+
+    crv = public_jwk.get("crv")
+
+    logger.info(f"crv: {crv}")
+
+    alg_map = {
+        "P-256": "ES256",
+        "P-384": "ES384",
+        "P-521": "ES512",
+        "RSA-OAEP-256": "RSA-OAEP-256",
+        "A128CBC-HS256": "A128CBC-HS256",
+        "A256CBC-HS512": "A256CBC-HS512",
+    }
+
+    alg = alg_map.get(crv)
+
+    if not alg:
+        raise ValueError(f"Crv not supported: {crv}")
+
+    now = int(time.time())
+
+    payload = {
+        "iss": kid,
+        "aud": audience,
+        "exp": now + int(lifetime),
+        "iat": now,
+        "response_type": response_type,
+        "client_id": kid,
+        "state": state,
+        "code_challenge": code_challenge,
+        "code_challenge_method": code_challenge_method,
+        "scope": "mDL",  # @TODO 1.3.3, chiedere a basili. Sulla documentazione si fa riferimento a pid per pid o mDL
+        "authorization_details": authorization_details,  # 1.3.3
+        "redirect_uri": redirect_uri,
+        "jti": str(uuid.uuid4()),
+        "issuer_state": None,  # @TODO chiedere a Marco mostrando la Walletinstance wen
+    }
+
+    headers = {"typ": "jwt", "alg": alg, "kid": kid}
+
+    private_pem = issuer_private_key.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.PKCS8,
+        encryption_algorithm=serialization.NoEncryption(),
+    )
+    jwt_token = jwt.encode(payload, key=private_pem, algorithm=alg, headers=headers)
+
+    return jwt_token
+
+
 def generate_dpop_jwt(
     issuer_private_key: EllipticCurvePrivateKey,
     http_method: str,
     http_url: str,
-    access_token: str = None,  # parametro opzionale
+    access_token: str = None,
 ) -> str:
     """
     Genera un DPoP proof JWT firmato con chiave EC.
@@ -821,28 +766,38 @@ def generate_dpop_jwt(
     Returns:
         Stringa rappresentante il DPoP proof JWT genrato e
     """
-    # Estrae chiave pubblica da quella privata
+    logger.info(
+        f"Entering generate_dpop_jwt. Params [issuer_private_key: {issuer_private_key}, http_method:{http_method}, http_url: {http_url}, access_token: {access_token}]"
+    )
+
     issuer_public_key = issuer_private_key.public_key()
 
-    # Converti la chiave pubblica in formato JWK
     public_jwk = jwk.JWK.from_pem(
         issuer_public_key.public_bytes(
             encoding=serialization.Encoding.PEM, format=serialization.PublicFormat.SubjectPublicKeyInfo
         )
     )
 
-    # Determina l'algoritmo in base alla curva
     crv = public_jwk.get("crv")
-    alg_map = {"P-256": "ES256", "P-384": "ES384", "P-521": "ES512"}
+
+    alg_map = {
+        "P-256": "ES256",
+        "P-384": "ES384",
+        "P-521": "ES512",
+        "RSA-OAEP-256": "RSA-OAEP-256",
+        "A128CBC-HS256": "A128CBC-HS256",
+        "A256CBC-HS512": "A256CBC-HS512",
+    }
+
     alg = alg_map.get(crv)
+
     if not alg:
-        raise ValueError(f"Curva non supportata: {crv}")
+        raise ValueError(f"Crv not found: {crv}")
 
     now = int(time.time())
 
     payload = {"htu": http_url, "htm": http_method.upper(), "iat": now, "jti": str(uuid.uuid4())}
 
-    # Aggiunta della claim 'ath' se l'access token è fornito
     if access_token:
         token_bytes = access_token.encode("ascii")
         thumbprint = hashlib.sha256(token_bytes).digest()
@@ -850,7 +805,6 @@ def generate_dpop_jwt(
 
     headers = {"typ": "dpop+jwt", "alg": alg, "jwk": json.loads(public_jwk.export(private_key=False))}
 
-    # Serializza la chiave privata per PyJWT
     private_pem = issuer_private_key.private_bytes(
         encoding=serialization.Encoding.PEM,
         format=serialization.PrivateFormat.PKCS8,
@@ -900,7 +854,14 @@ def generate_dpop_bound_access_token(
 
     # Determina l'algoritmo in base alla curva
     crv = issuer_public_jwk.get("crv")
-    alg_map = {"P-256": "ES256", "P-384": "ES384", "P-521": "ES512"}
+    alg_map = {
+        "P-256": "ES256",
+        "P-384": "ES384",
+        "P-521": "ES512",
+        "RSA-OAEP-256": "RSA-OAEP-256",
+        "A128CBC-HS256": "A128CBC-HS256",
+        "A256CBC-HS512": "A256CBC-HS512",
+    }
     alg = alg_map.get(crv)
     if not alg:
         raise ValueError(f"Curva non supportata: {crv}")
@@ -958,7 +919,14 @@ def generate_proof_jwt(issuer_private_key: EllipticCurvePrivateKey, audience: st
 
     # Determina l'algoritmo in base alla curva
     crv = public_jwk.get("crv")
-    alg_map = {"P-256": "ES256", "P-384": "ES384", "P-521": "ES512"}
+    alg_map = {
+        "P-256": "ES256",
+        "P-384": "ES384",
+        "P-521": "ES512",
+        "RSA-OAEP-256": "RSA-OAEP-256",
+        "A128CBC-HS256": "A128CBC-HS256",
+        "A256CBC-HS512": "A256CBC-HS512",
+    }
     alg = alg_map.get(crv)
     if not alg:
         raise ValueError(f"Curva non supportata: {crv}")
@@ -1017,7 +985,14 @@ def generate_response_uri_request_jws(private_key: EllipticCurvePrivateKey, vp_t
 
     # Determina l'algoritmo in base alla curva
     crv = public_jwk.get("crv")
-    alg_map = {"P-256": "ES256", "P-384": "ES384", "P-521": "ES512"}
+    alg_map = {
+        "P-256": "ES256",
+        "P-384": "ES384",
+        "P-521": "ES512",
+        "RSA-OAEP-256": "RSA-OAEP-256",
+        "A128CBC-HS256": "A128CBC-HS256",
+        "A256CBC-HS512": "A256CBC-HS512",
+    }
     alg = alg_map.get(crv)
     if not alg:
         raise ValueError(f"Curva non supportata: {crv}")
