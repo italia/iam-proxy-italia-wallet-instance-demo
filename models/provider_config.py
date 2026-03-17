@@ -56,3 +56,9 @@ class ProviderConfig:
             return None
         _key = key_from_jwk_dict(private_jwk)
         return _key.serialize(private=False)
+
+    def get_x5c_federation_by_kid(self, kid) -> list|None:
+        for k in self.private_fed_jwks:
+            if kid == k.get("kid"):
+                return k.get("x5c")
+        return None
