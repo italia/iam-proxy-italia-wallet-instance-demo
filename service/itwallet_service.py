@@ -1164,7 +1164,6 @@ class ItWalletService:
         """Get wallet attestation JWT from store, or create if missing/expired. Returns JWT string."""
         logger.info(f"Entering method: _get_or_create_wallet_attestation. Params [provider_url: {provider_url}]")
 
-
         wa_id = JWT_PREFIX + "_" + WALLET_ATTESTATION_NAME
         jwt_val = app_state.ec_store.get(wa_id)
 
