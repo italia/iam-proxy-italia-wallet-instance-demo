@@ -17,6 +17,24 @@ class ProviderConfig:
         return self._config.get('public_url') or ''
 
     @property
+    def wallet_name(self) -> str|None:
+        return (self._config.get('metadata_group', {})
+                .get("wallet_solution", {}) .get("wallet_metadata", {}).get("wallet_name")) or None
+
+    @property
+    def wallet_link(self) -> str|None:
+        return self._config.get('wallet_link') or None
+
+    @property
+    def nbf_attestation(self) -> int|None:
+        """
+        Set 'nbf' (Not Before) app attestation claim, it identifies the time before which the JWT must not be accepted
+        References:
+            * RFC 7519: https://tools.ietf.org/html/rfc7519#section-4.1.5
+            """
+        return self._config.get('nbf_attestation') or None
+
+    @property
     def private_fed_jwks(self) -> list[dict]:
         """Return federated private keys in JWKs"""
         return self._config.get('federation_jwks') or []
@@ -24,7 +42,7 @@ class ProviderConfig:
     @property
     def private_core_jwks(self) -> list:
         """Return core private key in JWK"""
-        return self._config.get('core_jwk') or list
+        return self._config.get('core_jwks') or []
 
     @property
     def public_fed_jwks(self) -> list[dict]:
@@ -57,8 +75,14 @@ class ProviderConfig:
         _key = key_from_jwk_dict(private_jwk)
         return _key.serialize(private=False)
 
-    def get_x5c_federation_by_kid(self, kid) -> list|None:
+    def get_federation_x5c_by_kid(self, kid) -> list | None:
         for k in self.private_fed_jwks:
+            if kid == k.get("kid"):
+                return k.get("x5c")
+        return None
+
+    def get_core_x5c_by_kid(self, kid) -> list | None:
+        for k in self.private_core_jwks:
             if kid == k.get("kid"):
                 return k.get("x5c")
         return None
