@@ -127,26 +127,26 @@ def decode_and_verify_jwt(signed_jwt: str, jwks: dict = None):
     - Se la firma fallisce, prova a validare con le altre chiavi usando verify_with_keys.
     """
     try:
-        logger.debug(
-            "🔐 JWT firmato in input da validare e decodificare: %s",
-            sanitize_for_logging(signed_jwt[:80] + "..."),
-        )
+        logger.debug(f"Entering method: decode_and_verify_jwt. Params [signed_jwt: {signed_jwt}]")
+
         header, payload, h_b64, p_b64, s_b64 = _decode_jwt_parts(signed_jwt)
-        logger.debug("📦 Header: %s", sanitize_for_logging(json.dumps(header, indent=2)))
-        logger.debug("📦 Payload: %s", sanitize_for_logging(json.dumps(payload, indent=2)))
+
+        logger.debug(f"Header: {json.dumps(header, indent=2)}")
+
+        logger.debug(f"Payload: {json.dumps(payload, indent=2)}")
 
         signed_jwt = _convert_der_signature_if_needed(signed_jwt, header, h_b64, p_b64, s_b64)
         jwks = _resolve_jwks(jwks, payload)
         jwks_keys = jwks.get("keys", [])
         if not jwks_keys:
-            raise ValueError("JWKS non contiene chiavi JWK")
+            raise ValueError("JWKS dont cont JWK")
 
         kid = header.get("kid")
         if kid:
             main_key = next((k for k in jwks_keys if k.get("kid") == kid), None)
             other_keys = [k for k in jwks_keys if k.get("kid") != kid]
         else:
-            logger.warning("⚠️  Nessun 'kid' nell'header del JWT, prendo la prima chiave nel JWKS")
+            logger.warning("Nessun 'kid' nell'header del JWT, prendo la prima chiave nel JWKS")
             main_key = jwks_keys[0] if jwks_keys else None
             other_keys = jwks_keys[1:]
 
@@ -155,7 +155,14 @@ def decode_and_verify_jwt(signed_jwt: str, jwks: dict = None):
             if not current_kid:
                 raise ValueError("La chiave usata per validare il JWT non presenta l'header 'kid'")
             crv = jwk.get("crv")
-            alg = {"P-256": "ES256", "P-384": "ES384", "P-521": "ES512"}.get(crv)
+            alg = {
+                "P-256": "ES256",
+                "P-384": "ES384",
+                "P-521": "ES512",
+                "RSA-OAEP-256": "RSA-OAEP-256",
+                "A128CBC-HS256": "A128CBC-HS256",
+                "A256CBC-HS512": "A256CBC-HS512",
+            }.get(crv)
             if not alg:
                 raise ValueError(f"Curva '{crv}' non supportata")
             public_key_pem = pem_public_key_from_jwk_dict(jwk)
@@ -229,7 +236,10 @@ def is_jwt(token: str) -> bool:
     :param token: La stringa da verificare.
     :return: True se la stringa ha il formato di un JWT, False altrimenti.
     """
+    logger.info(f"Entering method: is_jwt. Params [token: {token}]")
+
     jwt_pattern = re.compile(r"^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$")
+
     return bool(jwt_pattern.match(token))
 
 
