@@ -16,13 +16,14 @@ from utils.utils import ec_public_key_from_pem_file, pub_ec_key_obj_to_jwk
 
 logger = logging.getLogger(__name__)
 
-provider_bp = Blueprint("provider_bp", __name__, url_prefix='/provider')
+provider_bp = Blueprint("provider_bp", __name__, url_prefix="/provider")
 provider_config: ProviderConfig = None
 instance_conf = None
 
 NONCE_TTL = 300
 
 valid_nonces = {}
+
 
 @provider_bp.record_once
 def on_load(state):
@@ -31,48 +32,51 @@ def on_load(state):
     global instance_conf
     instance_conf = state.app.config.get("wallet_instance")
 
-@provider_bp.route('/.well-known/openid-federation', methods=['GET'], strict_slashes=False)
+
+@provider_bp.route("/.well-known/openid-federation", methods=["GET"], strict_slashes=False)
 def wallet_provider_entity_configuration():
-    _format = request.args.get('format', default='jwt')
+    _format = request.args.get("format", default="jwt")
 
     data = None
     status = 500
-    mimetype = 'text/plain'
+    mimetype = "text/plain"
 
     try:
         entity_config = ECBaseManager(provider_config)
         if _format == "json":
             data = json.dumps(entity_config.dump_as_dict())
             status = 200
-            mimetype = 'application/json'
+            mimetype = "application/json"
         elif _format == "jwt":
             data = entity_config.dump_as_jwt()
             status = 200
-            mimetype = 'application/entity-statement+jwt'
+            mimetype = "application/entity-statement+jwt"
     except Exception as e:
         exc_info = logger.getEffectiveLevel() == logging.DEBUG
         logger.error(f"An error occurred while generating entity configuration. Error: {e}", exc_info=exc_info)
         pass
     return Response(response=data, status=status, mimetype=mimetype)
 
-@provider_bp.route('/nonce', methods=['GET'], strict_slashes=False)
+
+@provider_bp.route("/nonce", methods=["GET"], strict_slashes=False)
 def wallet_nonce():
     nonce = secrets.token_hex(16)
     data = json.dumps(dict(nonce=nonce))
     status = 200
-    mimetype = 'application/json'
-    session['active_nonce'] = nonce
+    mimetype = "application/json"
+    session["active_nonce"] = nonce
     valid_nonces[nonce] = time.time() + NONCE_TTL
     return Response(response=data, status=status, mimetype=mimetype)
 
-@provider_bp.route('/instance-initialization', methods=['POST'], strict_slashes=False)
-def init_wallet_instance():
-    ... #todo
 
-@provider_bp.route('/wallet-attestation', methods=['POST'], strict_slashes=False)
+@provider_bp.route("/instance-initialization", methods=["POST"], strict_slashes=False)
+def init_wallet_instance(): ...  # todo
+
+
+@provider_bp.route("/wallet-attestation", methods=["POST"], strict_slashes=False)
 def wallet_attestations():
     body = request.get_json()
-    assertion_jwt = body.get('assertion')
+    assertion_jwt = body.get("assertion")
     payload = None
     data = dict(error="server_error", error_description="The server encountered an unexpected error.")
     status_code = 500
@@ -103,6 +107,7 @@ def wallet_attestations():
             logger.error("An error occurred while generating attestations. Error: %s", e)
     return jsonify(data), status_code
 
+
 def generate_wia() -> str:
     """
      Generates the IT Wallet App Attestation.
@@ -116,7 +121,9 @@ def generate_wia() -> str:
         * IT Wallet Technical Specifications v1.3.3: https://italia.github.io/eid-wallet-it-docs/releases/1.3.3/en/wallet-provider-endpoint.html#wallet-app-attestation-jwt
     """
     x5c = provider_config.get_core_x5c_by_kid(provider_config.private_core_jwks[0].get("kid"))
-    wia_issuer = WiaJswIssuer(provider_config.public_url, provider_config.private_core_jwks[0], get_wallet_instance_pubkey(), x5c)
+    wia_issuer = WiaJswIssuer(
+        provider_config.public_url, provider_config.private_core_jwks[0], get_wallet_instance_pubkey(), x5c
+    )
 
     if provider_config.wallet_name:
         wia_issuer.set_wallet_name(provider_config.wallet_name)
@@ -130,20 +137,23 @@ def generate_wia() -> str:
     # wia_issuer.set_trust_chain(...)
     return wia_issuer.generate_jws()
 
+
 def generate_wua() -> str:
     """
-      Generates the IT Wallet Unit Attestation.
+    Generates the IT Wallet Unit Attestation.
 
-      Produces a signed attestation to verify the specific Wallet Instance binding to the hardware-backed security module of the device.
+    Produces a signed attestation to verify the specific Wallet Instance binding to the hardware-backed security module of the device.
 
-      Returns:
-          str: Encoded Unit Attestation (JWT).
+    Returns:
+        str: Encoded Unit Attestation (JWT).
 
-      References:
-          * IT Wallet Technical Specifications v1.3.3: https://italia.github.io/eid-wallet-it-docs/releases/1.3.3/en/wallet-provider-endpoint.html#wallet-unit-attestation-jwt
-      """
+    References:
+        * IT Wallet Technical Specifications v1.3.3: https://italia.github.io/eid-wallet-it-docs/releases/1.3.3/en/wallet-provider-endpoint.html#wallet-unit-attestation-jwt
+    """
     x5c = provider_config.get_core_x5c_by_kid(provider_config.private_core_jwks[0].get("kid"))
-    wua_issuer = WuaJswIssuer(provider_config.public_url, provider_config.private_core_jwks[0], get_wallet_instance_pubkey(), x5c)
+    wua_issuer = WuaJswIssuer(
+        provider_config.public_url, provider_config.private_core_jwks[0], get_wallet_instance_pubkey(), x5c
+    )
 
     # fake instance data
     wua_issuer.set_user_authentication(instance_conf.get("user_authentication"))
@@ -155,12 +165,14 @@ def generate_wua() -> str:
     # wua_issuer.set_trust_chain(...) #todo [optional]
     return wua_issuer.generate_jws()
 
+
 def verify_attestation_req_payload(payload) -> bool:
-    nonce = payload.get('nonce')
+    nonce = payload.get("nonce")
     if validate_nonce(nonce) != 0:
         return False
-    ... #todo verify wallet-instance claims
+    ...  # todo verify wallet-instance claims
     return True
+
 
 def validate_nonce(nonce) -> int:
     """
@@ -180,7 +192,7 @@ def validate_nonce(nonce) -> int:
     return 0
 
 
-def get_wallet_instance_pubkey() -> dict: #todo remove and use init_wallet_instance() endpoint
+def get_wallet_instance_pubkey() -> dict:  # todo remove and use init_wallet_instance() endpoint
     """Retrieve wallet instance hardware public key"""
     public_key_path = os.path.join("config", "pub_key.pem")
     wallet_public_key = ec_public_key_from_pem_file(public_key_path)

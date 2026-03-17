@@ -7,4 +7,3 @@ class FederationEntity(BaseModel):
     policy_uri: HttpUrl
     tos_uri: HttpUrl
     logo_uri: HttpUrl
-

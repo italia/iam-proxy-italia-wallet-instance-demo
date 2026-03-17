@@ -63,7 +63,9 @@ def get_trust_root_and_eaa_provider_ec(
     credential_configuration_id: str,
 ) -> tuple[str, str, dict]:
     """Get trust_root_url, eaa_provider_url, eaa_provider_ec for given credential_configuration_id. Raises ValueError if not found."""
-    logger.info(f"Entering method: get_trust_root_and_eaa_provider_ec. Params: [credential_configuration_id: {credential_configuration_id}]")
+    logger.info(
+        f"Entering method: get_trust_root_and_eaa_provider_ec. Params: [credential_configuration_id: {credential_configuration_id}]"
+    )
     country = app_state.selected_country
     trust_root_url = extract_claim(current_app.config, f"ms_trust_configuration.{country}.trust_root")
 
@@ -216,7 +218,9 @@ def validate_access_token(
     json_content: dict, expected_issuer_url: str, expected_client_id: str, expected_cnf_jkt_value: str
 ) -> None:
     """Validate DPoP access token claims (iss, client_id, sub, cnf.jkt). Raises ValueError."""
-    logger.info(f"Entering method: validate_access_token. Params [json_content: {json_content}, expected_issuer_url: {expected_issuer_url}, expected_client_id:{expected_client_id}, expected_cnf_jkt_value: {expected_cnf_jkt_value}]")
+    logger.info(
+        f"Entering method: validate_access_token. Params [json_content: {json_content}, expected_issuer_url: {expected_issuer_url}, expected_client_id:{expected_client_id}, expected_cnf_jkt_value: {expected_cnf_jkt_value}]"
+    )
 
     if not json_content:
         raise ValueError("Access Token unspecified")
@@ -225,7 +229,9 @@ def validate_access_token(
         raise ValueError(f"iss not valid: expected_issuer_url '{expected_issuer_url}', found {json_content.get('iss')}")
 
     if json_content.get("client_id") != expected_client_id:
-        raise ValueError(f"Iclient id not vlaid: expected_client_id '{expected_client_id}', found {json_content.get('client_id')}")
+        raise ValueError(
+            f"Iclient id not vlaid: expected_client_id '{expected_client_id}', found {json_content.get('client_id')}"
+        )
 
     if json_content.get("sub") is None:
         raise ValueError("Sub not found")

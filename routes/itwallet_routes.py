@@ -20,7 +20,7 @@ from utils.utils import (
 
 logger = logging.getLogger(__name__)
 
-wallet_api_bp = Blueprint("wallet_api_bp", __name__, url_prefix='/itwallet')
+wallet_api_bp = Blueprint("wallet_api_bp", __name__, url_prefix="/itwallet")
 
 
 @wallet_api_bp.before_request
@@ -28,6 +28,7 @@ def log_request_info():
     method = request.method
     path = request.path
     logger.info(f"Ricevuta richiesta: {method} {path}")
+
 
 @wallet_api_bp.before_request
 def set_correlation_id():
@@ -171,7 +172,7 @@ def viewObjectTypeInMemory():
         data = request.get_json()
         logger.info("%s", sanitize_for_logging(data))
 
-        object_type_value = data.get("objectType") # Check if objectType key is present
+        object_type_value = data.get("objectType")  # Check if objectType key is present
         if not object_type_value:
             return jsonify({"success": False, "data": {"error": "Missing request parameter 'objectType'"}}), 400
 
@@ -305,10 +306,10 @@ def loginToRelyingParty():
         client_id, request_uri, request_uri_method, state = _validate_login_to_rp_request(data)
 
         logger.info("Body richiesta: %s", sanitize_for_logging(data))
-        logger.info("L'ID del Relying Party selezionato è un URL valido %s",
-                    sanitize_for_logging(data.get("relyingPartyId")))
-        logger.info("Il contenuto del QR Code è un URL valido: %s",
-                    sanitize_for_logging(data.get("qrCodeContent")))
+        logger.info(
+            "L'ID del Relying Party selezionato è un URL valido %s", sanitize_for_logging(data.get("relyingPartyId"))
+        )
+        logger.info("Il contenuto del QR Code è un URL valido: %s", sanitize_for_logging(data.get("qrCodeContent")))
 
         service = ItWalletService(session)
         result = service.loginToVerifier(client_id, request_uri, request_uri_method, state)

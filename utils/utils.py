@@ -36,6 +36,7 @@ from settings import CONTENT_PDF_BASE_64_PREFIX
 
 logger = logging.getLogger(__name__)
 
+
 def base64url_encode(data: bytes) -> str:
     return base64.urlsafe_b64encode(data).rstrip(b"=").decode("utf-8")
 
@@ -268,7 +269,9 @@ def get_thumbprint_from_private_key(pvt_key: EllipticCurvePrivateKey) -> str:
 
     pub_key = pvt_key.public_key()
 
-    pem = pub_key.public_bytes(encoding=serialization.Encoding.PEM, format=serialization.PublicFormat.SubjectPublicKeyInfo)
+    pem = pub_key.public_bytes(
+        encoding=serialization.Encoding.PEM, format=serialization.PublicFormat.SubjectPublicKeyInfo
+    )
 
     jwk_key = jwk.JWK.from_pem(pem)
 

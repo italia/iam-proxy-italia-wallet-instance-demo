@@ -155,8 +155,14 @@ def decode_and_verify_jwt(signed_jwt: str, jwks: dict = None):
             if not current_kid:
                 raise ValueError("La chiave usata per validare il JWT non presenta l'header 'kid'")
             crv = jwk.get("crv")
-            alg = {"P-256": "ES256", "P-384": "ES384", "P-521": "ES512", "RSA-OAEP-256": "RSA-OAEP-256",
-                       "A128CBC-HS256": "A128CBC-HS256", "A256CBC-HS512": "A256CBC-HS512"}.get(crv)
+            alg = {
+                "P-256": "ES256",
+                "P-384": "ES384",
+                "P-521": "ES512",
+                "RSA-OAEP-256": "RSA-OAEP-256",
+                "A128CBC-HS256": "A128CBC-HS256",
+                "A256CBC-HS512": "A256CBC-HS512",
+            }.get(crv)
             if not alg:
                 raise ValueError(f"Curva '{crv}' non supportata")
             public_key_pem = pem_public_key_from_jwk_dict(jwk)

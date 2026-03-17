@@ -96,7 +96,6 @@ def request_as_par(
     }
     data = {"client_id": client_id, "request": request_object_jwt}
 
-
     logger.info(f"Header: {json.dumps(headers, indent=2)}")
 
     logger.info(f"Payload: {json.dumps(data, indent=2)}")
@@ -138,7 +137,6 @@ def request_authorize(
     """
 
     logger.info(f"Entering method: request_authorize. Params: [query_string: {query_string}, url: {url}]")
-
 
     full_url = url + query_string
 
@@ -557,6 +555,7 @@ def generate_wallet_attestation_pop_jwt(
 
     return pop_jwt
 
+
 def generate_request_object_jwt(
     issuer_private_key: EllipticCurvePrivateKey,
     audience: str,
@@ -648,6 +647,8 @@ def generate_request_object_jwt(
     jwt_token = jwt.encode(payload, key=private_pem, algorithm=alg, headers=headers)
 
     return jwt_token
+
+
 ##
 #
 #   VERSION 1.3.3
@@ -683,7 +684,9 @@ def generate_par_request_object_jwt(
     Returns:
         Stringa rappresentante il request object JWT da inviare nell'header DPoP.
     """
-    logger.info(f"Entering method: generate_par_request_object_jwt. Params: [issuer_private_key: {issuer_private_key}] ")
+    logger.info(
+        f"Entering method: generate_par_request_object_jwt. Params: [issuer_private_key: {issuer_private_key}] "
+    )
 
     issuer_public_key = issuer_private_key.public_key()
 
@@ -699,7 +702,14 @@ def generate_par_request_object_jwt(
 
     logger.info(f"crv: {crv}")
 
-    alg_map = {"P-256": "ES256", "P-384": "ES384", "P-521": "ES512", "RSA-OAEP-256": "RSA-OAEP-256", "A128CBC-HS256": "A128CBC-HS256", "A256CBC-HS512":"A256CBC-HS512"}
+    alg_map = {
+        "P-256": "ES256",
+        "P-384": "ES384",
+        "P-521": "ES512",
+        "RSA-OAEP-256": "RSA-OAEP-256",
+        "A128CBC-HS256": "A128CBC-HS256",
+        "A256CBC-HS512": "A256CBC-HS512",
+    }
 
     alg = alg_map.get(crv)
 
@@ -718,11 +728,11 @@ def generate_par_request_object_jwt(
         "state": state,
         "code_challenge": code_challenge,
         "code_challenge_method": code_challenge_method,
-        "scope": "mDL" , # @TODO 1.3.3, chiedere a basili. Sulla documentazione si fa riferimento a pid per pid o mDL
-        "authorization_details": authorization_details , #1.3.3
+        "scope": "mDL",  # @TODO 1.3.3, chiedere a basili. Sulla documentazione si fa riferimento a pid per pid o mDL
+        "authorization_details": authorization_details,  # 1.3.3
         "redirect_uri": redirect_uri,
         "jti": str(uuid.uuid4()),
-        "issuer_state": None # @TODO chiedere a Marco mostrando la Walletinstance wen
+        "issuer_state": None,  # @TODO chiedere a Marco mostrando la Walletinstance wen
     }
 
     headers = {"typ": "jwt", "alg": alg, "kid": kid}
@@ -756,15 +766,28 @@ def generate_dpop_jwt(
     Returns:
         Stringa rappresentante il DPoP proof JWT genrato e
     """
-    logger.info(f"Entering generate_dpop_jwt. Params [issuer_private_key: {issuer_private_key}, http_method:{http_method}, http_url: {http_url}, access_token: {access_token}]")
+    logger.info(
+        f"Entering generate_dpop_jwt. Params [issuer_private_key: {issuer_private_key}, http_method:{http_method}, http_url: {http_url}, access_token: {access_token}]"
+    )
 
     issuer_public_key = issuer_private_key.public_key()
 
-    public_jwk = jwk.JWK.from_pem(issuer_public_key.public_bytes(encoding=serialization.Encoding.PEM, format=serialization.PublicFormat.SubjectPublicKeyInfo))
+    public_jwk = jwk.JWK.from_pem(
+        issuer_public_key.public_bytes(
+            encoding=serialization.Encoding.PEM, format=serialization.PublicFormat.SubjectPublicKeyInfo
+        )
+    )
 
     crv = public_jwk.get("crv")
 
-    alg_map = {"P-256": "ES256", "P-384": "ES384", "P-521": "ES512", "RSA-OAEP-256": "RSA-OAEP-256", "A128CBC-HS256": "A128CBC-HS256", "A256CBC-HS512":"A256CBC-HS512"}
+    alg_map = {
+        "P-256": "ES256",
+        "P-384": "ES384",
+        "P-521": "ES512",
+        "RSA-OAEP-256": "RSA-OAEP-256",
+        "A128CBC-HS256": "A128CBC-HS256",
+        "A256CBC-HS512": "A256CBC-HS512",
+    }
 
     alg = alg_map.get(crv)
 
@@ -831,7 +854,14 @@ def generate_dpop_bound_access_token(
 
     # Determina l'algoritmo in base alla curva
     crv = issuer_public_jwk.get("crv")
-    alg_map = {"P-256": "ES256", "P-384": "ES384", "P-521": "ES512", "RSA-OAEP-256": "RSA-OAEP-256", "A128CBC-HS256": "A128CBC-HS256", "A256CBC-HS512":"A256CBC-HS512"}
+    alg_map = {
+        "P-256": "ES256",
+        "P-384": "ES384",
+        "P-521": "ES512",
+        "RSA-OAEP-256": "RSA-OAEP-256",
+        "A128CBC-HS256": "A128CBC-HS256",
+        "A256CBC-HS512": "A256CBC-HS512",
+    }
     alg = alg_map.get(crv)
     if not alg:
         raise ValueError(f"Curva non supportata: {crv}")
@@ -889,7 +919,14 @@ def generate_proof_jwt(issuer_private_key: EllipticCurvePrivateKey, audience: st
 
     # Determina l'algoritmo in base alla curva
     crv = public_jwk.get("crv")
-    alg_map = {"P-256": "ES256", "P-384": "ES384", "P-521": "ES512", "RSA-OAEP-256": "RSA-OAEP-256", "A128CBC-HS256": "A128CBC-HS256", "A256CBC-HS512":"A256CBC-HS512"}
+    alg_map = {
+        "P-256": "ES256",
+        "P-384": "ES384",
+        "P-521": "ES512",
+        "RSA-OAEP-256": "RSA-OAEP-256",
+        "A128CBC-HS256": "A128CBC-HS256",
+        "A256CBC-HS512": "A256CBC-HS512",
+    }
     alg = alg_map.get(crv)
     if not alg:
         raise ValueError(f"Curva non supportata: {crv}")
@@ -948,7 +985,14 @@ def generate_response_uri_request_jws(private_key: EllipticCurvePrivateKey, vp_t
 
     # Determina l'algoritmo in base alla curva
     crv = public_jwk.get("crv")
-    alg_map = {"P-256": "ES256", "P-384": "ES384", "P-521": "ES512", "RSA-OAEP-256": "RSA-OAEP-256", "A128CBC-HS256": "A128CBC-HS256", "A256CBC-HS512":"A256CBC-HS512"}
+    alg_map = {
+        "P-256": "ES256",
+        "P-384": "ES384",
+        "P-521": "ES512",
+        "RSA-OAEP-256": "RSA-OAEP-256",
+        "A128CBC-HS256": "A128CBC-HS256",
+        "A256CBC-HS512": "A256CBC-HS512",
+    }
     alg = alg_map.get(crv)
     if not alg:
         raise ValueError(f"Curva non supportata: {crv}")

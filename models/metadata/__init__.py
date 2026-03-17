@@ -6,7 +6,6 @@ logger = logging.getLogger(__name__)
 
 
 class MetadataFactory:
-
     @staticmethod
     def get_model_instance(spec_version: str) -> Any:
         """

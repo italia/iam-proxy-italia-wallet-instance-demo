@@ -42,5 +42,6 @@ class AppState:
         else:
             return []
 
+
 # Creazione istanza globale dello stato
 app_state = AppState()

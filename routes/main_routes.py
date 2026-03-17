@@ -12,9 +12,11 @@ main_routes = Blueprint("main_routes", __name__)
 def page_not_found(e):
     return render_template("404.html"), 404
 
+
 @main_routes.app_errorhandler(500)
 def internal_error(e):
     return render_template("500.html"), 500
+
 
 @main_routes.route("/favicon.ico")
 def favicon():

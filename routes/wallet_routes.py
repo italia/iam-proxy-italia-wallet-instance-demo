@@ -17,7 +17,7 @@ from utils.utils import (
 )
 
 logger = logging.getLogger(__name__)
-wallet_routes = Blueprint("wallet_routes", __name__, url_prefix='/wallet')
+wallet_routes = Blueprint("wallet_routes", __name__, url_prefix="/wallet")
 
 
 @wallet_routes.route("/activate", methods=["GET"])
@@ -48,7 +48,7 @@ def wallet_access():
         if app_state.stored_hashed_pin and bcrypt.checkpw(pin_attempt.encode(), app_state.stored_hashed_pin):
             session["pin_authenticated"] = True
 
-            #Create new session ID and set as correlation ID for log tracking.
+            # Create new session ID and set as correlation ID for log tracking.
             session_id = generate_nonce()
             session["session_id"] = session_id
 
@@ -71,7 +71,7 @@ def wallet_home():
     selected_country = app_state.selected_country
     wallet_initialized = app_state.wallet_initialized
     credential_store = app_state.credential_store
-    credential_keys = credential_store.keys() # Retrieve all credential keys
+    credential_keys = credential_store.keys()  # Retrieve all credential keys
 
     return render_template(
         "wallet_home.html",
@@ -93,7 +93,7 @@ def logout():
 
 @wallet_routes.route("/cb", methods=["GET"])
 def wallet_callback():
-    params_list = list(request.args.items()) # Convert query parameters into a list of tuples
+    params_list = list(request.args.items())  # Convert query parameters into a list of tuples
     current_path = request.path
 
     if params_list:
@@ -103,14 +103,14 @@ def wallet_callback():
     else:
         logger.info("Ricevuta request GET %s senza query string", sanitize_for_logging(current_path))
 
-    session["query_params"] = dict(params_list) #store params in session
+    session["query_params"] = dict(params_list)  # store params in session
     return render_template("wallet_cb.html")
 
 
 @wallet_routes.route("/template/<credential_type>", methods=["GET"])
 def credentialTypeTemplate(credential_type):
 
-    _clear_session() #todo can remove it?
+    _clear_session()  # todo can remove it?
 
     if not (result := app_state.credential_store.find_by_prefix_with_key(credential_type)):
         logger.error("Nessuna credenziale di tipo %s trovata nella memoria", sanitize_for_logging(credential_type))
@@ -203,10 +203,12 @@ def _parse_credential_claims_by_key(credential_key, claims):
         iat = validity_info.get("validFrom")  # ISO 8601 formatted string with UTC timezone
         exp = validity_info.get("validUntil")  # ISO 8601 formatted string with UTC timezone
 
-        dt_iat_local_formatted = unix_ts_to_str_datetime(int(datetime.fromisoformat(iat).timestamp()),
-                                                         fmt="%d-%m-%Y %H:%M:%S")
-        dt_exp_local_formatted = unix_ts_to_str_datetime(int(datetime.fromisoformat(exp).timestamp()),
-                                                         fmt="%d-%m-%Y %H:%M:%S")
+        dt_iat_local_formatted = unix_ts_to_str_datetime(
+            int(datetime.fromisoformat(iat).timestamp()), fmt="%d-%m-%Y %H:%M:%S"
+        )
+        dt_exp_local_formatted = unix_ts_to_str_datetime(
+            int(datetime.fromisoformat(exp).timestamp()), fmt="%d-%m-%Y %H:%M:%S"
+        )
 
     elif credential_key.startswith(SD_JWT_PREFIX):
         issuing_country = claims.get("issuing_country")

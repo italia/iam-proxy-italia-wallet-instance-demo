@@ -11,8 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 class ECBaseManager:
-
-    _DEFAULT_EXPIRATION_SECS = 33 * 60 #todo check right default value
+    _DEFAULT_EXPIRATION_SECS = 33 * 60  # todo check right default value
 
     def __init__(self, provider_config: ProviderConfig):
         self._provider_config = provider_config
@@ -22,14 +21,13 @@ class ECBaseManager:
         self._metadata = None
         self._validity = self._generate_validity()
 
-
     @property
     def sub(self) -> str:
-        return self._provider_config.public_url #Public URL of the Wallet Solution.  #todo validate and check it
+        return self._provider_config.public_url  # Public URL of the Wallet Solution.  #todo validate and check it
 
     @property
     def iss(self) -> str:
-        return self._provider_config.public_url #Public URL of the Wallet Solution. #todo validate and check it
+        return self._provider_config.public_url  # Public URL of the Wallet Solution. #todo validate and check it
 
     @property
     def iat(self) -> int:
@@ -55,9 +53,10 @@ class ECBaseManager:
         if _metadata_cls is None:
             raise Exception("No Metadata Class provided")
 
-        metadata_obj = _metadata_cls.model_validate(self._provider_config.metadata_group,
-                                                    context={"public_core_jwks": self._provider_config.public_core_jwks})
-        return metadata_obj.model_dump(mode='json', exclude_unset=True)
+        metadata_obj = _metadata_cls.model_validate(
+            self._provider_config.metadata_group, context={"public_core_jwks": self._provider_config.public_core_jwks}
+        )
+        return metadata_obj.model_dump(mode="json", exclude_unset=True)
 
     @property
     def authority_hints(self) -> list[str]:
@@ -65,8 +64,7 @@ class ECBaseManager:
         Array of URLs (String) containing the list of URLs of the immediate superior Entities,
         such as the Trust Anchor or an Intermediate, that MAY issue an Entity Statement related to the Wallet Solution.
         """
-        return self._provider_config.authority_hints #todo validate and check it
-
+        return self._provider_config.authority_hints  # todo validate and check it
 
     def dump_as_dict(self):
         _ret = dict()
@@ -97,7 +95,6 @@ class ECBaseManager:
         header["alg"] = self._alg_from_jwk(sign_key)
         jws_helper = JWSHelper([sign_key])
         return jws_helper.sign(plain_dict=payload, protected=header)
-
 
     def _generate_validity(self):
         val = dict()
