@@ -566,11 +566,11 @@ class ItWalletService:
 
         # Generazione PKCE
         pkce = generate_pkce_pair()
-        logger.info(f" code_verifier: {sanitize_for_logging(pkce.get("code_verifier", ""))}")
+        logger.info(f" code_verifier: {pkce.get("code_verifier", "")}")
 
-        logger.info(f"code_challenge: {sanitize_for_logging(pkce.get("code_challenge", ""))}")
+        logger.info(f"code_challenge: {pkce.get("code_challenge", "")}")
 
-        logger.info(f"method: {sanitize_for_logging(pkce.get("code_challenge_method", ""))}")
+        logger.info(f"method: {pkce.get("code_challenge_method", "")}")
 
         # Salvataggio in sessione del PKCE code verifier
         self.session["code_verifier"] = pkce["code_verifier"]
@@ -1076,9 +1076,7 @@ class ItWalletService:
         """Exchange auth code for DPoP access token, validate, return token and credential_identifiers."""
         wallet_private_key, wallet_public_key = self._retrieve_instance_hw_keys(CONFIG_DIR)
 
-        logger.info(f"Entering method: _token_issuing_management. Params [wallet_provider_url: {wallet_provider_url}, trust_root_url: {trust_root_url}]")
-
-        wallet_private_key, wallet_public_key = self._inizializza_wallet_keys(CONFIG_DIR)
+        logger.info(f"Entering method: _token_issuing_management. Params [authorization_server_url: {authorization_server_url}, redirect_uri: {redirect_uri}]")
 
         if not wallet_private_key or not wallet_public_key:
             raise ValueError("Exception generation wallet key")
@@ -1675,7 +1673,7 @@ class ItWalletService:
         if not input or not input.has_attr("value"):
             raise ValueError( "Hidden response not found.")
 
-        jwt_val = inp["value"]
+        jwt_val = input["value"]
 
         if not is_jwt(jwt_val):
             raise ValueError("Validation Exception: jwt_val not valid")
