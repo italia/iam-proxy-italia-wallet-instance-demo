@@ -1,14 +1,20 @@
 import logging
-import bcrypt
-
 from datetime import datetime
-from flask import Blueprint, flash, redirect, render_template, request, session, url_for, current_app
 
-from settings import CONTENT_PDF_BASE_64_PREFIX, MSO_MDOC_PREFIX, ISO_18013_5_NAME, SD_JWT_PREFIX
-from utils.itwalletUtils import get_status_description
-from utils.utils import generate_nonce, sanitize_for_logging, extract_text_from_base64_pdf, extract_claim, \
-    unix_ts_to_str_datetime, unescape_json
+import bcrypt
+from flask import Blueprint, current_app, flash, redirect, render_template, request, session, url_for
+
+from settings import CONTENT_PDF_BASE_64_PREFIX, ISO_18013_5_NAME, MSO_MDOC_PREFIX, SD_JWT_PREFIX
 from store import app_state
+from utils.itwalletUtils import get_status_description
+from utils.utils import (
+    extract_claim,
+    extract_text_from_base64_pdf,
+    generate_nonce,
+    sanitize_for_logging,
+    unescape_json,
+    unix_ts_to_str_datetime,
+)
 
 logger = logging.getLogger(__name__)
 wallet_routes = Blueprint("wallet_routes", __name__, url_prefix='/wallet')
@@ -26,7 +32,7 @@ def activate_wallet():
     if pin != confirm or not pin.isdigit() or not (4 <= len(pin) <= 8):
         flash("PIN non valido o non corrispondente", "error")
         return redirect(url_for("wallet_routes.show_activation"))
-    
+
     app_state.stored_hashed_pin = bcrypt.hashpw(pin.encode(), bcrypt.gensalt())  # Hash the PIN and save it to memory
     flash("Wallet attivato correttamente!", "success")
 
@@ -91,11 +97,11 @@ def wallet_callback():
     current_path = request.path
 
     if params_list:
-        logger.info(f"Ricevuta request GET %s con query string:", sanitize_for_logging(current_path))
+        logger.info("Ricevuta request GET %s con query string:", sanitize_for_logging(current_path))
         for k, v in params_list:
             logger.info("   %s = %s", sanitize_for_logging(k), sanitize_for_logging(v))
     else:
-        logger.info(f"Ricevuta request GET %s senza query string", sanitize_for_logging(current_path))
+        logger.info("Ricevuta request GET %s senza query string", sanitize_for_logging(current_path))
 
     session["query_params"] = dict(params_list) #store params in session
     return render_template("wallet_cb.html")

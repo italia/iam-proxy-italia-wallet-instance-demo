@@ -6,9 +6,9 @@ import sys
 
 from flask import Flask, g, has_app_context
 
-from routes.wallet_provider import provider_bp
 from routes.itwallet_routes import wallet_api_bp
 from routes.main_routes import main_routes
+from routes.wallet_provider import provider_bp
 from routes.wallet_routes import wallet_routes
 from settings import CONFIG_DIR, CORRELATION_ID_FALLBACK, JWT_PREFIX, MSO_MDOC_PREFIX, SD_JWT_PREFIX, SECRET_KEY
 from utils.utils import remove_str_prefix, sanitize_for_logging

@@ -2,10 +2,10 @@ import base64
 import binascii
 import hashlib
 import json
+import logging
 import secrets
 import string
 import unicodedata
-import logging
 from datetime import datetime, timezone
 from typing import Tuple, Union
 from urllib.parse import parse_qs, urlparse
@@ -33,7 +33,6 @@ from cryptography.hazmat.primitives.serialization import (
 from jwcrypto import jwk
 
 from settings import CONTENT_PDF_BASE_64_PREFIX
-
 
 logger = logging.getLogger(__name__)
 

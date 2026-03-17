@@ -4,13 +4,13 @@ import os
 import secrets
 import time
 
-from flask import Blueprint, Response, request, session, jsonify
-
-from models.provider_config import ProviderConfig
+from flask import Blueprint, Response, jsonify, request, session
 from pyeudiw.jwt.exceptions import JWSVerificationError
 from pyeudiw.jwt.jws_helper import JWSHelper
 from pyeudiw.wallet_instance_attestations.issuers.wia import WiaJswIssuer
 from pyeudiw.wallet_instance_attestations.issuers.wua import WuaJswIssuer
+
+from models.provider_config import ProviderConfig
 from service.ec_manager import ECBaseManager
 from utils.utils import ec_public_key_from_pem_file, pub_ec_key_obj_to_jwk
 
@@ -85,9 +85,9 @@ def wallet_attestations():
     try:
         instance_pub_key = get_wallet_instance_pubkey()
         payload = JWSHelper([instance_pub_key]).verify(assertion_jwt)
-    except JWSVerificationError as e:
+    except JWSVerificationError:
         logger.error("JWT verification failed: The request for wallet attestations has expired.")
-    except Exception as e:
+    except Exception:
         data["error"] = "invalid_request"
         data["error_description"] = "Unable to verify signature"
         logger.error("JWT verification failed: invalid key for signing verification")
@@ -118,9 +118,12 @@ def generate_wia() -> str:
     x5c = provider_config.get_core_x5c_by_kid(provider_config.private_core_jwks[0].get("kid"))
     wia_issuer = WiaJswIssuer(provider_config.public_url, provider_config.private_core_jwks[0], get_wallet_instance_pubkey(), x5c)
 
-    if provider_config.wallet_name: wia_issuer.set_wallet_name(provider_config.wallet_name)
-    if provider_config.wallet_link: wia_issuer.set_wallet_link(provider_config.wallet_link)
-    if provider_config.nbf_attestation: wia_issuer.set_nbf(provider_config.nbf_attestation)
+    if provider_config.wallet_name:
+        wia_issuer.set_wallet_name(provider_config.wallet_name)
+    if provider_config.wallet_link:
+        wia_issuer.set_wallet_link(provider_config.wallet_link)
+    if provider_config.nbf_attestation:
+        wia_issuer.set_nbf(provider_config.nbf_attestation)
 
     # todo [optional]
     # wia_issuer.set_status(...)

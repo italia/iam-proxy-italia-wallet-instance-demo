@@ -10,9 +10,9 @@ from typing import Any
 
 from flask import current_app
 
+from settings import METADATA_TYPE_CREDENTIAL_ISSUER  # ?_?
 from store import app_state
 from utils.utils import extract_claim, sanitize_for_logging
-from settings import METADATA_TYPE_CREDENTIAL_ISSUER  # ?_?
 
 logger = logging.getLogger(__name__)
 

@@ -1,7 +1,6 @@
 import datetime
 import logging
 
-
 from pydantic import BaseModel
 from pyeudiw.jwt.jws_helper import JWSHelper
 

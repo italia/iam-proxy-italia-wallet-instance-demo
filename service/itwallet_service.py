@@ -33,11 +33,11 @@ from bs4 import BeautifulSoup
 from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePrivateKey, EllipticCurvePublicKey
 from flask import current_app
 from jwcrypto.common import base64url_decode
-
-from models.provider_config import ProviderConfig
 from pyeudiw.jwt.exceptions import LifetimeException
 from pyeudiw.jwt.jws_helper import JWSHelper
 from pyeudiw.wallet_instance_attestations.issuers.wa_request import WaJswRequestIssuer
+
+from models.provider_config import ProviderConfig
 from service.itwallet_helpers import (
     apply_credential_issuer_overrides,
     apply_replace_values,
@@ -72,12 +72,12 @@ from settings import (
 )
 from store import app_state
 from utils.cborUtils import decode_and_verify_issuer_signed
-from utils.http_utils import http_request_with_retry, _parse_json_response
+from utils.http_utils import _parse_json_response, http_request_with_retry
 from utils.itwalletUtils import (
     generate_dpop_jwt,
+    generate_par_request_object_jwt,
     generate_proof_jwt,
     generate_request_object_jwt,
-    generate_par_request_object_jwt,
     generate_response_uri_request_jwe,
     generate_response_uri_request_jws,
     generate_status_assertion_request_object_jwt,
@@ -104,7 +104,8 @@ from utils.utils import (
     generate_pkce_pair,
     get_thumbprint_from_private_key,
     priv_ec_key_obj_to_jwk,
-    sanitize_for_logging, pub_ec_key_obj_to_jwk,
+    pub_ec_key_obj_to_jwk,
+    sanitize_for_logging,
 )
 
 logger = logging.getLogger(__name__)
@@ -1441,7 +1442,7 @@ class ItWalletService:
         self, enc: bool, vp_token_claims: dict, rp_state: str, rp_jwks: dict, wallet_private_key
     ) -> str:
         """Build JWE or JWS for response_uri request. Raises ValueError on failure."""
-        logger.info(f"Entering method: _build_response_uri_request. Params []")
+        logger.info("Entering method: _build_response_uri_request. Params []")
 
         if enc:
             enc_key_jwk = extract_key_for_enc(rp_jwks)
@@ -1672,12 +1673,12 @@ class ItWalletService:
         input = bea_soup.find("input", {"type": "hidden", "name": "response"})
 
         if not input or not input.has_attr("value"):
-            raise ValueError( f"Hidden response not found.")
+            raise ValueError( "Hidden response not found.")
 
         jwt_val = inp["value"]
 
         if not is_jwt(jwt_val):
-            raise ValueError(f"Validation Exception: jwt_val not valid")
+            raise ValueError("Validation Exception: jwt_val not valid")
 
         return self.__validate_authentication_response(jwt_val, rp_jwks, redirect_uri)
 
@@ -1734,7 +1735,7 @@ class ItWalletService:
         aud = payload.get("aud")
 
         if not aud:
-            raise ValueError(f"aud not found")
+            raise ValueError("aud not found")
 
         logger.debug(f"aud: {aud}")
 
