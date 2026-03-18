@@ -78,7 +78,7 @@ jobs:
         run: npm install
 
       - name: Run stylelint
-        run: npx stylelint 'static/**/*.css' --max-warnings 0
+        run: npx stylelint 'app/static/**/*.css' --max-warnings 0
 
   html:
     needs: changes
@@ -99,4 +99,4 @@ jobs:
         run: npm install
 
       - name: Run HTMLHint
-        run: npx htmlhint "templates/**/*.html" "static/**/*.html"
+        run: npx htmlhint "app/templates/**/*.html" "app/static/**/*.html"

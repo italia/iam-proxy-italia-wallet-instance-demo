@@ -34,4 +34,4 @@ RUN chown -R wiwuser:wiwgroup /app
 USER wiwuser
 
 # Comando di avvio
-CMD ["python", "app.py"]
+CMD ["python", "run.py"]

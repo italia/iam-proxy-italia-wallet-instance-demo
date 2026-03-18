@@ -10,17 +10,15 @@ import requests
 import urllib3
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePrivateKey, EllipticCurvePublicKey
-from flask import current_app
 from jwcrypto import jwe, jwk
 
+from app.utils.http_utils import _parse_json_response, http_request_with_retry
+from app.utils.utils import base64url_encode, sanitize_for_logging
 from settings import (
     CREDENTIAL_INVALID,
     CREDENTIAL_SUSPENDED,
     CREDENTIAL_VALID,
 )
-from utils.http_utils import http_request_with_retry
-from utils.sdJwtUtils import issue_sd_jwt
-from utils.utils import base64url_encode, priv_ec_key_obj_to_jwk, pub_ec_key_obj_to_jwk, sanitize_for_logging
 
 logger = logging.getLogger(__name__)
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -28,8 +26,6 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 def _parse_json_for_par(response: requests.Response) -> dict:
     """Parse and validate JSON response for PAR endpoint."""
-    from utils.http_utils import _parse_json_response
-
     result = _parse_json_response(response, str(response.url))
     logger.info("✅ Risposta OK:")
     # codeql[py/log-injection]
@@ -267,8 +263,6 @@ def request_credential(
 
 def _parse_nonce_response(response: requests.Response) -> str:
     """Parse c_nonce from nonce endpoint JSON response."""
-    from utils.http_utils import _parse_json_response
-
     result = _parse_json_response(response, str(response.url))
     if not result:
         raise ValueError("Il JSON ricevuto non contiene alcun dato")

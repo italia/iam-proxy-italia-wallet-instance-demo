@@ -2,12 +2,10 @@ import json
 import logging
 
 import requests
-from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives.asymmetric import ec
 
+from app.utils.http_utils import http_request_with_retry
+from app.utils.utils import sanitize_for_logging
 from settings import OID_FED_LIST_PATH, OID_FED_WELL_KNOWN_PATH
-from utils.http_utils import http_request_with_retry
-from utils.utils import sanitize_for_logging
 
 logger = logging.getLogger(__name__)
 

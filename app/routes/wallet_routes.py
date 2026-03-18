@@ -1,23 +1,106 @@
+import json
 import logging
 from datetime import datetime
 
 import bcrypt
 from flask import Blueprint, current_app, flash, redirect, render_template, request, session, url_for
 
-from settings import CONTENT_PDF_BASE_64_PREFIX, ISO_18013_5_NAME, MSO_MDOC_PREFIX, SD_JWT_PREFIX
-from store import app_state
-from utils.itwalletUtils import get_status_description
-from utils.utils import (
+from app.store import app_state
+from app.utils.itwalletUtils import get_status_description
+from app.utils.utils import (
     extract_claim,
     extract_text_from_base64_pdf,
     generate_nonce,
+    remove_str_prefix,
     sanitize_for_logging,
     unescape_json,
     unix_ts_to_str_datetime,
 )
+from settings import CONTENT_PDF_BASE_64_PREFIX, ISO_18013_5_NAME, JWT_PREFIX, MSO_MDOC_PREFIX, SD_JWT_PREFIX
 
 logger = logging.getLogger(__name__)
 wallet_routes = Blueprint("wallet_routes", __name__, url_prefix="/wallet")
+
+
+@wallet_routes.app_template_filter("from_json")
+def convert_to_list(value):
+    """
+    Converts input to a Python list.
+
+    Returns the list if already provided, decodes it if it's a valid JSON string,
+    or returns an empty list if an error occurs or the input is None.
+    """
+    if value is None:
+        return []
+    if isinstance(value, list):
+        return value
+    try:
+        return json.loads(value)
+    except (TypeError, json.JSONDecodeError) as e:
+        # codeql[py/log-injection]
+        logging.getLogger(__name__).error(
+            "JSON parsing error in filter: %s, value: %s",
+            sanitize_for_logging(str(e)),
+            sanitize_for_logging(value),
+        )
+        return []
+
+
+@wallet_routes.app_template_filter("split")
+def split_string(value, delimiter):
+    """Splits a string into a list based on a delimiter."""
+    if value is None:
+        return []
+    return str(value).split(delimiter)
+
+
+@wallet_routes.app_template_filter("format_credenziale")
+def format_credential(value):
+    """
+    Identifies the credential format based on the credential_id prefix.
+    Returns the lowercased format name or 'unknown' if no match is found.
+    """
+    if not value:
+        return "sconosciuto"
+
+    val_lower = value.lower()
+    prefixes = [JWT_PREFIX, SD_JWT_PREFIX, MSO_MDOC_PREFIX]
+    for prefix in prefixes:
+        if val_lower.startswith(prefix.lower()):
+            return prefix.lower()
+    return "sconosciuto"
+
+
+@wallet_routes.app_template_filter("tag_credenziale")
+def credential_tag(value):
+    """
+    Generates a 3-4 character uppercase tag from a credential ID.
+    Removes prefixes and special characters, prioritizes existing uppercase chars,
+    or formats based on underscores.
+    """
+    if not value:
+        return "N/A"
+
+    # 1. Clean prefix and leading special chars
+    prefixes = [JWT_PREFIX, SD_JWT_PREFIX, MSO_MDOC_PREFIX]
+    val = remove_str_prefix(value, prefixes)
+
+    if val and not val[0].isalnum():
+        val = val[1:]
+
+    # 2. Strategy A: Use existing uppercase if enough (min 3)
+    upper_chars = "".join(c for c in val if c.isupper())
+    if len(upper_chars) >= 3:
+        return upper_chars[:3]
+
+    # 3. Strategy B: Handle underscores (e.g., "name_id" -> "NAM-I")
+    if "_" in val[1:]:
+        parts = val.split("_", 1)
+        if len(parts) > 1 and parts[1]:
+            return f"{parts[0][:3].upper()}-{parts[1][0].upper()}"
+
+    # 4. Strategy C: Fallback to first 3 chars
+    return val[:3].upper()
 
 
 @wallet_routes.route("/activate", methods=["GET"])

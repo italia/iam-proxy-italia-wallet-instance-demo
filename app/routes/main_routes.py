@@ -2,8 +2,8 @@ import os
 
 from flask import Blueprint, current_app, redirect, render_template, send_from_directory, session, url_for
 
+from app.store import app_state
 from settings import CHROME_DEVTOOLS_PATH, FAVICON_MIMETYPE, FAVICON_SUBPATH, STATIC_FOLDER
-from store import app_state
 
 main_routes = Blueprint("main_routes", __name__)
 
