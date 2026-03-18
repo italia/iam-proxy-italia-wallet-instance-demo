@@ -269,7 +269,7 @@ class ItWalletService:
 
         # todo retrieve provider data from ec
         wallet_attestation_jwt = self._get_or_create_app_attestation(
-            self.provider_config.public_url, self.provider_config.public_fed_jwks[0]
+            self.provider_config.public_url, self.provider_config.public_core_jwks[0]
         )
 
         # Generazione PKCE
@@ -576,7 +576,7 @@ class ItWalletService:
 
         # todo retrieve provider data from ec
         wallet_attestation_jwt = self._get_or_create_app_attestation(
-            self.provider_config.public_url, self.provider_config.public_fed_jwks[0]
+            self.provider_config.public_url, self.provider_config.public_core_jwks[0]
         )
 
         # Generazione PKCE
@@ -1131,7 +1131,7 @@ class ItWalletService:
 
         # todo retrieve provider data from ec
         wallet_attestation_jwt = self._get_or_create_app_attestation(
-            self.provider_config.public_url, self.provider_config.public_fed_jwks[0]
+            self.provider_config.public_url, self.provider_config.public_core_jwks[0]
         )
 
         dpop_token_request = generate_dpop_jwt(
