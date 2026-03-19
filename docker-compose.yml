@@ -1,27 +1,23 @@
 services:
-  web:
-    container_name: my-wallet
-    image: my-wallet:1.0.0
-    ports:
-      - "8080:8080"
-    volumes:
-      - ./config:/app/config:ro
-    environment:
-      - FLASK_ENV=development
 
-    # Scenario 1: build da Dockerfile
+  wallet-instance:
+    image: iam-proxy-italia-wallet-istance-demo:1.3.3
     build:
       context: .
       dockerfile: Dockerfile
-    profiles: ["build"]
-
-  web_registry:
-    container_name: my-wallet
-    image: myregistry.example.com/myuser/my-wallet:1.0.0
+    container_name: iam-proxy-italia-wallet-istance-demo
+    environment:
+      - FLASK_RUN_PORT=8080
+      - PYTHONUNBUFFERED=1
+      - CONFIG_DIR=/application/config
+      - POETRY_VERSION=2.3.2
+      - TZ=Europe/Rome
     ports:
       - "8080:8080"
     volumes:
-      - ./config:/app/config:ro
-    environment:
-      - FLASK_ENV=production
-    profiles: ["registry"]
+      - ./config:/application/config:ro
+    restart: unless-stopped
+
+networks:
+  iam-proxy-italia:
+    name: iam-proxy-italia
