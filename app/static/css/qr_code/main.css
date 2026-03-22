@@ -1,11 +1,10 @@
 * {
-  -webkit-box-sizing: border-box;
-  -moz-box-sizing: border-box;
   box-sizing: border-box;
 }
+
 :root {
-  --mainColor: #607d8b;
-  --secColor: #009688;
+  --main-color: #607d8b;
+  --sec-color: #009688;
 }
 
 
@@ -39,31 +38,31 @@ h1, h2, h3, h4 {
   padding-right: 15px;
   margin-left: auto;
   margin-right: auto;
+  height: 100vh;
+  position: relative;
 }
 
 /* Small */
-@media (min-width: 768px) {
+@media (width >= 768px) {
   .container {
     width: 750px;
   }
 }
+
 /* Medium */
-@media (min-width: 992px) {
+@media (width >= 992px) {
   .container {
     width: 970px;
   }
 }
+
 /* Large */
-@media (min-width: 1200px) {
+@media (width >= 1200px) {
   .container {
     width: 1170px;
   }
 }
 
-.container {
-  height: 100vh;
-  position: relative;
-}
 .container .app {
   width: 400px;
   height: 350px;
@@ -72,25 +71,29 @@ h1, h2, h3, h4 {
   left: 50%;
   transform: translate(-50%, -50%);
   padding: 30px;
-  background-color: var(--mainColor);
+  background-color: var(--main-color);
   border-radius: 8px;
   overflow: hidden;
   transition: height 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55);
 }
+
 /* JavaScript change-height Class */
 .container .app.change-height {
   height: 550px;
 }
+
 .container .app form {
   text-align: center;
   background-color: #fff;
   border-radius: 8px;
   padding: 10px;
 }
+
 .container .app form img {
   width: 80%;
   max-height: 80%;
 }
+
 .container .app form .content {
   height: 250px;
   display: flex;
@@ -99,27 +102,33 @@ h1, h2, h3, h4 {
   align-items: center;
   cursor: pointer;
 }
+
 /* JavaScript hidden Class */
 .container .app form .content.hidden {
   display: none;
 }
+
 .container .app form .content svg {
   font-size: 120px;
   margin-bottom: 20px;
-  color: var(--secColor);
+  color: var(--sec-color);
 }
+
 .container .app form .content p {
   font-size: 25px;
   font-weight: 800;
 }
+
 .container .app .details {
   display: none;
   margin-top: 20px;
 }
+
 /* JavaScript active Class */
 .container .app .details.active {
   display: block;
 }
+
 .container .app .details textarea {
   width: 100%;
   height: 120px;
@@ -133,10 +142,12 @@ h1, h2, h3, h4 {
   margin-bottom: 20px;
   resize: none;
 }
+
 .container .app .details .buttons {
   display: flex;
   justify-content: space-between;
 }
+
 .container .app .details .buttons button {
   height: 50px;
   width: calc(100% / 2 - 10px);
@@ -145,12 +156,13 @@ h1, h2, h3, h4 {
   cursor: pointer;
   font-size: 16px;
   font-weight: 500;
-  color: var(--secColor);
+  color: var(--sec-color);
   background: #fff;
   border-radius: 8px;
   opacity: 0.5;
   transition: opacity 0.5s;
 }
+
 .container .app .details .buttons button:hover {
   opacity: 1; 
 }

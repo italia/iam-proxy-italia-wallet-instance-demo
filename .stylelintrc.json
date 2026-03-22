@@ -1,6 +1,6 @@
 {
   "extends": "stylelint-config-standard",
-  "ignoreFiles": ["static/css/**", "static/tom-select.css", "**/all.min.css"],
+  "ignoreFiles": ["**/tom-select.css", "**/normalize.css", "**/all.min.css"],
   "rules": {
     "no-descending-specificity": null,
     "alpha-value-notation": null,
