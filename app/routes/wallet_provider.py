@@ -7,8 +7,8 @@ import time
 from flask import Blueprint, Response, jsonify, request, session
 from pyeudiw.jwt.exceptions import JWSVerificationError
 from pyeudiw.jwt.jws_helper import JWSHelper
-from pyeudiw.wallet_instance_attestations.issuers.wia import WiaJswIssuer
-from pyeudiw.wallet_instance_attestations.issuers.wua import WuaJswIssuer
+from pyeudiw.wallet_attestations.issuers.wia import WiaJswIssuer
+from pyeudiw.wallet_attestations.issuers.wua import WuaJswIssuer
 
 from app.models.provider_config import ProviderConfig
 from app.service.ec_manager import ECBaseManager

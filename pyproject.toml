@@ -29,7 +29,7 @@ dependencies = [
     "pyzbar==0.1.9",
     "requests==2.32.5",
     "urllib3==2.6.3",
-    "pyeudiw @ git+https://github.com/italia/eudi-wallet-it-python@feature/wallet_attestation" # replace with latest version
+    "pyeudiw @ git+https://github.com/italia/eudi-wallet-it-python@dev"
 ]
 
 [tool.ruff]

@@ -35,7 +35,7 @@ from flask import current_app
 from jwcrypto.common import base64url_decode
 from pyeudiw.jwt.exceptions import LifetimeException
 from pyeudiw.jwt.jws_helper import JWSHelper
-from pyeudiw.wallet_instance_attestations.issuers.wa_request import WaJswRequestIssuer
+from pyeudiw.wallet_attestations.issuers.wa_request import WaJswRequestIssuer
 
 from app.models.provider_config import ProviderConfig
 from app.service.itwallet_helpers import (
