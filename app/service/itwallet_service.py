@@ -37,8 +37,8 @@ from pyeudiw.jwt.exceptions import LifetimeException
 from pyeudiw.jwt.jws_helper import JWSHelper
 from pyeudiw.wallet_instance_attestations.issuers.wa_request import WaJswRequestIssuer
 
-from models.provider_config import ProviderConfig
-from service.itwallet_helpers import (
+from app.models.provider_config import ProviderConfig
+from app.service.itwallet_helpers import (
     apply_credential_issuer_overrides,
     apply_replace_values,
     get_proxies_from_config,
@@ -52,28 +52,10 @@ from service.itwallet_helpers import (
     validate_response_mode,
     validate_response_type,
 )
-from settings import (
-    AUTH_RESPONSE_MODE_FORM_POST_JWT,
-    AUTH_RESPONSE_MODE_QUERY,
-    AUTH_RESPONSE_TYPE_CODE,
-    CONFIG_DIR,
-    ISO_18013_5_NAME,
-    ISO_18013_5_VERSION,
-    JWT_PREFIX,
-    METADATA_TYPE_AUTHORIZATION_SERVER,
-    METADATA_TYPE_CREDENTIAL_ISSUER,
-    METADATA_TYPE_CREDENTIAL_VERIFIER,
-    METADATA_TYPE_FEDERATION_ENTITY,
-    MSO_MDOC_PREFIX,
-    PRESENTATION_RESPONSE_MODE_DIRECT_POST_JWT,
-    PRESENTATION_RESPONSE_TYPE_VP_TOKEN,
-    SD_JWT_PREFIX,
-    WALLET_ATTESTATION_NAME,
-)
-from store import app_state
-from utils.cborUtils import decode_and_verify_issuer_signed
-from utils.http_utils import _parse_json_response, http_request_with_retry
-from utils.itwalletUtils import (
+from app.store import app_state
+from app.utils.cborUtils import decode_and_verify_issuer_signed
+from app.utils.http_utils import _parse_json_response, http_request_with_retry
+from app.utils.itwalletUtils import (
     generate_dpop_jwt,
     generate_par_request_object_jwt,
     generate_proof_jwt,
@@ -93,10 +75,10 @@ from utils.itwalletUtils import (
     request_status,
     request_token,
 )
-from utils.jwtUtils import decode_and_verify_jwt, extract_key_for_enc, is_jwt
-from utils.oidFedUtils import oid_fed_fetch_openid_configuration, oid_fed_list
-from utils.sdJwtUtils import decode_and_verify_sd_jwt, paths_to_nested_dict, present_sd_jwt
-from utils.utils import (
+from app.utils.jwtUtils import decode_and_verify_jwt, extract_key_for_enc, is_jwt
+from app.utils.oidFedUtils import oid_fed_fetch_openid_configuration, oid_fed_list
+from app.utils.sdJwtUtils import decode_and_verify_sd_jwt, paths_to_nested_dict, present_sd_jwt
+from app.utils.utils import (
     ec_private_key_from_pem_file,
     ec_public_key_from_pem_file,
     extract_claim,
@@ -106,6 +88,24 @@ from utils.utils import (
     priv_ec_key_obj_to_jwk,
     pub_ec_key_obj_to_jwk,
     sanitize_for_logging,
+)
+from settings import (
+    AUTH_RESPONSE_MODE_FORM_POST_JWT,
+    AUTH_RESPONSE_MODE_QUERY,
+    AUTH_RESPONSE_TYPE_CODE,
+    CONFIG_DIR,
+    ISO_18013_5_NAME,
+    ISO_18013_5_VERSION,
+    JWT_PREFIX,
+    METADATA_TYPE_AUTHORIZATION_SERVER,
+    METADATA_TYPE_CREDENTIAL_ISSUER,
+    METADATA_TYPE_CREDENTIAL_VERIFIER,
+    METADATA_TYPE_FEDERATION_ENTITY,
+    MSO_MDOC_PREFIX,
+    PRESENTATION_RESPONSE_MODE_DIRECT_POST_JWT,
+    PRESENTATION_RESPONSE_TYPE_VP_TOKEN,
+    SD_JWT_PREFIX,
+    WALLET_ATTESTATION_NAME,
 )
 
 logger = logging.getLogger(__name__)
@@ -269,7 +269,7 @@ class ItWalletService:
 
         # todo retrieve provider data from ec
         wallet_attestation_jwt = self._get_or_create_app_attestation(
-            self.provider_config.public_url, self.provider_config.public_fed_jwks[0]
+            self.provider_config.public_url, self.provider_config.public_core_jwks[0]
         )
 
         # Generazione PKCE
@@ -576,7 +576,7 @@ class ItWalletService:
 
         # todo retrieve provider data from ec
         wallet_attestation_jwt = self._get_or_create_app_attestation(
-            self.provider_config.public_url, self.provider_config.public_fed_jwks[0]
+            self.provider_config.public_url, self.provider_config.public_core_jwks[0]
         )
 
         # Generazione PKCE
@@ -1131,7 +1131,7 @@ class ItWalletService:
 
         # todo retrieve provider data from ec
         wallet_attestation_jwt = self._get_or_create_app_attestation(
-            self.provider_config.public_url, self.provider_config.public_fed_jwks[0]
+            self.provider_config.public_url, self.provider_config.public_core_jwks[0]
         )
 
         dpop_token_request = generate_dpop_jwt(

@@ -6,7 +6,7 @@ from typing import Union
 import jwt
 from cryptography.hazmat.primitives.asymmetric.utils import decode_dss_signature
 
-from utils.utils import base64url_decode, base64url_encode, pem_public_key_from_jwk_dict, sanitize_for_logging
+from app.utils.utils import base64url_decode, base64url_encode, pem_public_key_from_jwk_dict, sanitize_for_logging
 
 logger = logging.getLogger(__name__)
 

@@ -1,7 +1,7 @@
 import logging
 
-from store.credential_store import CredentialStore
-from store.entity_config_store import EntityConfigurationStore
+from app.store.credential_store import CredentialStore
+from app.store.entity_config_store import EntityConfigurationStore
 
 logger = logging.getLogger(__name__)
 

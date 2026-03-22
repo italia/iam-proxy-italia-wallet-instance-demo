@@ -4,18 +4,18 @@ from urllib.parse import urlparse
 
 from flask import Blueprint, current_app, g, jsonify, request, session
 
-from service.itwallet_service import ItWalletService
-from settings import (
-    DEFAULT_CORRELATION_ID,
-    EU_COUNTRIES,
-    IDP_VALID,
-)
-from store import app_state
-from utils.utils import (
+from app.service.itwallet_service import ItWalletService
+from app.store import app_state
+from app.utils.utils import (
     estrai_parametro_query_string,
     extract_claim,
     guess_credential_configuration_icon,
     sanitize_for_logging,
+)
+from settings import (
+    DEFAULT_CORRELATION_ID,
+    EU_COUNTRIES,
+    IDP_VALID,
 )
 
 logger = logging.getLogger(__name__)

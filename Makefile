@@ -27,15 +27,15 @@ ruff:
 
 radon:
 	@echo "--- Radon CC (complexity) ---"
-	radon cc app.py routes/ service/ utils/ settings.py settings_utils.py -a -s --total-average
+	radon cc run.py settings.py settings_utils.py app/ -a -s --total-average -x "app/templates/*,app/static/*"
 	@echo "--- Radon MI (maintainability) ---"
-	radon mi app.py routes/ service/ utils/ settings.py settings_utils.py -s -n B
+	radon mi run.py settings.py settings_utils.py app/ -s -n B -x "app/templates/*,app/static/*"
 	@echo "--- Xenon (fail on CC > B) ---"
-	xenon --max-absolute B --max-modules B --max-average B app.py routes/ service/ utils/
+	xenon --max-absolute B --max-modules B --max-average B -e "app/templates/.*,app/static/.*" run.py settings.py settings_utils.py app/
 
 bandit:
 	@echo "--- Bandit (security lint) ---"
-	bandit -r app.py routes/ service/ utils/ settings_utils.py -ll -c pyproject.toml
+	bandit -r run.py settings.py settings_utils.py app/ -ll -c pyproject.toml -x "app/templates/*,app/static/*"
 
 pip-audit:
 	@echo "--- pip-audit (dependency vulnerabilities) ---"
@@ -49,11 +49,11 @@ pip-audit:
 
 html:
 	@echo "--- HTML (HTMLHint) ---"
-	npx htmlhint "templates/**/*.html" "static/**/*.html"
+	npx htmlhint "app/templates/**/*.html" "app/static/**/*.html"
 
 css:
 	@echo "--- CSS (stylelint) ---"
-	npx stylelint 'static/**/*.css' --max-warnings 0
+	npx stylelint 'app/static/**/*.css' --max-warnings 0
 
 # CodeQL: requires CodeQL CLI in PATH (download from github.com/github/codeql-action/releases)
 codeql:

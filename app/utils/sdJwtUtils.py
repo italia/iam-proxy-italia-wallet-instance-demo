@@ -6,7 +6,7 @@ from pyeudiw.sd_jwt.holder import SDJWTHolder
 from pyeudiw.sd_jwt.issuer import SDJWTIssuer, SDObj
 from pyeudiw.sd_jwt.verifier import SDJWTVerifier
 
-from utils.utils import base64url_decode, sanitize_for_logging
+from app.utils.utils import base64url_decode, sanitize_for_logging
 
 logger = logging.getLogger(__name__)
 

@@ -1,7 +1,7 @@
 import logging
 from typing import Optional, Tuple
 
-from utils.utils import sanitize_for_logging
+from app.utils.utils import sanitize_for_logging
 
 logger = logging.getLogger(__name__)
 

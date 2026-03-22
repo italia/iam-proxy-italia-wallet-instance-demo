@@ -12,56 +12,30 @@ include = []
 name = "iam-proxy-italia-wallet-instance-demo"
 version = "1.3.3"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.12,<4.0"
 dependencies = [
-    "asn1crypto==1.5.1",
-    "attrs==25.3.0",
-    "bcrypt==4.3.0",
-    "beautifulsoup4==4.13.4",
-#    "blinker==1.9.0",
+    "beautifulsoup4==4.14.3",
     "cbor2==5.8.0",
-#    "certifi==2025.8.3",
-    "certvalidator==0.11.1",
-#    "cffi==2.0.0",
-#    "charset-normalizer==3.4.2",
-#    "click==8.2.1",
-    "colorama==0.4.6",
     "cryptography==46.0.5",
+    "PyMuPDF==1.27.2",
+    "cryptojwt==1.9.4",
     "Flask==3.1.3",
-#    "idna==3.10",
-#    "itsdangerous==2.2.0",
-#    "Jinja2==3.1.6",
-    "jmespath==1.0.1",
+    "jmespath==1.1.0",
     "jwcrypto==1.5.6",
-#    "MarkupSafe==3.0.2",
-    "numpy==2.2.6",
-    "opencv-python==4.12.0.88",
-    "oscrypto==1.3.0",
     "pillow==12.1.1",
-    "psutil==7.0.0",
-#    "pycparser==2.22",
-    "PyJWT==2.12.0",
-    "PyMuPDF==1.26.3",
-    "PyYAML==6.0.2",
-    "pyOpenSSL>=26.0.0",
-    "pyzbar==0.1.7",
-    "requests==2.32.4",
-#    "pyeudiw==2.1.0",
-#    "six==1.17.0",
-#    "soupsieve==2.7",
-    "typing_extensions==4.14.1",
-#    "urllib3==2.6.3",
-#    "Werkzeug==3.1.5",
-    "zxing==1.0.3",
-#    "satosa @ git+https://github.com/peppelinux/SATOSA@pplnx-v8.5.2",
-    "pyeudiw[satosa] @ git+https://github.com/italia/eudi-wallet-it-python@feature/wallet_attestation",
-
+    "pydantic==2.12.5",
+    "PyJWT==2.12.1",
+    "bcrypt==5.0.0",
+    "pyzbar==0.1.9",
+    "requests==2.32.5",
+    "urllib3==2.6.3",
+    "pyeudiw @ git+https://github.com/italia/eudi-wallet-it-python@feature/wallet_attestation" # replace with latest version
 ]
 
 [tool.ruff]
 target-version = "py310"
 line-length = 120
-exclude = [".ci_env", ".ci-venv", ".git", "__pycache__", ".venv", "venv", "static", "templates", "node_modules"]
+exclude = [".ci_env", ".ci-venv", ".git", "__pycache__", ".venv", "venv", "app/static", "app/templates", "node_modules"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I"]
@@ -79,7 +53,7 @@ max_modules = "B"
 max_average = "A"
 
 [tool.bandit]
-exclude_dirs = [".ci_env", ".ci-venv", ".git", "__pycache__", ".venv", "venv", "static", "templates"]
+exclude_dirs = [".ci_env", ".ci-venv", ".git", "__pycache__", ".venv", "venv", "app/static", "app/templates"]
 skips = [
     "B101",  # assert_used
     "B104",  # hardcoded_bind_all_interfaces - demo dev server

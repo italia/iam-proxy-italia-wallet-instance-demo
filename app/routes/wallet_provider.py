@@ -10,9 +10,9 @@ from pyeudiw.jwt.jws_helper import JWSHelper
 from pyeudiw.wallet_instance_attestations.issuers.wia import WiaJswIssuer
 from pyeudiw.wallet_instance_attestations.issuers.wua import WuaJswIssuer
 
-from models.provider_config import ProviderConfig
-from service.ec_manager import ECBaseManager
-from utils.utils import ec_public_key_from_pem_file, pub_ec_key_obj_to_jwk
+from app.models.provider_config import ProviderConfig
+from app.service.ec_manager import ECBaseManager
+from app.utils.utils import ec_public_key_from_pem_file, pub_ec_key_obj_to_jwk
 
 logger = logging.getLogger(__name__)
 
