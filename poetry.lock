@@ -1874,8 +1874,8 @@ test = ["pytest", "pytest-mock"]
 [package.source]
 type = "git"
 url = "https://github.com/italia/eudi-wallet-it-python"
-reference = "feature/wallet_attestation"
-resolved_reference = "c7bde7985095c0c07184fec27b7c904e400ef7a6"
+reference = "dev"
+resolved_reference = "77fa9a7bc99857693d3d5d8a3ef19d4e4c3f1d30"
 
 [[package]]
 name = "pyjwt"
@@ -2217,4 +2217,4 @@ propcache = ">=0.2.1"
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.12,<4.0"
-content-hash = "a166ef1696773c59eb935320697f9d95377380fe3cf0f21dfdfa54196a02183f"
+content-hash = "7c1efdf13054f00e42a88d4faf8ab245bfe2a3e43d17b2bc88b0d156c85fef26"
