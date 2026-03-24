@@ -37,6 +37,7 @@ DEFAULTS = {
     "metadata_type_authorization_server": "oauth_authorization_server",
     "metadata_type_credential_issuer": "openid_credential_issuer",
     "metadata_type_credential_verifier": "openid_credential_verifier",
+    "metadata_type_wallet_provider": "wallet_provider",
     "eu_countries": "AT,BE,BG,CZ,CY,DK,DE,EE,ES,FR,FI,GR,HU,IE,IT,LV,LT,LU,MT,NL,PL,PT,RO,SK,SI,SE",
     "idp_valid": "CIE3,CIE2,SPID2",
     "credential_valid": "0x00",

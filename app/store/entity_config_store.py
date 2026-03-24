@@ -11,7 +11,7 @@ class EntityConfigurationStore:
         """
         self._store[key] = value
 
-    def get(self, key) -> dict:
+    def get(self, key) -> dict|None:
         """
         Cerca un EntityConfiguration.
         """

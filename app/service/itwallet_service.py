@@ -105,7 +105,7 @@ from settings import (
     PRESENTATION_RESPONSE_MODE_DIRECT_POST_JWT,
     PRESENTATION_RESPONSE_TYPE_VP_TOKEN,
     SD_JWT_PREFIX,
-    WALLET_ATTESTATION_NAME,
+    WALLET_ATTESTATION_NAME, METADATA_TYPE_WALLET_PROVIDER,
 )
 
 logger = logging.getLogger(__name__)
@@ -220,6 +220,9 @@ class ItWalletService:
             # codeql[py/log-injection]
             logger.info("✅ Scaricato e salvato EC trust root %s", sanitize_for_logging(trust_root_url))
 
+        if not (wallet_provider_url := self._retrieve_wallet_provider_ec(trust_root_url)):
+            raise ValueError("Retrieving wallet_provider entity configuration failed")
+
         params = {"entity_type": METADATA_TYPE_CREDENTIAL_ISSUER}
         oid_fed_list_reponse = oid_fed_list(
             base_url=trust_root_url,
@@ -267,10 +270,10 @@ class ItWalletService:
 
         logger.info("📄 Wallet Attestation PoP JWT generata.")
 
-        # todo retrieve provider data from ec
-        wallet_attestation_jwt = self._get_or_create_app_attestation(
-            self.provider_config.public_url, self.provider_config.public_core_jwks[0]
-        )
+        if not (provider_ec := app_state.ec_store.get(wallet_provider_url)): # find 1st wallet_provider
+            raise ValueError("The provider wallet is not present in the wallet")
+        pub_core_jwks = extract_claim(provider_ec, "metadata.wallet_provider.jwks.keys")
+        wallet_attestation_jwt = self._get_or_create_app_attestation(wallet_provider_url, pub_core_jwks)
 
         # Generazione PKCE
         pkce = generate_pkce_pair()
@@ -574,10 +577,11 @@ class ItWalletService:
             raise ValueError("Cant generate the Wallet Attestation PoP JWT")
         logger.info(f"client_attestation_pop_jwt: {client_attestation_pop_jwt}.")
 
-        # todo retrieve provider data from ec
-        wallet_attestation_jwt = self._get_or_create_app_attestation(
-            self.provider_config.public_url, self.provider_config.public_core_jwks[0]
-        )
+        if not (provider_ec := app_state.ec_store.all_values("metadata.wallet_provider")): # find 1st wallet_provider
+            raise ValueError("The provider wallet is not present in the wallet")
+
+        pub_core_jwks = extract_claim(provider_ec[0], "metadata.wallet_provider.jwks.keys")
+        wallet_attestation_jwt = self._get_or_create_app_attestation(provider_ec[0]["iss"], pub_core_jwks)
 
         # Generazione PKCE
         pkce = generate_pkce_pair()
@@ -1129,10 +1133,11 @@ class ItWalletService:
         )
         logger.info(f"client_attestation_pop_jwt: {client_attestation_pop_jwt}")
 
-        # todo retrieve provider data from ec
-        wallet_attestation_jwt = self._get_or_create_app_attestation(
-            self.provider_config.public_url, self.provider_config.public_core_jwks[0]
-        )
+
+        if not (provider_ec := app_state.ec_store.all_values("metadata.wallet_provider")):  # find 1st wallet_provider
+            raise ValueError("The provider wallet is not present in the wallet")
+        pub_core_jwks = extract_claim(provider_ec[0], "metadata.wallet_provider.jwks.keys")
+        wallet_attestation_jwt = self._get_or_create_app_attestation(provider_ec[0]["iss"], pub_core_jwks)
 
         dpop_token_request = generate_dpop_jwt(
             issuer_private_key=wallet_private_key, http_method="POST", http_url=authorization_server_token_url
@@ -1202,7 +1207,7 @@ class ItWalletService:
 
         return dpop_bound_access_token, matching_identifiers
 
-    def _get_or_create_app_attestation(self, provider_url: str, provider_pubkey) -> str:
+    def _get_or_create_app_attestation(self, provider_url: str, provider_jwks: list[dict]) -> str:
         """Get wallet attestation JWT from store, or create if missing/expired. Returns JWT string."""
         logger.info(f"Entering method: _get_or_create_wallet_attestation. Params [provider_url: {provider_url}]")
 
@@ -1211,16 +1216,16 @@ class ItWalletService:
 
         def validate_jws(value):
             try:
-                _helper = JWSHelper([provider_pubkey])
+                _helper = JWSHelper(provider_jwks)
                 return _helper.verify(value)
             except LifetimeException:
                 logger.error("App attestation jwt expired")
                 return None
-            except Exception:
-                logger.error("Validation of the app wallet attestation jwt failed")
+            except Exception as e:
+                logger.error("Validation of the app wallet attestation jwt failed: {}".format(e))
                 return None
 
-        if not validate_jws(jwt_val):
+        if not jwt_val or not validate_jws(jwt_val):
             attestations = self._retrieve_attestations_jws(provider_url)
             if app_attestation := attestations.get("wallet_app_attestation"):
                 app_state.ec_store.add(wa_id, app_attestation)
@@ -1999,7 +2004,10 @@ class ItWalletService:
         """This method retrieve a wallet app attestation and a wallet unit attestation from wallet provider endpoint.
         Return: a dict with attestations as signed JWT
         """
+        if not self._hw_key_tag or not self._hw_private_jwk:
+            raise ValueError("Unable to retrieve instance wallet keys, please initialize instance wallet again")
 
+        provider_url = provider_url[: -1] + provider_url[-1].replace("/", "")
         http_headers = {"Accept": "application/json"}
         nonce_url = provider_url + "/nonce"
         nonce_response = http_request_with_retry("GET", url=nonce_url, headers=http_headers)
@@ -2031,3 +2039,34 @@ class ItWalletService:
                 if k in supported_attestations:
                     res.update({k: v})
         return res
+
+    def _retrieve_wallet_provider_ec(self, trust_root_url: str) -> str | None:
+        """
+        Retrieve the wallet provider url from the trusted root; store it Entity Configuration in-memory
+        Returns:
+            (str) wallet provider URL or None if error occurred
+        """
+        params = {"entity_type": METADATA_TYPE_WALLET_PROVIDER}
+
+        founded = oid_fed_list(
+            base_url=trust_root_url,
+            query_string=f"?{urlencode(params)}",
+            proxies=self.proxies,
+            no_proxy_domains=self.no_proxy_domains,
+        )
+        if not founded:
+            logger.error("No entity of type wallet_provider was found within the federation.")
+            return None
+
+        try:
+            wallet_provider_url = founded[0]
+            ec_payload = self._entity_configuration_management(
+                wallet_provider_url,
+                [METADATA_TYPE_FEDERATION_ENTITY, METADATA_TYPE_WALLET_PROVIDER],
+                trust_root_url
+            )
+        except Exception as e:
+            logger.error("Unable to retrieve entity configuration for provider - error: {}".format(e))
+            return None
+        app_state.ec_store.add(wallet_provider_url, ec_payload)
+        return wallet_provider_url
