@@ -57,7 +57,7 @@
         ]
       }
     ],
-    "authority_hints": [],
+    "authority_hints": ["https://trust-anchor.example.org"],
     "metadata_group": {
       "federation_entity": {
         "organization_name": "IAM PROXY ITALIA DEMO",
@@ -66,7 +66,7 @@
         "tos_uri": "https://wallet-provider.example.org/info_policy",
         "logo_uri": "https://wallet-provider.example.org/logo.svg"
       },
-      "wallet_solution": {
+      "wallet_provider": {
         "logo_uri": "https://wallet-solution.example.org/compact-logo.svg",
         "wallet_metadata": {
           "wallet_name": "WALLET DEMO",
@@ -114,7 +114,7 @@
         "CIE2": "https://cie-provider.example.org",
         "SPID2": "https://demo.spid.gov.it"
       },
-      "credential_configuration_id": "dc_sd_jwt_PersonIdentificationData",
+      "credential_configuration_id": "dc_sd_jwt_pid",
       "response_mode": "query",
       "response_type": "code",
       "redirect_uri": "http://localhost:8080/wallet/cb"
