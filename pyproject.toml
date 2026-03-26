@@ -27,7 +27,7 @@ dependencies = [
     "PyJWT==2.12.1",
     "bcrypt==5.0.0",
     "pyzbar==0.1.9",
-    "requests==2.32.5",
+    "requests==2.33.0",
     "urllib3==2.6.3",
     "pyeudiw @ git+https://github.com/italia/eudi-wallet-it-python@dev"
 ]
