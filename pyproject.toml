@@ -15,7 +15,7 @@ readme = "README.md"
 requires-python = ">=3.12,<4.0"
 dependencies = [
     "beautifulsoup4==4.14.3",
-    "cbor2==5.8.0",
+    "cbor2==5.9.0",
     "cryptography==46.0.5",
     "PyMuPDF==1.27.2",
     "cryptojwt==1.9.4",
