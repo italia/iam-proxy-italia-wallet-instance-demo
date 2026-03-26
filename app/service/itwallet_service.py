@@ -26,6 +26,7 @@ import json
 import logging
 import os
 import re
+from app.service import *
 from typing import Optional, Tuple
 from urllib.parse import parse_qs, urlencode, urlparse
 
@@ -122,6 +123,9 @@ class ItWalletService:
         self._hw_private_jwk = None
         self._hw_public_jwk = None
         self._hw_key_tag = None
+        self.federation_service = FederationService(current_app.config, self.proxies, self.no_proxy_domains)
+        self.provider_service = ProviderService(current_app.config, self.proxies, self.no_proxy_domains)
+        self.issuer_service = IssuerService(current_app.config, self.proxies, self.no_proxy_domains)
 
     def getOnboardedRelyingParties(self):
         """Return list of onboarded Relying Parties (Credential Verifiers) from trust root."""
@@ -196,7 +200,6 @@ class ItWalletService:
              self.session["code_verifier"]
              self.session["pid_provider_url]
         """
-        # codeql[py/log-injection]
         logger.info("➡️  Richiesta di Inizializzazione del wallet per il paese: %s", sanitize_for_logging(country))
         cred_config_id = extract_claim(current_app.config, "metadata.initialize_flow.credential_configuration_id")
         init_response_mode = extract_claim(current_app.config, "metadata.initialize_flow.response_mode")
@@ -207,7 +210,6 @@ class ItWalletService:
         trust_root_url = extract_claim(current_app.config, f"ms_trust_configuration.{country}.trust_root")
         if not trust_root_url:
             raise ValueError(f"Nessun Trust root per il paese {country}")
-        # codeql[py/log-injection]
         logger.info(
             "ℹ️  Trust root individuato per il paese %s: %s",
             sanitize_for_logging(country),
@@ -215,26 +217,42 @@ class ItWalletService:
         )
 
         if not app_state.ec_store.exists(trust_root_url):
-            trust_root_ec = self._entity_configuration_management(trust_root_url, [METADATA_TYPE_FEDERATION_ENTITY])
-            app_state.ec_store.add(trust_root_url, trust_root_ec)
-            # codeql[py/log-injection]
-            logger.info("✅ Scaricato e salvato EC trust root %s", sanitize_for_logging(trust_root_url))
+            # DEPRECATED
+            # trust_root_ec = self._entity_configuration_management(trust_root_url, [METADATA_TYPE_FEDERATION_ENTITY])
+            trust_root_entity_configuration = self.federation_service.trust_root_ec(trust_root_url)
+            self.federation_service.validate_entity_configuration(payload= trust_root_entity_configuration, expected_url= trust_root_url, metadata_types= [METADATA_TYPE_FEDERATION_ENTITY])
+            app_state.ec_store.add(trust_root_url, trust_root_entity_configuration)
+            logger.info(f"trust_root_url: {trust_root_url}")
 
+        #  DEPRECATED
         if not (wallet_provider_url := self._retrieve_wallet_provider_ec(trust_root_url)):
             raise ValueError("Retrieving wallet_provider entity configuration failed")
 
-        params = {"entity_type": METADATA_TYPE_CREDENTIAL_ISSUER}
-        oid_fed_list_reponse = oid_fed_list(
-            base_url=trust_root_url,
-            query_string=f"?{urlencode(params)}",
-            proxies=self.proxies,
-            no_proxy_domains=self.no_proxy_domains,
-        )
-        # codeql[py/log-injection]
-        logger.info("📄 oid_fed_list response: %s", sanitize_for_logging(oid_fed_list_reponse))
+        wallet_provider_entity_configuration = self.provider_service.wallet_provider_ec(self.provider_service.wallet_provider_list(trust_root_url),"test")
+        self.provider_service.validate_entity_configuration(payload=wallet_provider_entity_configuration, hint= trust_root_url, metadata_types= [METADATA_TYPE_FEDERATION_ENTITY, METADATA_TYPE_WALLET_PROVIDER])
+        app_state.ec_store.add(self.provider_service.wallet_provider_url, wallet_provider_entity_configuration)
+
+        credential_issuer_list = self.issuer_service.credential_issuer_list(trust_root_url)
+
+        # DEPRECATED
+        # params = {"entity_type": METADATA_TYPE_CREDENTIAL_ISSUER}
+        # oid_fed_list_reponse = oid_fed_list(
+        #     base_url=trust_root_url,
+        #     query_string=f"?{urlencode(params)}",
+        #     proxies=self.proxies,
+        #     no_proxy_domains=self.no_proxy_domains,
+        # )
+        # # codeql[py/log-injection]
+        # logger.info("📄 oid_fed_list response: %s", sanitize_for_logging(oid_fed_list_reponse))
+
+
+        # DEPRECATED
+        # pid_provider_ec = self._find_pid_provider_and_process_issuers(
+        #     oid_fed_list_reponse, cred_config_id, trust_root_url
+        # )
 
         pid_provider_ec = self._find_pid_provider_and_process_issuers(
-            oid_fed_list_reponse, cred_config_id, trust_root_url
+            credential_issuer_list, cred_config_id, trust_root_url
         )
 
         pid_provider_url = self._get_pid_provider_url(pid_provider_ec, cred_config_id)
