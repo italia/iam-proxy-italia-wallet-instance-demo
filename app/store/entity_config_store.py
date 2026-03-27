@@ -1,21 +1,57 @@
 import jmespath
+import threading
+import time
 
 
 class EntityConfigurationStore:
-    def __init__(self):
-        self._store = {}
 
-    def add(self, key, value) -> None:
-        """
-        Aggiunge o aggiorna un EntityConfiguration.
-        """
-        self._store[key] = value
+    #@ TODO Talking with Giuseppe for cleanup_interval and ttl default values
+
+    def __init__(self, cleanup_interval=1):
+        self._store = {}
+        self._expiry = {}
+        self._cleanup_interval = cleanup_interval
+        self._lock = threading.Lock()
+        self._start_cleanup_thread()
+
+    # DEPRECATED
+    # def add(self, key, value) -> None:
+    #     """
+    #     Aggiunge o aggiorna un EntityConfiguration.
+    #     """
+    #     self._store[key] = value
+
+    def add(self, key, value, ttl: int = None) -> None:
+        with self._lock:
+            self._store[key] = value
+            if ttl is not None:
+                self._expiry[key] = time.time() + ttl
+
+
+    def _start_cleanup_thread(self):
+        thread = threading.Thread(target=self._cleanup_loop, daemon=True)
+        thread.start()
+
+    def _cleanup_loop(self):
+        while True:
+            now = time.time()
+            with self._lock:
+                keys_to_delete = [key for key, time_items in self._expiry.items() if time_items <= now]
+                for key in keys_to_delete:
+                    self._store.pop(key, None)
+                    self._expiry.pop(key, None)
+            time.sleep(self._cleanup_interval)
 
     def get(self, key) -> dict|None:
-        """
-        Cerca un EntityConfiguration.
-        """
-        return self._store.get(key)
+        with self._lock:
+            return self._store.get(key)
+
+    # DEPRECATED
+    # def get(self, key) -> dict|None:
+    #     """
+    #     Cerca un EntityConfiguration.
+    #     """
+    #     return self._store.get(key)
 
     def remove(self, key) -> None:
         """

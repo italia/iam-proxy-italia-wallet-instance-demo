@@ -10,7 +10,8 @@ class  BaseService:
     APPLICATION_JSON_HEADERS = {"Accept": "application/json"}
     ENTITY_STATEMENT_HEADERS = {"Accept": "application/entity-statement+jwt"}
 
-    WELL_KNOWN_PATH = "/.well-known/openid-federation"
+    WELL_KNOWN_FEDERATION_PATH = "/.well-known/openid-federation"
+    WELL_KNOWN_CREDENTIAL_PATH ="/.well-known/openid-credential-issuer"
     LIST_ENDPOINT = "/list"
 
     def __init__(self, app_state: AppState):

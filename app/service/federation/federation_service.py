@@ -18,9 +18,9 @@ class FederationService(BaseService):
         self.proxy = proxy
         self.no_proxy_domains = no_proxy_domains
 
-    def trust_root_ec(self, url):
+    def issuer_presentation_ec(self, url):
         logger.debug(f"Entering method: _trust_root_ec. Params [url: {url}]")
-        entity_configuration_jwt = self.call_endpoint(url,self.WELL_KNOWN_PATH,self._create_header(self.ENTITY_STATEMENT_HEADERS),proxies=self.proxy, no_proxy_domains=self.no_proxy_domains, parse_response= _parse_entity_statement_jwt)
+        entity_configuration_jwt = self.call_endpoint(url,self.WELL_KNOWN_FEDERATION_PATH,self._create_header(self.ENTITY_STATEMENT_HEADERS),proxies=self.proxy, no_proxy_domains=self.no_proxy_domains, parse_response= _parse_entity_statement_jwt)
         if not entity_configuration_jwt:
             raise ValueError(f"Exception forEntity Configuration {url}")
         return decode_and_verify_jwt(entity_configuration_jwt)
