@@ -60,8 +60,9 @@ def wallet_reset():
 
 
 @wallet_api_bp.route("/init", methods=["GET"])
-def initItWallet():
+def init_wallet():
     """Endpoint for Wallet initialization via required query parameters (e.g., country, idp)."""
+    logger.info("Entering method: init_wallet.")
     _clear_session()
     try:
         country = request.args.get("country")

@@ -361,7 +361,7 @@ def extract_claim(entity: dict, jmes_query: str):
         else:
             print("❌ Non trovato")
     """
-    logger.info(f"Entering method: extract_claim. Params [jmes_query: {jmes_query}")
+    logger.info(f"Entering method: extract_claim. Params [jmes_query: {jmes_query}]")
 
     try:
         # DEBUG

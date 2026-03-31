@@ -218,8 +218,10 @@ class ItWalletService:
 
         if not app_state.ec_store.exists(trust_root_url):
             # DEPRECATED
+            logger.info("Before self._entity_configuration_management")
             trust_root_ec = self._entity_configuration_management(trust_root_url, [METADATA_TYPE_FEDERATION_ENTITY])
-            trust_root_entity_configuration = self.federation_service.trust_root_ec(trust_root_url)
+            logger.info("After self._entity_configuration_management")
+            trust_root_entity_configuration = self.federation_service.issuer_ec(trust_root_url)
             self.federation_service.validate_entity_configuration(payload= trust_root_entity_configuration, expected_url= trust_root_url, metadata_types= [METADATA_TYPE_FEDERATION_ENTITY])
             app_state.ec_store.add(trust_root_url, trust_root_entity_configuration)
             logger.info(f"trust_root_url: {trust_root_url}")
