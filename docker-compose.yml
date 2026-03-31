@@ -15,9 +15,11 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - ./config:/application/config:ro
+      - ./config:/application/config:rwxo
     restart: unless-stopped
+    networks:
+      - iam-proxy-italia
 
 networks:
   iam-proxy-italia:
-    name: iam-proxy-italia
+    external: true

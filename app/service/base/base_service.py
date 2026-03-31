@@ -67,13 +67,13 @@ class  BaseService:
             raise ValueError(f"iss/sub expected: '{expected}'")
 
     def _validate_authority_hints(self, payload: dict, expected_hint: any) -> None:
-        logger.debug(f"Entering method: _validate_authority_hints. Params [payload: {payload}, expected: {expected}]")
+        logger.debug(f"Entering method: _validate_authority_hints. Params [payload: {payload}, expected_hint: {expected_hint}]")
         hints = payload.get("authority_hints", [])
         if not isinstance(hints, list) or not hints or expected_hint not in hints:
             raise ValueError(f"Authority expected: '{expected_hint}'")
 
     def _validate_metadata_and_jwks(self, payload: dict, expected_metadata_types: list) -> None:
-        logger.debug(f"Entering method: _validate_metadata_and_jwks. Params [payload: {payload}, expected: {expected}]")
+        logger.debug(f"Entering method: _validate_metadata_and_jwks. Params [payload: {payload}, expected_metadata_types: {expected_metadata_types}]")
         actual = payload.get("metadata", {})
         missing = [type for type in expected_metadata_types if type not in actual]
         if missing:

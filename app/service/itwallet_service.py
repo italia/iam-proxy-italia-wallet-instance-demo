@@ -218,20 +218,18 @@ class ItWalletService:
 
         if not app_state.ec_store.exists(trust_root_url):
             # DEPRECATED
-            logger.info("Before self._entity_configuration_management")
-            trust_root_ec = self._entity_configuration_management(trust_root_url, [METADATA_TYPE_FEDERATION_ENTITY])
-            logger.info("After self._entity_configuration_management")
+            # trust_root_ec = self._entity_configuration_management(trust_root_url, [METADATA_TYPE_FEDERATION_ENTITY])
             trust_root_entity_configuration = self.federation_service.issuer_ec(trust_root_url)
             self.federation_service.validate_entity_configuration(payload= trust_root_entity_configuration, expected_url= trust_root_url, metadata_types= [METADATA_TYPE_FEDERATION_ENTITY])
             app_state.ec_store.add(trust_root_url, trust_root_entity_configuration)
             logger.info(f"trust_root_url: {trust_root_url}")
 
         #  DEPRECATED
-        if not (wallet_provider_url := self._retrieve_wallet_provider_ec(trust_root_url)):
-            raise ValueError("Retrieving wallet_provider entity configuration failed")
+        # if not (wallet_provider_url := self._retrieve_wallet_provider_ec(trust_root_url)):
+        #     raise ValueError("Retrieving wallet_provider entity configuration failed")
 
-        wallet_provider_entity_configuration = self.provider_service.wallet_provider_ec(self.provider_service.wallet_provider_list(trust_root_url),"test")
-        self.provider_service.validate_entity_configuration(payload=wallet_provider_entity_configuration, hint= trust_root_url, metadata_types= [METADATA_TYPE_FEDERATION_ENTITY, METADATA_TYPE_WALLET_PROVIDER])
+        wallet_provider_entity_configuration = self.provider_service.wallet_provider_ec(self.provider_service.wallet_provider_list(trust_root_url),extract_claim(current_app.config, "wallet_provider.public_url"))
+        self.provider_service.validate_entity_configuration(expected_url=extract_claim(current_app.config, "wallet_provider.public_url"), payload=wallet_provider_entity_configuration, hint= trust_root_url, metadata_types= [METADATA_TYPE_FEDERATION_ENTITY, METADATA_TYPE_WALLET_PROVIDER])
         app_state.ec_store.add(self.provider_service.wallet_provider_url, wallet_provider_entity_configuration)
 
         credential_issuer_list = self.issuer_service.credential_issuer_list(trust_root_url)

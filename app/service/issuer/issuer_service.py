@@ -2,6 +2,7 @@ import logging
 from ..base.base_service import BaseService
 from app.store import AppState
 from settings import METADATA_TYPE_CREDENTIAL_ISSUER
+from urllib.parse import urlencode
 
 
 logger = logging.getLogger('issuer')
