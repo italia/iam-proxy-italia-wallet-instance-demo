@@ -3,6 +3,13 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
+def get_json_from_response(response: requests.Response) -> str:
+    """Parse JSON array of strings from oid_fed_list response."""
+    data = response.json()
+    return data
+
+
 def get_dictionary_from_json(input: str) -> dict:
     '''
     Parses a JSON string and returns the dict.

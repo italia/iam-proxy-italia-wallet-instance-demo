@@ -211,7 +211,7 @@ class ItWalletService:
         if not trust_root_url:
             raise ValueError(f"Nessun Trust root per il paese {country}")
         logger.info(
-            "ℹ️  Trust root individuato per il paese %s: %s",
+            "Trust root individuato per il paese %s: %s",
             sanitize_for_logging(country),
             sanitize_for_logging(trust_root_url),
         )
@@ -258,7 +258,7 @@ class ItWalletService:
 
         pid_provider_url = self._get_pid_provider_url(pid_provider_ec, cred_config_id)
         logger.info(
-            "✅ Trovata entità %s che rilascia credenziali di tipo %s",
+            "Trovata entità %s che rilascia credenziali di tipo %s",
             sanitize_for_logging(pid_provider_url),
             sanitize_for_logging(cred_config_id),
         )
@@ -275,7 +275,7 @@ class ItWalletService:
         wallet_client_id = get_thumbprint_from_private_key(wallet_private_key)
         # codeql[py/log-injection]
         logger.debug(
-            "ℹ️  Calcolato client id del wallet come thumbprint della sua chiave pvt: %s",
+            "Calcolato client id del wallet come thumbprint della sua chiave pvt: %s",
             sanitize_for_logging(wallet_client_id),
         )
 
@@ -287,12 +287,12 @@ class ItWalletService:
         if not client_attestation_pop_jwt:
             raise ValueError("Fallita generazione Wallet Attestation PoP JWT")
 
-        logger.info("📄 Wallet Attestation PoP JWT generata.")
+        logger.info("Wallet Attestation PoP JWT generata.")
 
-        if not (provider_ec := app_state.ec_store.get(wallet_provider_url)): # find 1st wallet_provider
+        if not (provider_ec := app_state.ec_store.get(self.provider_service.wallet_provider_url)): # find 1st wallet_provider
             raise ValueError("The provider wallet is not present in the wallet")
         pub_core_jwks = extract_claim(provider_ec, "metadata.wallet_provider.jwks.keys")
-        wallet_attestation_jwt = self._get_or_create_app_attestation(wallet_provider_url, pub_core_jwks)
+        wallet_attestation_jwt = self._get_or_create_app_attestation(self.provider_service.wallet_provider_url, pub_core_jwks)
 
         # Generazione PKCE
         pkce = generate_pkce_pair()
