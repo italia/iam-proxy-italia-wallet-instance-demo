@@ -233,6 +233,7 @@ class ItWalletService:
         app_state.ec_store.add(self.provider_service.wallet_provider_url, wallet_provider_entity_configuration)
 
         credential_issuer_list = self.issuer_service.credential_issuer_list(trust_root_url)
+        app_state.ec_store.add("credential_issuer_list", credential_issuer_list)
 
         # DEPRECATED
         # params = {"entity_type": METADATA_TYPE_CREDENTIAL_ISSUER}
