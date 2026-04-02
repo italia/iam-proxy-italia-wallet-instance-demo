@@ -64,24 +64,6 @@ main p {
   margin-bottom: 6px; /* riduci lo spazio sotto al <p> */
 }
 
-/* Un po’ di padding tra il cerchio e il testo */
-#idp label {
-    font-size: 16px;
-    margin-bottom: 6px;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-}
-
-/* Ingrandisce i radio button */
-input[type="radio"] {
-    width: 24px;
-    height: 24px;
-    accent-color: #0049a8; /* colore del cerchio selezionato */
-    vertical-align: middle;
-    cursor: pointer; 
-}
-
 #reader {
   width: 300px;
   margin: 20px auto;
@@ -101,13 +83,6 @@ input[type="radio"] {
   width: 100%;
 }
 
-#states label {
-  display: block;
-  margin-bottom: 8px;
-  font-weight: 600;
-  font-size: 1rem;
-  color: #333;
-}
 
 /* Container orizzontale logo + bandiera */
 .logo-with-flag {
@@ -196,11 +171,6 @@ input[type="radio"] {
   flex-direction: column;
 }
 
-.form-group label {
-  font-weight: 600;
-  margin-bottom: 6px;
-  color: #2c3e50;
-}
 
 .form-group input[type="password"] {
   padding: 12px 14px;
@@ -228,11 +198,7 @@ input[type="radio"] {
   cursor: pointer;
 }
 
-.form-group.checkbox label {
-  font-weight: 400;
-  font-size: 0.9rem;
-  color: #55616f;
-}
+
 
 .form-group.checkbox a {
   color: #005ea5;
@@ -673,10 +639,10 @@ input[type="radio"] {
   border: 1px solid rgb(0 120 212 / 0.2);  /* bordo soft */
   border-radius: 8px;
   font-weight: 500;
-  transition: 
-    background 0.3s ease, 
-    color 0.3s ease, 
-    box-shadow 0.3s ease, 
+  transition:
+    background 0.3s ease,
+    color 0.3s ease,
+    box-shadow 0.3s ease,
     border-color 0.3s ease;
   backdrop-filter: blur(4px);
 }
@@ -730,7 +696,7 @@ input[type="radio"] {
 .tab-actions .copy-button:hover {
   background-color: #45a049;
 }
-   
+
 #credentials {
   display: flex;
   gap: 10px; /* spazio tra le credenziali */
@@ -745,7 +711,7 @@ input[type="radio"] {
   box-shadow: inset 2px 2px 5px rgb(0 0 0 / 0.3),
             inset -2px -2px 5px rgb(255 255 255 / 0.7);
   padding-top: 5px;
-  padding-left: 10px;          
+  padding-left: 10px;
   padding-right: 10px;
   background-clip: padding-box;  /* aiuta a non tagliare il bordo */
 }
@@ -827,25 +793,6 @@ input[type="radio"] {
   object-fit: cover;
 }
 
-.button-cred .label {
-  position: absolute;
-  color: white;
-  font-weight: bold;
-  font-size: 1.0rem;
-  letter-spacing: 2px;
-  text-align: center;
-  z-index: 1;
-  pointer-events: none;
-  padding-top: 14px;
-  padding-left: 3px;
-  font-family: Arial, Helvetica, sans-serif;
-  text-shadow:
-    0 0 2px rgb(75 0 130 / 0.8),
-    0 0 4px rgb(75 0 130 / 0.6),
-    0 2px 4px rgb(0 0 0 / 0.8);
-}
-
-/* SELECT */ 
 
 .custom-confirm-wrapper {
   font-family: "Segoe UI", sans-serif;
@@ -919,17 +866,7 @@ input[type="radio"] {
   margin-top: 20px;
 }
 
-.custom-select-wrapper .textarea-wrapper .label-with-icon {
-  display: flex;
-  align-items: center;
-  gap: 6px; /* Spazio tra label e icona */
-  margin-bottom: 6px;
-}
 
-.custom-select-wrapper .textarea-wrapper .label-with-icon label {
-  font-weight: 500;
-  color: #333;
-}
 
 .custom-select-wrapper .textarea-wrapper textarea {
   width: 100%;
@@ -950,12 +887,6 @@ input[type="radio"] {
   box-shadow: 0 0 0 2px rgb(0 123 255 / 0.15);
 }
 
-.custom-select-wrapper .custom-select .selected span.label {
-  flex-grow: 1;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
 
 .custom-select-wrapper .custom-select .selected::after {
   content: "▼";
@@ -1008,13 +939,6 @@ input[type="radio"] {
   text-align: center;
 }
 
-.custom-select-wrapper .select-options .label {
-  flex-grow: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  text-align: left;
-}
 
 .button-continue {
   margin-top: 20px;
@@ -1109,7 +1033,7 @@ input[type="radio"] {
 #cred-popup-body {
   display: flex;
   flex-direction: column;
-  justify-content: flex-start; 
+  justify-content: flex-start;
   align-items: stretch;
   width: 100%;
   flex: 1; /* occupa tutto lo spazio disponibile */
@@ -1122,7 +1046,7 @@ input[type="radio"] {
 
 .cred-popup-content {
   display: flex;
-  flex-direction: column;  
+  flex-direction: column;
   justify-content: center; /* centra orizzontalmente */
   align-items: center;     /* centra verticalmente */
   background: rgb(255 255 255 / 0.9);
@@ -1131,8 +1055,8 @@ input[type="radio"] {
   max-width: 530px;
   min-height: 410px;
   width: 530px;
-  height: auto;          
-  text-align: center; 
+  height: auto;
+  text-align: center;
   box-shadow: 0 20px 40px rgb(0 0 0 / 0.2);
   transform: translateY(-40px);
   opacity: 0;
@@ -1255,6 +1179,145 @@ input[type="radio"] {
   color: #c586c0;
 }
 
+#states {
+  margin-bottom: 1.5rem;
+}
+
+
+
+
+/* pallino interno checked */
+.form-check-input[type="radio"]:checked {
+  border-color: #0066cc !important;
+  background-color: #fff;
+}
+
+.form-check-input[type="radio"]:checked::before {
+  content: "";
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: #0066cc;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+/* focus pulito, niente bordo nero */
+.form-check-input[type="radio"]:focus,
+.form-check-input[type="radio"]:focus-visible,
+.form-check-input[type="radio"]:active,
+.form-check-input[type="radio"]:hover {
+  outline: none !important;
+  box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.2) !important;
+  border-color: #0066cc !important;
+}
+
+
+
+/* contenitore radio un po' più pulito */
+.form-check {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin-bottom: 0.9rem;
+}
+
+
+
+#idp {
+  margin-top: 1rem;
+}
+
+
+
+.form-check {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  min-height: 28px;
+}
+
+.form-check-input[type="radio"] {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+
+  flex: 0 0 auto;
+  width: 20px !important;
+  height: 20px !important;
+  margin: 0 !important;
+  border: 2px solid #5c6f82 !important;
+  border-radius: 50%;
+  background-color: #fff !important;
+  position: relative;
+  cursor: pointer;
+  box-shadow: none !important;
+  outline: none !important;
+  transform: none !important;
+  vertical-align: middle;
+}
+
+/* pallino interno */
+.form-check-input[type="radio"]:checked {
+  border-color: #0066cc !important;
+  background-color: #fff !important;
+}
+
+.form-check-input[type="radio"]:checked::before {
+  content: "";
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: #0066cc;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+/* focus vero */
+.form-check-input[type="radio"]:focus,
+.form-check-input[type="radio"]:focus-visible,
+.form-check-input[type="radio"]:active {
+  outline: none !important;
+  box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.22) !important;
+  border-color: #0066cc !important;
+}
+
+/* hover */
+.form-check-input[type="radio"]:hover {
+  border-color: #0066cc !important;
+}
+
+/* forza override del focus nativo/browser/bootstrap */
+input[type="radio"]:focus,
+input[type="radio"]:focus-visible,
+input[type="radio"]:active,
+input.form-check-input:focus,
+input.form-check-input:focus-visible {
+  outline: none !important;
+  box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.22) !important;
+  border-color: #0066cc !important;
+}
+
+
+
+
+
+/* Textarea popup */
+#extraInfo {
+  width: 100%;
+  min-height: 120px;
+  padding: 0.75rem 1rem;
+  font-size: 1rem;
+  resize: vertical;
+}
+
+
+
 /* Animazioni */
 @keyframes fade-in {
   from {
@@ -1294,3 +1357,4 @@ input[type="radio"] {
     font-size: 1.5rem;
   }
 }
+

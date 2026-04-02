@@ -25,6 +25,40 @@ class PresentationService(BaseService):
         self.app_state.ec_store.add(url,credential_list)
         return credential_list
 
+    def get_presentation_from_credential(self, search_type: str, search: str) -> dict:
+        logger.debug(f"Entering get_presentation_from_credential method. Params [credential: {credential}, search_type: {search_type}, search: {search}]")
+        if not search_type or not search:
+            raise ValueError("Search type and search value cannot be empty.")
+        output = {}
+        for credential_issuer in self.app_state.ec_store("credential_issuer_list"):
+            if search_type == "scope":
+                output.add(self.__get_presentation_from_scope(credential_issuer, search))
+            elif search_type == "credential":
+                output.add(self.__get_presentation_from_format(credential_issuer, search))
+        return output
+
+    def __get_presentation_from_scope(self, credential_issuer: str, search: str) -> list[str]:
+        logger.debug(f"Entering __get_presentation_from_scope method. Params [credential_issuer: {credential_issuer}, search: {search}]")
+        if not self.app_state.ec_store(credential_issuer):
+            # @todo Insert new businness logic for caching
+            self.app_state.ec_store.add(credential_issuer,self.credential_list(credential_issuer))
+        output = {}
+        for credential in self.app_state.ec_store(credential_issuer):
+            if credential.get("scope") == search:
+                output.add(credential)
+
+        return output
+
+    def __get_presentation_from_format(self,credential_issuer: str, search: str) -> list[str]:
+        logger.debug(f"Entering __get_presentation_from_format method. Params [credential_issuer: {credential_issuer}, search: {search}]")
+        if not self.app_state.ec_store(credential_issuer):
+            # @todo Insert new businness logic for caching
+            self.app_state.ec_store.add(credential_issuer,self.credential_list(credential_issuer))
+        output = {}
+        for credential in self.app_state.ec_store(credential_issuer):
+            if credential.get("format") == search:
+                output.add(credential)
+        return search.split(" ")
 
     def _create_header(self, params: dict):
         logger.debug(f"Entering method: _create_header. Params [params: {params}]")

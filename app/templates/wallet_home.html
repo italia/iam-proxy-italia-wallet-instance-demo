@@ -3,19 +3,18 @@
 <head>
   <meta charset="UTF-8" />
   <title>EU Digital Wallet - Home</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap-italia.min.css') }}" />
   <link rel="stylesheet" href="{{ url_for('static', filename='wallet.css') }}" />
-  <link rel="stylesheet" href="{{ url_for('static', filename='tom-select.css') }}" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <script src="/static/js/tom-select.base.js"></script>
 </head>
-<body> 
+<body>
   <!-- Popup piccolo sotto il cestino -->
   <div id="trash-popup" class="popup-hidden">
     <div class="trash-popup-content">
       <p>Vuoi resettare il wallet?</p>
       <div class="trash-popup-buttons">
-        <button id="trash-popup-confirm-btn" class="trash-popup-btn">Conferma</button>
-        <button id="trash-popup-cancel-btn" class="trash-popup-btn">Annulla</button>
+        <button id="trash-popup-confirm-btn" class="btn btn-danger">Conferma</button>
+        <button id="trash-popup-cancel-btn" class="btn btn-secondary">Annulla</button>
       </div>
     </div>
   </div>
@@ -40,12 +39,23 @@
       <h1>Benvenuto nel tuo Digital Wallet</h1>
     </header>
     <main>
-      <p>Qui puoi gestire le tue credenziali digitali in modo sicuro e conforme agli standard europei.</p>
-      <div id="result"></div>
+      <div class="row">
+        <div class="form-group col-md-12">
+            <p class="form-label d-block mb-3">Qui puoi gestire le tue credenziali digitali in modo sicuro e conforme agli standard europei. </p>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="form-group col-md-12">
+             <div id="result"></div>
+        </div>
+      </div>
+
       <div id="overlay" style="display:none;">
         <div class="loader"></div>
       </div>
-      <div id="states" {% if wallet_initialized %}style="display:none;"{% endif %}>
+
+      <div id="states" class="select-wrapper" {% if wallet_initialized %}style="display:none;"{% endif %}>
         <label for="select">Seleziona il tuo Stato Membro:</label>
         <select id="select">
           <option value="" disabled selected>-- Scegli dal menu --</option>
@@ -78,56 +88,145 @@
           <option value="MT"{% if selected_country == 'MT' %} selected{% endif %}>🇲🇹 Malta</option>
         </select>
       </div>
-      <div id="idp" {% if wallet_initialized %}style="display:none;"{% endif %}>
-        <p>Scegli come verificare la tua identità:</p>
-        <label>
-          <input type="radio" name="idpRadio" value="CIE3"
-                {% if selected_idp == 'CIE3' or not selected_idp %}checked{% endif %}>
-          CIE (Livello 3)
-        </label><br>
-                <label>
-          <input type="radio" name="idpRadio" value="CIE2"
-                {% if selected_idp == 'CIE2' %}checked{% endif %}>
-          CIE (Livello 2)
-        </label><br>
-        <label>
-          <input type="radio" name="idpRadio" value="SPID2"
-                {% if selected_idp == 'SPID' %}checked{% endif %}>
-          SPID (Livello 2)
-        </label>
-      </div>
-      <div id="credentials" {% if not wallet_initialized %}style="display:none;"{% endif %}>
-        <!-- Itera su tutte le credenziali -->
-        {% for credential_key in credential_keys %}
-          {% if credential_key not in ['jwt_WalletAttestation', 'dc_sd_jwt_WalletAttestation', 'mso_mdoc_WalletAttestation'] %}
-            <div class="cred-item">
-              {% set credential_format = credential_key | format_credenziale %}
-              {% set credential_label = credential_key | tag_credenziale %}
+      <div id="idp" class="form-group" {% if wallet_initialized %}style="display:none;"{% endif %}>
+        <fieldset>
+        <legend>Scegli come verificare la tua identità</legend>
+<!--        <label class="form-label d-block mb-3">Scegli come verificare la tua identità</label>-->
+          <div class="form-check">
+            <input  type="radio" name="idpRadio" value="CIE3" id="cie3"
+                  {% if selected_idp == 'CIE3' or not selected_idp %}checked{% endif %}>
+            <label  for="cie3">CIE (Livello 3)</label>
+          </div>
 
-              <span class="cred-format">{{ credential_format }}</span>
-              <button id="{{ credential_key }}" class="button-cred" role="button">
-                <!-- Puoi usare un'icona diversa per ogni tipo di credenziale -->
-                <img src="{{ url_for('static', filename='images/card-violet.svg') }}" alt="{{ credential_key }}" />
-                
-                <span class="label">{{ credential_label }}</span>
+          <div class="form-check">
+            <input  type="radio" name="idpRadio" value="CIE2" id="cie2"
+                  {% if selected_idp == 'CIE2' %}checked{% endif %}>
+            <label  for="cie2">CIE (Livello 2)</label>
+          </div>
+
+          <div class="form-check">
+            <input  type="radio" name="idpRadio" value="SPID2" id="spid2"
+                  {% if selected_idp == 'SPID' %}checked{% endif %}>
+            <label  for="spid2">SPID (Livello 2)</label>
+          </div>
+        </fieldset>
+      </div>
+
+
+
+<!--      <div id="credentials" {% if not wallet_initialized %}style="display:none;"{% endif %}>-->
+<!--        &lt;!&ndash; Itera su tutte le credenziali &ndash;&gt;-->
+<!--        {% for credential_key in credential_keys %}-->
+<!--          {% if credential_key not in ['jwt_WalletAttestation', 'dc_sd_jwt_WalletAttestation', 'mso_mdoc_WalletAttestation'] %}-->
+<!--            <div class="cred-item">-->
+<!--              {% set credential_format = credential_key | format_credenziale %}-->
+<!--              {% set credential_label = credential_key | tag_credenziale %}-->
+
+<!--              <span class="cred-format">{{ credential_format }}</span>-->
+<!--              <button id="{{ credential_key }}" class="btn btn-outline-primary d-flex align-items-center flex-column" role="button">-->
+<!--                &lt;!&ndash; Puoi usare un'icona diversa per ogni tipo di credenziale &ndash;&gt;-->
+<!--                <img src="{{ url_for('static', filename='images/card-violet.svg') }}" alt="{{ credential_key }}" />-->
+
+<!--                <span class="label">{{ credential_label }}</span>-->
+<!--              </button>-->
+<!--            </div>-->
+<!--          {% endif %}-->
+<!--        {% endfor %}-->
+<!--      </div>-->
+
+
+      <div class="form-group">
+        <div class="input-group">
+          <div class="select-wrapper">
+            <label for="defaultSelect1">Credenziali</label>
+            <select id="defaultSelect1">
+              <option selected="" value="">Scegli una credenziale</option>
+              <option value="Value 1">Opzione 1</option>
+              <option value="Value 2">Opzione 2</option>
+              <option value="Value 3">Opzione 3</option>
+              <option value="Value 4">Opzione 4</option>
+              <option value="Value 5">Opzione 5</option>
+            </select>
+          </div>
+          <div class="select-wrapper">
+            <select id="defaultSelect2">
+              <option selected="" value="">Tipo ricerca</option>
+              <option value="credential_issuer">Credential Issuer</option>
+              <option value="cedential_type">Tipo credenziale</option>
+              <option value="attribute">attributo/i contenuti</option>
+            </select>
+          </div>
+        </div>
+        <br>
+        <div class="input-group">
+            <label for="input-group-search">Testo da cercare</label>
+            <input type="text" class="form-control" id="input-group-search" name="input-group-search">
+            <div class="input-group-append">
+              <button class="btn btn-primary" type="button" id="search-btn">Cerca</button>
+            </div>
+        </div>
+      </div>
+
+
+
+
+      <div class="col-md-12">
+        <div class="row">
+            <div class="form-group col-md-12">
+                <button id="init-btn" class="btn btn-primary"{% if wallet_initialized %} style="display:none;"{% endif %}{% if not wallet_initialized %} disabled{% endif %}>
+                    <span class="rounded-icon">
+                      <svg class="icon icon-primary">
+                          <use href="https://italia.github.io/bootstrap-italia/dist/svg/sprites.svg#it-settings"></use>
+                      </svg>
+                    </span>
+                    <span>Inizializza</span>
+                </button>
+            </div>
+        </div>
+        <div class="row">
+            <div class="form-group col-md-12">
+                <a href="/wallet/logout" class="btn btn-outline-danger">
+                    <span class="rounded-icon">
+                      <svg class="icon icon-danger">
+                          <use href="https://italia.github.io/bootstrap-italia/dist/svg/sprites.svg#it-locked"></use>
+                      </svg>
+                    </span>
+                    <span>Blocca</span>
+                </a>
+            </div>
+        </div>
+        <div class="row">
+            <div class="form-group col-md-12">
+              <button id="add-btn" class="btn btn-primary"{% if not wallet_initialized %} style="display:none;"{% endif %}>
+                  <span class="rounded-icon">
+                    <svg class="icon icon-primary">
+                        <use href="https://italia.github.io/bootstrap-italia/dist/svg/sprites.svg#it-plus"></use>
+                    </svg>
+                  </span>
+                  <span>Aggiungi</span>
               </button>
             </div>
-          {% endif %}  
-        {% endfor %}
-      </div>
-      <div id="button-row">
-        <a href="{{ url_for('wallet_routes.logout') }}" class="btn-wallet">🔒&nbsp;Blocca&nbsp;</a>
-        <button id="init-btn" class="btn-wallet"{% if wallet_initialized %} style="display:none;"{% endif %}{% if not wallet_initialized %} disabled{% endif %}>⚙️&nbsp;Inizializza&nbsp;</button>
-        <button id="add-btn" class="btn-wallet"{% if not wallet_initialized %} style="display:none;"{% endif %}>🞧&nbsp;Aggiungi</button>
-        <button id="rp-btn" class="btn-wallet"{% if not wallet_initialized %} style="display:none;"{% endif %}>⏵&nbsp;Relying&nbsp;Party&nbsp;</button>
+        </div>
+        <div class="row">
+            <div class="form-group col-md-12">
+              <button id="rp-btn" class="btn btn-secondary"{% if not wallet_initialized %} style="display:none;" {% endif %}>
+                  <span class="rounded-icon">
+                    <svg class="icon icon-secondary">
+                        <use href="https://italia.github.io/bootstrap-italia/dist/svg/sprites.svg#it-info-circle"></use>
+                    </svg>
+                  </span>
+                  <span>Relying Party</span>
+              </button>
+            </div>
+        </div>
       </div>
     </main>
   </div>
   <!-- Popup Modal Moderno -->
   <div id="cred-popup" class="modal">
     <div class="cred-popup-content">
-      <button id="cred-popup-trash" class="cred-popup-trash-btn" onclick="deleteCredential()">🗑️</button>
-      <button id="cred-popup-close" class="cred-popup-close-btn" onclick="closeCredPopup()">❌</button>
+      <button id="cred-popup-trash" class="btn btn-outline-danger" onclick="deleteCredential()">🗑️</button>
+      <button id="cred-popup-close" class="btn btn-outline-secondary" onclick="closeCredPopup()">❌</button>
       <div id="cred-popup-title">&nbsp;</div>
       <div id="cred-popup-body">Caricamento...</div>
     </div>
@@ -173,7 +272,7 @@
         if (popupHtml && !popupHtml.closed) popupHtml.focus();
       });
       spinner.hasPopupFocusHandler = true;
-    } 
+    }
 
     window.onload = function () {
       console.log("Tutto caricato");
@@ -224,7 +323,7 @@
 
             // Mostra spinner
             spinner.style.display = "flex";
-            
+
             // Ritardo opzionale per mostrare lo spinner
             await new Promise(resolve => setTimeout(resolve, 300));
 
@@ -260,15 +359,11 @@
               if (statesDiv){
                 // mostra select stato membro
                 statesDiv.style.display = "block";
-                if (selectElement && selectElement.tomselect) {
-                  // resetta la selezione
-                  selectElement.tomselect.clear();
-                  
-                  // mostra initBtn
-                  if (initBtn){
-                    initBtn.style.display = "inline-flex";
-                    initBtn.disabled = true;
-                  }
+                selectElement.value = "";
+                // mostra initBtn
+                if (initBtn){
+                  initBtn.style.display = "inline-flex";
+                  initBtn.disabled = true;
                 }
               }
 
@@ -424,8 +519,8 @@
                       </ul>
                   </div>
                   <div class="button-wrapper">
-                    <button id="confirmCredential" class="popup-btn confirm" disabled>Conferma</button>
-                    <button id="confirmCredential" class="popup-btn cancel" onclick="closeCredPopup()">Annulla</button>
+                    <button id="confirmCredential" class="btn btn-primary" disabled>Conferma</button>
+                    <button id="cancelCredential" class="btn btn-secondary" onclick="closeCredPopup()">Annulla</button>
                   </div>
                 </div>
               `;
@@ -521,7 +616,7 @@
                       <textarea id="extraInfo" rows="5" placeholder="Scrivi qui..." disabled></textarea>
                     </div>
                     <div class="button-wrapper">
-                      <button id="confirmLoginRP" class="popup-btn confirm" style="width: 200px;"  disabled>Entra con il Wallet</button>
+                      <button id="confirmLoginRP" class="btn btn-primary" style="width: 200px;"  disabled>Entra con il Wallet</button>
                     </div>
                   </div>
                 `;
@@ -604,7 +699,7 @@
               const mappedTypes = objectTypes.map(type => {
                 return {
                   id: type,
-                  label: type, 
+                  label: type,
                   icon: "📦"
                 };
               });
@@ -623,7 +718,7 @@
                       </ul>
                   </div>
                   <div class="button-wrapper">
-                    <button id="confirmCredential" class="popup-btn confirm" onClick="confirmViewObjectTypeInMemory()" disabled>Visualizza</button>
+                    <button id="confirmCredential" class="btn btn-primary" onClick="confirmViewObjectTypeInMemory()" disabled>Visualizza</button>
                   </div>
                 </div>
               `;
@@ -664,18 +759,18 @@
         });
         memoryIcon.hasMemoryIconHandler = true; // previene duplicazione listener
       }
-      
+
       // Chiudi trashPopup se clicchi fuori
       document.addEventListener("click", (e) => {
         if (!trashPopup.contains(e.target) && !trashIcon.contains(e.target)) {
           trashPopup.classList.remove("popup-visible");
         }
       });
-      
+
       // --- Bottone mostra credenziale ---
       document.addEventListener("click", async (e) => {
-        if (e.target.closest(".button-cred")) {
-          const button = e.target.closest(".button-cred");
+        if (e.target.closest(".btn-outline-primary")) {
+          const button = e.target.closest(".btn-outline-primary");
           lastOpenedButtonId = button.id;
           console.log("Aperto popup da bottone id:", lastOpenedButtonId);
 
@@ -787,19 +882,14 @@
         }
     }
 
-    // --- Inizializza TomSelect ---
-    if (selectElement && !selectElement.tomselect) {
-      new TomSelect(selectElement, { 
-        create: false,
-        virtual_scroll: true,
-        loadingClass: 'loading',
-        onChange: function(value){
-          updateFlag(value);
-          initBtn.disabled = false;
-        } 
-      });
-    }
+
+    // --- Event listener per select ---
+    selectElement.addEventListener('change', function(event) {
+      updateFlag(event.target.value);
+      initBtn.disabled = false;
+    });
   </script>
   <script src="/static/js/wallet-utils.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap-italia@2.18.0/dist/js/bootstrap-italia.bundle.min.js"></script>
 </body>
 </html>
