@@ -10,7 +10,7 @@ class PresentationService(BaseService):
     # @TODO Define the key into a constant in configuration file
     CREDENTIAL_CONFIGURATION_KEY="credential_configurations_supported"
 
-    def __init__(self, app_state: AppState):
+    def __init__(self, app_state: AppState, proxy, no_proxy_domains):
         logger.debug("Entering method: init for Presentation Service")
         super().__init__(app_state)
         self.proxy = proxy
@@ -26,39 +26,36 @@ class PresentationService(BaseService):
         return credential_list
 
     def get_presentation_from_credential(self, search_type: str, search: str) -> dict:
-        logger.debug(f"Entering get_presentation_from_credential method. Params [credential: {credential}, search_type: {search_type}, search: {search}]")
+        logger.debug(f"Entering get_presentation_from_credential method. Params [ search_type: {search_type}, search: {search}]")
         if not search_type or not search:
             raise ValueError("Search type and search value cannot be empty.")
         output = {}
-        for credential_issuer in self.app_state.ec_store("credential_issuer_list"):
+        for credential_issuer in self.app_state.ec_store("user_credential"):
             if search_type == "scope":
-                output.add(self.__get_presentation_from_scope(credential_issuer, search))
-            elif search_type == "credential":
-                output.add(self.__get_presentation_from_format(credential_issuer, search))
+                output[credential_issuer] = output[credential_issuer] | self.__get_presentation_from_scope(credential_issuer, search)
+            elif search_type == "format":
+                output[credential_issuer]= output[credential_issuer] | self.__get_presentation_from_format(credential_issuer, search)
         return output
 
-    def __get_presentation_from_scope(self, credential_issuer: str, search: str) -> list[str]:
+    def __get_presentation_from_scope(self, credential_issuer: str, search: str) -> dict[str,str]:
         logger.debug(f"Entering __get_presentation_from_scope method. Params [credential_issuer: {credential_issuer}, search: {search}]")
         if not self.app_state.ec_store(credential_issuer):
-            # @todo Insert new businness logic for caching
-            self.app_state.ec_store.add(credential_issuer,self.credential_list(credential_issuer))
+            return {}
         output = {}
         for credential in self.app_state.ec_store(credential_issuer):
             if credential.get("scope") == search:
-                output.add(credential)
-
+                output[credential_issuer] = output[credential_issuer] |  credential
         return output
 
-    def __get_presentation_from_format(self,credential_issuer: str, search: str) -> list[str]:
+    def __get_presentation_from_format(self,credential_issuer: str, search: str) -> dict[str,str]:
         logger.debug(f"Entering __get_presentation_from_format method. Params [credential_issuer: {credential_issuer}, search: {search}]")
         if not self.app_state.ec_store(credential_issuer):
-            # @todo Insert new businness logic for caching
-            self.app_state.ec_store.add(credential_issuer,self.credential_list(credential_issuer))
+            return {}
         output = {}
         for credential in self.app_state.ec_store(credential_issuer):
             if credential.get("format") == search:
-                output.add(credential)
-        return search.split(" ")
+                output[credential_issuer] = output[credential_issuer] |  credential
+        return output
 
     def _create_header(self, params: dict):
         logger.debug(f"Entering method: _create_header. Params [params: {params}]")

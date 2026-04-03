@@ -114,61 +114,55 @@
 
 
 
-<!--      <div id="credentials" {% if not wallet_initialized %}style="display:none;"{% endif %}>-->
-<!--        &lt;!&ndash; Itera su tutte le credenziali &ndash;&gt;-->
-<!--        {% for credential_key in credential_keys %}-->
-<!--          {% if credential_key not in ['jwt_WalletAttestation', 'dc_sd_jwt_WalletAttestation', 'mso_mdoc_WalletAttestation'] %}-->
-<!--            <div class="cred-item">-->
-<!--              {% set credential_format = credential_key | format_credenziale %}-->
-<!--              {% set credential_label = credential_key | tag_credenziale %}-->
+     <div id="credentials" {% if not wallet_initialized %}style="display:none;"{% endif %}>
+        <!-- Itera su tutte le credenziali -->
+        {% for credential_issuer, credential_list in credential_keys.items() %}
 
-<!--              <span class="cred-format">{{ credential_format }}</span>-->
-<!--              <button id="{{ credential_key }}" class="btn btn-outline-primary d-flex align-items-center flex-column" role="button">-->
-<!--                &lt;!&ndash; Puoi usare un'icona diversa per ogni tipo di credenziale &ndash;&gt;-->
-<!--                <img src="{{ url_for('static', filename='images/card-violet.svg') }}" alt="{{ credential_key }}" />-->
+        <!-- {% if credential_key not in ['jwt_WalletAttestation', 'dc_sd_jwt_WalletAttestation', 'mso_mdoc_WalletAttestation'] %}   ?????-->
 
-<!--                <span class="label">{{ credential_label }}</span>-->
-<!--              </button>-->
-<!--            </div>-->
-<!--          {% endif %}-->
-<!--        {% endfor %}-->
-<!--      </div>-->
+            {% for credential_type, credential_object in credential_list.items() %}
 
+              {% set credential_format = credential_object.get("format") %}
+              {% set credential_label = (
+                credential_object.get("credential_metadata", {}).get("display", [])
+                | selectattr("locale", "equalto", "it-IT")
+                | map(attribute="description")
+                | first
+              ) %}
+              {% set id_credential = credential_issuer + credential_type %}
+              <span class="cred-format">{{ credential_format }}</span>
+              <button id="{{ id_credential }}" class="btn btn-outline-primary d-flex align-items-center flex-column" role="button">
+                <!-- Puoi usare un'icona diversa per ogni tipo di credenziale -->
+                <img src="{{ url_for('static', filename='images/card-violet.svg') }}" alt="{{ credential_key }}" />
 
-      <div class="form-group">
-        <div class="input-group">
-          <div class="select-wrapper">
-            <label for="defaultSelect1">Credenziali</label>
-            <select id="defaultSelect1">
-              <option selected="" value="">Scegli una credenziale</option>
-              <option value="Value 1">Opzione 1</option>
-              <option value="Value 2">Opzione 2</option>
-              <option value="Value 3">Opzione 3</option>
-              <option value="Value 4">Opzione 4</option>
-              <option value="Value 5">Opzione 5</option>
-            </select>
-          </div>
-          <div class="select-wrapper">
-            <select id="defaultSelect2">
-              <option selected="" value="">Tipo ricerca</option>
-              <option value="credential_issuer">Credential Issuer</option>
-              <option value="cedential_type">Tipo credenziale</option>
-              <option value="attribute">attributo/i contenuti</option>
-            </select>
-          </div>
-        </div>
-        <br>
-        <div class="input-group">
-            <label for="input-group-search">Testo da cercare</label>
-            <input type="text" class="form-control" id="input-group-search" name="input-group-search">
-            <div class="input-group-append">
-              <button class="btn btn-primary" type="button" id="search-btn">Cerca</button>
+                <span class="label">{{ credential_label }}</span>
+              </button>
+            {% endfor %}
+
             </div>
+          {% endif %}
+        {% endfor %}
+         <div class="form-group">
+          <div class="input-group">
+            <div class="select-wrapper">
+              <select id="defaultSelect2">
+                <option selected="" value="">Tipo ricerca</option>
+                <option value="credential_issuer">Credential Issuer</option>
+                <option value="cedential_type">Tipo credenziale</option>
+                <option value="attribute">attributo/i contenuti</option>
+              </select>
+            </div>
+          </div>
+          <br>
+          <div class="input-group">
+              <label for="input-group-search">Testo da cercare</label>
+              <input type="text" class="form-control" id="input-group-search" name="input-group-search">
+              <div class="input-group-append">
+                <button class="btn btn-primary" type="button" id="search-btn">Cerca</button>
+              </div>
+          </div>
         </div>
       </div>
-
-
-
 
       <div class="col-md-12">
         <div class="row">

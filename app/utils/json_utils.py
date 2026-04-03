@@ -22,8 +22,10 @@ def get_dictionary_from_json(input: str) -> dict:
     if not input:
         return {}
     try:
-        data = json.loads(input)
-        return data
+        if isinstance(input, dict):
+            return input
+        elif isinstance(input, str):
+            return json.loads(input)
     except json.JSONDecodeError as e:
         raise ValueError(f"Invalid JSON string: {e}")
 
