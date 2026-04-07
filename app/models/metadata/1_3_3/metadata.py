@@ -1,9 +1,9 @@
 from pydantic import BaseModel
 
 from .federation_entity import FederationEntity
-from .wallet_provider import WalletProvider
+from .wallet_solution import WalletSolution
 
 
 class MetadataGroup(BaseModel):
     federation_entity: FederationEntity
-    wallet_provider: WalletProvider
+    wallet_solution: WalletSolution
