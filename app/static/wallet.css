@@ -3,7 +3,7 @@
 * {
   box-sizing: border-box;
 }
-
+/*
 body {
   background-color: #f4f6f9;
   color: #2c3e50;
@@ -14,11 +14,13 @@ body {
   justify-content: center;
   align-items: center;
 }
+*/
 
 pre {
   margin: 0;
 }
 
+/*
 .container {
   background: white;
   border-radius: 12px;
@@ -27,6 +29,7 @@ pre {
   max-width: 480px;
   width: 90%;
 }
+*/
 
 header {
   text-align: center;
@@ -156,19 +159,22 @@ main p {
   font-size: 1rem;
 }
 
-/* Form containers */
+/* Form containers
 .access-form,
 .activation-form {
   display: flex;
   flex-direction: column;
 }
 
-/* Form groups */
+*/
+
+/* Form groups
 .form-group {
   margin-bottom: 20px;
   display: flex;
   flex-direction: column;
 }
+*/
 
 /*
 .form-group input[type="password"] {
@@ -515,6 +521,7 @@ main p {
   font-weight: bold;
 }
 
+/*
 .flash-container {
   margin-top: 0;
   margin-bottom: 10px;
@@ -534,7 +541,7 @@ main p {
   font-weight: 600;
   font-size: 1rem;
 }
-
+*/
 .flash-success {
   background-color: #d4edda;
   color: #155724;
@@ -1349,9 +1356,7 @@ input.form-check-input:focus-visible {
 /* Responsive */
 
 @media (width <= 480px) {
-  .container {
-    padding: 25px 20px;
-  }
+
 
   header h1 {
     font-size: 1.5rem;

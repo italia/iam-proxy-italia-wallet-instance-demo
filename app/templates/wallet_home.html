@@ -111,44 +111,57 @@
         </fieldset>
       </div>
 
+     <div class="container py-4" {% if not wallet_initialized %}style="display:none;"{% endif %}>
+        <div class="card">
+            <div class="card-header">
+              <p class="form-label d-block mb-3">Credenziali presenti nel wallet: {{ credential_count }}</p>
+            </div>
+            <div class="card-body" style="max-height: 400px; overflow-y: auto;">
 
-
-     <div id="credentials" {% if not wallet_initialized %}style="display:none;"{% endif %}>
-        <!-- Itera su tutte le credenziali -->
-        {% for credential_issuer, credential_list in credential_keys.items() %}
-
-        <!-- {% if credential_key not in ['jwt_WalletAttestation', 'dc_sd_jwt_WalletAttestation', 'mso_mdoc_WalletAttestation'] %}   ?????-->
-
-            {% for credential_type, credential_object in credential_list.items() %}
-
-              {% set credential_format = credential_object.get("format") %}
-              {% set credential_label = (
-                credential_object.get("credential_metadata", {}).get("display", [])
-                | selectattr("locale", "equalto", "it-IT")
-                | map(attribute="description")
-                | first
-              ) %}
-              {% set id_credential = credential_issuer + credential_type %}
-              <span class="cred-format">{{ credential_format }}</span>
-              <button id="{{ id_credential }}" class="btn btn-outline-primary d-flex align-items-center flex-column" role="button">
-                <!-- Puoi usare un'icona diversa per ogni tipo di credenziale -->
-                <img src="{{ url_for('static', filename='images/card-violet.svg') }}" alt="{{ credential_key }}" />
-
-                <span class="label">{{ credential_label }}</span>
-              </button>
-            {% endfor %}
-          {% endif %}
-        {% endfor %}
-         <div class="form-group">
+                     {% for credential_issuer, credential_list in credential_keys.items() %}
+                        {% for credential_type, credential_object in credential_list.items() %}
+                            {% set credential_format = credential_object.get("format") %}
+                            {% set credential_label = (
+                                credential_object.get("credential_metadata", {}).get("display", [])
+                                | selectattr("locale", "equalto", "it-IT")
+                                | map(attribute="description")
+                                | first
+                            ) %}
+                            {% set id_credential = credential_issuer + credential_type %}
+                            <div class="row">
+                                <div class="col-4 col-md-6 col-6 mb-3 mb-md-4">
+                                    <article class="it-card it-card-image it-card-height-full rounded border shadow-sm mb-3">
+                                        <h3 class="it-card-title">
+                                            {{ credential_type }}
+                                        </h3>
+                                        <div class="it-card-body">
+                                            <p class="it-card-subtitle">{{ credential_format }}</p>
+                                            <p class="it-card-text">{{ credential_label }}</p>
+                                        </div>
+                                        <div class="it-card-footer" aria-label="Link correlati:">
+                                            <button id="test" role="button" class="btn btn-outline-primary">Dettaglio</button>
+                                        </div>
+                                    </article>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% endfor %}
+            </div>
+        </div>
+     </div>
+     <br>
+     <div class="form-group" {% if not wallet_initialized %}style="display:none;"{% endif %}>
+          <div class="container py-4">
               <div class="input-group">
-                <div class="select-wrapper">
-                  <select id="defaultSelect2">
-                    <option selected="" value="">Tipo ricerca</option>
-                    <option value="credential_issuer">Credential Issuer</option>
-                    <option value="cedential_type">Tipo credenziale</option>
-                    <option value="attribute">attributo/i contenuti</option>
-                  </select>
-                </div>
+                  <div class="select-wrapper">
+                      <select id="defaultSelect2">
+                        <option selected="" value="">Tipo ricerca</option>
+                        <option value="all">Tutto</option>
+                        <option value="credential_issuer">Credential Issuer</option>
+                        <option value="cedential_type">Tipo credenziale</option>
+                        <option value="attribute">attributo/i contenuti</option>
+                      </select>
+                  </div>
               </div>
               <br>
               <div class="input-group">
@@ -158,58 +171,42 @@
                     <button class="btn btn-primary" type="button" id="search-btn">Cerca</button>
                   </div>
               </div>
-        </div>
-     </div>
-      <div class="col-md-12">
-        <div class="row">
-            <div class="form-group col-md-12">
-                <button id="init-btn" class="btn btn-primary"{% if wallet_initialized %} style="display:none;"{% endif %}{% if not wallet_initialized %} disabled{% endif %}>
-                    <span class="rounded-icon">
-                      <svg class="icon icon-primary">
-                          <use href="{{ url_for('static', filename='svg/sprites.svg#it-settings') }}"></use>
-                      </svg>
-                    </span>
-                    <span>Inizializza</span>
-                </button>
-            </div>
-        </div>
-        <div class="row">
-            <div class="form-group col-md-12">
-                <a href="/wallet/logout" class="btn btn-outline-danger">
-                    <span class="rounded-icon">
-                      <svg class="icon icon-danger">
-                          <use href="{{ url_for('static', filename='svg/sprites.svg#it-locked') }}"></use>
-                      </svg>
-                    </span>
-                    <span>Blocca</span>
-                </a>
-            </div>
-        </div>
-        <div class="row">
-            <div class="form-group col-md-12">
-              <button id="add-btn" class="btn btn-primary"{% if not wallet_initialized %} style="display:none;"{% endif %}>
-                  <span class="rounded-icon">
-                    <svg class="icon icon-primary">
-                        <use href="{{ url_for('static', filename='svg/sprites.svg#it-plus') }}"></use>
-                    </svg>
-                  </span>
-                  <span>Aggiungi</span>
-              </button>
-            </div>
-        </div>
-        <div class="row">
-            <div class="form-group col-md-12">
-              <button id="rp-btn" class="btn btn-secondary"{% if not wallet_initialized %} style="display:none;" {% endif %}>
-                  <span class="rounded-icon">
-                    <svg class="icon icon-secondary">
-                        <use href="{{ url_for('static', filename='svg/sprites.svg#it-info-circle') }}"></use>
-                    </svg>
-                  </span>
-                  <span>Relying Party</span>
-              </button>
-            </div>
-        </div>
-      </div>
+          </div>
+    </div>
+    <div class="d-grid gap-2">
+        <button id="init-btn" class="btn btn-primary"{% if wallet_initialized %} style="display:none;"{% endif %}{% if not wallet_initialized %} disabled{% endif %}>
+            <span class="rounded-icon">
+              <svg class="icon icon-primary">
+                  <use href="{{ url_for('static', filename='svg/sprites.svg#it-settings') }}"></use>
+              </svg>
+            </span>
+            <span>Inizializza</span>
+        </button>
+        <a href="/wallet/logout" class="btn btn-outline-danger">
+            <span class="rounded-icon">
+              <svg class="icon icon-danger">
+                  <use href="{{ url_for('static', filename='svg/sprites.svg#it-locked') }}"></use>
+              </svg>
+            </span>
+            <span>Blocca</span>
+        </a>
+        <button id="add-btn" class="btn btn-primary"{% if not wallet_initialized %} style="display:none;"{% endif %}>
+              <span class="rounded-icon">
+                <svg class="icon icon-primary">
+                    <use href="{{ url_for('static', filename='svg/sprites.svg#it-plus') }}"></use>
+                </svg>
+              </span>
+              <span>Aggiungi</span>
+        </button>
+        <button id="rp-btn" class="btn btn-secondary"{% if not wallet_initialized %} style="display:none;" {% endif %}>
+          <span class="rounded-icon">
+            <svg class="icon icon-secondary">
+                <use href="{{ url_for('static', filename='svg/sprites.svg#it-info-circle') }}"></use>
+            </svg>
+          </span>
+          <span>Relying Party</span>
+      </button>
+    </div>
     </main>
   </div>
   <!-- Popup Modal Moderno -->
@@ -880,6 +877,6 @@
     });
   </script>
   <script src="/static/js/wallet-utils.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap-italia@2.18.0/dist/js/bootstrap-italia.bundle.min.js"></script>
+  <script src="{{ url_for('static', filename='js/bootstrap-italia.bundle.min.js') }}"></script>
 </body>
 </html>
