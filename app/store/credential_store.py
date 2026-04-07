@@ -52,6 +52,13 @@ class CredentialStore:
         """Restituisce una lista di tutte le chiavi presenti nello store."""
         return list(self._store.keys())
 
+    def get_store(self):
+        '''
+        Return all dictionary of the store.
+        @return dict
+        '''
+        return self._store
+
     def keys_with_vct(self) -> list[str]:
         """
         Restituisce una lista di stringhe del tipo "chiave:vct".

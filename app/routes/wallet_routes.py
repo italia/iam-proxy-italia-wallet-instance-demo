@@ -154,7 +154,8 @@ def wallet_home():
     selected_country = app_state.selected_country
     wallet_initialized = app_state.wallet_initialized
     credential_store = app_state.credential_store
-    credential_keys = credential_store.keys()  # Retrieve all credential keys
+    # credential_keys = credential_store.keys()  # Retrieve all credential keys
+    credential_keys = credential_store.get_store()
 
     return render_template(
         "wallet_home.html",

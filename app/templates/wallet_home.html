@@ -88,10 +88,9 @@
           <option value="MT"{% if selected_country == 'MT' %} selected{% endif %}>🇲🇹 Malta</option>
         </select>
       </div>
-      <div id="idp" class="form-group" {% if wallet_initialized %}style="display:none;"{% endif %}>
+      <div id="idp" {% if wallet_initialized %}style="display:none;"{% endif %}>
         <fieldset>
         <legend>Scegli come verificare la tua identità</legend>
-<!--        <label class="form-label d-block mb-3">Scegli come verificare la tua identità</label>-->
           <div class="form-check">
             <input  type="radio" name="idpRadio" value="CIE3" id="cie3"
                   {% if selected_idp == 'CIE3' or not selected_idp %}checked{% endif %}>
@@ -170,7 +169,7 @@
                 <button id="init-btn" class="btn btn-primary"{% if wallet_initialized %} style="display:none;"{% endif %}{% if not wallet_initialized %} disabled{% endif %}>
                     <span class="rounded-icon">
                       <svg class="icon icon-primary">
-                          <use href="https://italia.github.io/bootstrap-italia/dist/svg/sprites.svg#it-settings"></use>
+                          <use href="{{ url_for('static', filename='svg/sprites.svg#it-settings') }}"></use>
                       </svg>
                     </span>
                     <span>Inizializza</span>
@@ -182,7 +181,7 @@
                 <a href="/wallet/logout" class="btn btn-outline-danger">
                     <span class="rounded-icon">
                       <svg class="icon icon-danger">
-                          <use href="https://italia.github.io/bootstrap-italia/dist/svg/sprites.svg#it-locked"></use>
+                          <use href="{{ url_for('static', filename='svg/sprites.svg#it-locked') }}"></use>
                       </svg>
                     </span>
                     <span>Blocca</span>
@@ -194,7 +193,7 @@
               <button id="add-btn" class="btn btn-primary"{% if not wallet_initialized %} style="display:none;"{% endif %}>
                   <span class="rounded-icon">
                     <svg class="icon icon-primary">
-                        <use href="https://italia.github.io/bootstrap-italia/dist/svg/sprites.svg#it-plus"></use>
+                        <use href="{{ url_for('static', filename='svg/sprites.svg#it-plus') }}"></use>
                     </svg>
                   </span>
                   <span>Aggiungi</span>
@@ -206,7 +205,7 @@
               <button id="rp-btn" class="btn btn-secondary"{% if not wallet_initialized %} style="display:none;" {% endif %}>
                   <span class="rounded-icon">
                     <svg class="icon icon-secondary">
-                        <use href="https://italia.github.io/bootstrap-italia/dist/svg/sprites.svg#it-info-circle"></use>
+                        <use href="{{ url_for('static', filename='svg/sprites.svg#it-info-circle') }}"></use>
                     </svg>
                   </span>
                   <span>Relying Party</span>

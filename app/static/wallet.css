@@ -5,7 +5,6 @@
 }
 
 body {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   background-color: #f4f6f9;
   color: #2c3e50;
   margin: 0;
@@ -171,7 +170,7 @@ main p {
   flex-direction: column;
 }
 
-
+/*
 .form-group input[type="password"] {
   padding: 12px 14px;
   border-radius: 8px;
@@ -184,6 +183,7 @@ main p {
   border-color: #005ea5;
   outline: none;
 }
+*/
 
 /* Checkbox group (solo activation) */
 .form-group.checkbox {

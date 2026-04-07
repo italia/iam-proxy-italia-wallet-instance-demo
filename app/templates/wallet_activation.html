@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <title>Attivazione EU Wallet</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='wallet.css') }}">
+     <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap-italia.min.css') }}" />
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 <body>
@@ -25,23 +27,51 @@
         {% endif %}
       {% endwith %}
       <form class="activation-form" action="/wallet/activate" method="post">
+
         <div class="form-group">
-          <label for="pin">Imposta un PIN sicuro (4-8 cifre)</label>
-          <input type="password" id="pin" name="pin" pattern="\d{4,8}" required>
+          <label for="pin">PIN</label>
+          <input type="password" data-bs-input class="form-control input-password" id="pin" name="pin" pattern="\d{4,8}"  aria-describedby="infoPassword" required>
+          <button type="button" class="password-icon btn" role="switch" aria-checked="false">
+            <span class="visually-hidden">Mostra/Nascondi Password</span>
+            <svg class="password-icon-visible icon icon-sm" aria-hidden="true"><use href="{{ url_for('static', filename='svg/sprites.svg#it-password-visible') }}"></use></svg>
+            <svg class="password-icon-invisible icon icon-sm d-none" aria-hidden="true"><use href="{{ url_for('static', filename='svg/sprites.svg#it-password-invisible') }}"></use></svg>
+          </button>
+          <p id="infoPassword" class="form-text text-muted d-block small pb-0">Imposta un PIN sicuro (4-8 cifre).</p>
         </div>
+
         <div class="form-group">
           <label for="confirm_pin">Conferma il PIN</label>
-          <input type="password" id="confirm_pin" name="confirm_pin" required>
+          <input type="password" data-bs-input class="form-control input-password" id="confirm_pin" name="confirm_pin"  aria-describedby="confirmPassword" required>
+          <button type="button" class="password-icon btn" role="switch" aria-checked="false">
+            <span class="visually-hidden">Mostra/Nascondi Password</span>
+            <svg class="password-icon-visible icon icon-sm" aria-hidden="true"><use href="{{ url_for('static', filename='svg/sprites.svg#it-password-visible') }}"></use></svg>
+            <svg class="password-icon-invisible icon icon-sm d-none" aria-hidden="true"><use href="{{ url_for('static', filename='svg/sprites.svg#it-password-invisible') }}"></use></svg>
+          </button>
         </div>
 
-        <div class="form-group checkbox">
-          <input type="checkbox" id="terms" name="terms" required>
-          <label for="terms">Accetto i <a href="/terms">termini di servizio</a> e l'<a href="/privacy">informativa privacy</a>.</label>
-        </div>
+<!--        <div class="form-group">-->
+<!--          <label for="pin">Imposta un PIN sicuro (4-8 cifre)</label>-->
+<!--          <input type="password" id="pin" name="pin" pattern="\d{4,8}" required>-->
+<!--        </div>-->
+<!--        <div class="form-group">-->
+<!--          <label for="confirm_pin">Conferma il PIN</label>-->
+<!--          <input type="password" id="confirm_pin" name="confirm_pin" required>-->
+<!--        </div>-->
 
-        <button type="submit" class="btn-activate">Attiva Wallet</button>
+<!--        <div class="form-group checkbox">-->
+<!--          <input type="checkbox" id="terms" name="terms" required>-->
+<!--          <label for="terms">Accetto i <a href="/terms">termini di servizio</a> e l'<a href="/privacy">informativa privacy</a>.</label>-->
+<!--        </div>-->
+
+          <div class="form-check">
+            <input id="terms" name="terms" type="checkbox" required="" data-focus-mouse="false">
+            <label for="terms">Accetto i <a href="/terms">termini di servizio</a> e l'<a href="/privacy">informativa privacy</a>.</label>
+          </div>
+
+        <button type="submit" class="btn btn-primary">Attiva Wallet</button>
       </form>
     </main>
   </div>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap-italia@2.18.0/dist/js/bootstrap-italia.bundle.min.js"></script>
 </body>
 </html>
