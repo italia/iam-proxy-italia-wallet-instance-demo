@@ -137,32 +137,29 @@
                 <span class="label">{{ credential_label }}</span>
               </button>
             {% endfor %}
-
-            </div>
           {% endif %}
         {% endfor %}
          <div class="form-group">
-          <div class="input-group">
-            <div class="select-wrapper">
-              <select id="defaultSelect2">
-                <option selected="" value="">Tipo ricerca</option>
-                <option value="credential_issuer">Credential Issuer</option>
-                <option value="cedential_type">Tipo credenziale</option>
-                <option value="attribute">attributo/i contenuti</option>
-              </select>
-            </div>
-          </div>
-          <br>
-          <div class="input-group">
-              <label for="input-group-search">Testo da cercare</label>
-              <input type="text" class="form-control" id="input-group-search" name="input-group-search">
-              <div class="input-group-append">
-                <button class="btn btn-primary" type="button" id="search-btn">Cerca</button>
+              <div class="input-group">
+                <div class="select-wrapper">
+                  <select id="defaultSelect2">
+                    <option selected="" value="">Tipo ricerca</option>
+                    <option value="credential_issuer">Credential Issuer</option>
+                    <option value="cedential_type">Tipo credenziale</option>
+                    <option value="attribute">attributo/i contenuti</option>
+                  </select>
+                </div>
               </div>
-          </div>
+              <br>
+              <div class="input-group">
+                  <label for="input-group-search">Testo da cercare</label>
+                  <input type="text" class="form-control" id="input-group-search" name="input-group-search">
+                  <div class="input-group-append">
+                    <button class="btn btn-primary" type="button" id="search-btn">Cerca</button>
+                  </div>
+              </div>
         </div>
-      </div>
-
+     </div>
       <div class="col-md-12">
         <div class="row">
             <div class="form-group col-md-12">
