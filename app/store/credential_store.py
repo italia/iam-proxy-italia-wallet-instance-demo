@@ -10,6 +10,26 @@ class CredentialStore:
     def __init__(self):
         self._store = {}
 
+    def count(self):
+        '''
+        Return the number of credentials stored in the store.
+        @return int
+        '''
+        count = 0
+        if not self._store:
+            return 0
+        stack = [self._store]
+        stack_pop = stack.pop
+        stack_append = stack.append
+        while stack:
+            current = stack_pop()
+            for k, v in current.items():
+                if type(v) is dict:
+                    stack_append(v)
+                else:
+                    count += 1
+        return count
+
     def add(self, key, data_row, vct, claims=None, status_assertion=None, status=None) -> None:
         """
         Aggiunge o aggiorna una credenziale.

@@ -33,8 +33,8 @@
           <input type="password" data-bs-input class="form-control input-password" id="pin_attempt" name="pin_attempt"  aria-describedby="confirmPassword" pattern="\d{4,8}" required>
           <button type="button" class="password-icon btn" role="switch" aria-checked="false">
             <span class="visually-hidden">Mostra/Nascondi Password</span>
-            <svg class="password-icon-visible icon icon-sm" aria-hidden="true"><use href="{{ url_for('static', filename='svg/sprites.svg#it-password-visible') }}"></use></svg>
-            <svg class="password-icon-invisible icon icon-sm d-none" aria-hidden="true"><use href="{{ url_for('static', filename='svg/sprites.svg#it-password-invisible') }}"></use></svg>
+            <svg class="password-icon-visible icon icon-sm" aria-hidden="true"><use href="{{ (url_for('static', filename='svg/sprites.svg') ~ '#it-password-visible') | safe }}"></use></svg>
+            <svg class="password-icon-invisible icon icon-sm d-none" aria-hidden="true"><use href="{{ (url_for('static', filename='svg/sprites.svg') ~ '#it-password-invisible') | safe }}"></use></svg>
           </button>
         </div>
 <!--        <div class="form-group">-->
@@ -42,7 +42,17 @@
 <!--          <input type="password" id="pin_attempt" name="pin_attempt" pattern="\d{4,8}" required>-->
 <!--        </div>-->
 <!--        <button type="submit" class="btn-access">🔓 Accedi</button>-->
-        <button type="submit" class="btn btn-primary">🔓 Accedi</button>
+<!--        <button type="submit" class="btn btn-primary">🔓 Accedi</button>-->
+        <div class="d-grid gap-2">
+          <button type="submit" class="btn btn-primary">
+            <span class="rounded-icon">
+              <svg class="icon icon-white">
+                   <use href="{{ (url_for('static', filename='svg/sprites.svg') ~ '#it-unlocked') | safe }}"></use>
+              </svg>
+            </span>
+            <span>Accedi</span>
+          </button>
+        </div>
       </form>
     </main>
   </div>

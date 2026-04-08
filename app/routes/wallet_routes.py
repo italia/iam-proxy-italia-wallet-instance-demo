@@ -157,12 +157,16 @@ def wallet_home():
     # credential_keys = credential_store.keys()  # Retrieve all credential keys
     credential_keys = credential_store.get_store()
 
+
+
+
     return render_template(
         "wallet_home.html",
         session_id=session_id,
         selected_country=selected_country,
         wallet_initialized=wallet_initialized,
         credential_keys=credential_keys,
+        credential_count=credential_store.count(),
     )
 
 
