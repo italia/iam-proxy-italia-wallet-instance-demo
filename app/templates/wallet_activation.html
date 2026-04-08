@@ -6,6 +6,8 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='wallet.css') }}">
      <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap-italia.min.css') }}" />
 
+
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 <body>
@@ -17,14 +19,24 @@
     <main>
       <p>Stai per attivare il tuo Digital Wallet conforme allo standard europeo. Imposta un PIN per proteggerne l'accesso.</p>
       {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-          {% set first_category = messages[0][0] %}
-          <div class="flash-container flash-{{ first_category }}">
-            {% for category, message in messages %}
-              <p>{{ message }}</p>
-            {% endfor %}
-          </div>
-        {% endif %}
+          {% if messages %}
+              {% set first_category = messages[0][0] %}
+              {% set first_message = messages[0][1] %}
+
+              {% if first_category == 'success' %}
+                  <div class="alert alert-success d-flex align-items-center" role="alert">
+                      <div>
+                        {{ first_message }}
+                      </div>
+                  </div>
+              {% elif first_category == 'error' %}
+                  <div class="alert alert-danger d-flex align-items-center" role="alert">
+                    <div>
+                      <strong>Error:</strong> {{ first_message }}
+                    </div>
+                  </div>
+              {% endif %}
+          {% endif %}
       {% endwith %}
       <form class="activation-form" action="/wallet/activate" method="post">
 
@@ -80,6 +92,6 @@
       </form>
     </main>
   </div>
-   <script src="{{ url_for('static', filename='js/bootstrap-italia.bundle.min.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/bootstrap-italia.bundle.min.js') }}"></script>
 </body>
 </html>

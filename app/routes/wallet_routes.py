@@ -3,9 +3,10 @@ import logging
 from datetime import datetime
 
 import bcrypt
-from flask import Blueprint, current_app, flash, redirect, render_template, request, session, url_for
+from flask import Blueprint, current_app, flash, redirect, render_template, request, session, url_for, jsonify
 
 from app.store import app_state
+from app.service.v1.service import Service
 from app.utils.itwalletUtils import get_status_description
 from app.utils.utils import (
     extract_claim,
@@ -154,10 +155,14 @@ def wallet_home():
     selected_country = app_state.selected_country
     wallet_initialized = app_state.wallet_initialized
     credential_store = app_state.credential_store
-    # credential_keys = credential_store.keys()  # Retrieve all credential keys
     credential_keys = credential_store.get_store()
 
-
+    # LOCAL TESTING
+    # from ..utils.json_utils import get_value_from_json
+    #
+    # with open("/application/app/routes/example.json") as f:
+    #     credential_list = get_value_from_json(f.read(), "credential_configurations_supported")
+    #     credential_keys = {"issuer_test": credential_list}
 
 
     return render_template(
@@ -166,7 +171,6 @@ def wallet_home():
         selected_country=selected_country,
         wallet_initialized=wallet_initialized,
         credential_keys=credential_keys,
-        credential_count=credential_store.count(),
     )
 
 
@@ -194,6 +198,41 @@ def wallet_callback():
     session["query_params"] = dict(params_list)  # store params in session
     return render_template("wallet_cb.html")
 
+
+@wallet_routes.route("/v1/search", methods=["POST"])
+def search():
+    logger.info(f"Entering method: search. Params [search_type: {request.form.get('search_type')}, search_element: {request.form.get('search_element')}]")
+    result = {}
+    error_message = None
+    success_message = None
+    status_code = 200
+    try:
+        service = Service(session)
+        result = service.search(request.form.get("search_type"), request.form.get("search_element"))
+    except ValueError as ve:
+        logger.error(f"Error, message: {ve}")
+        error_message = str(ve)
+        credential_store = app_state.credential_store
+        result =  credential_store.get_store()
+        status_code = 400
+    except Exception as e:
+        logger.error(f"Error, message: {e}")
+        error_message = "Si è verificato un errore interno durante la ricerca."
+        status_code = 500
+
+    session_id = request.args.get("session_id", "")
+    selected_country = app_state.selected_country
+    wallet_initialized = app_state.wallet_initialized
+    credential_keys = result
+    return render_template(
+        "wallet_home.html",
+        session_id=session_id,
+        selected_country=selected_country,
+        wallet_initialized=wallet_initialized,
+        credential_keys=credential_keys,
+        success_message = success_message,
+        error_message = error_message
+    ), status_code
 
 @wallet_routes.route("/template/<credential_type>", methods=["GET"])
 def credentialTypeTemplate(credential_type):
