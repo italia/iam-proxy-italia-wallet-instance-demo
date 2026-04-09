@@ -31,10 +31,19 @@ class PresentationService(BaseService):
             raise ValueError("Search type and search value cannot be empty.")
         output = {}
         for credential_issuer in self.app_state.ec_store("user_credential"):
-            if search_type == "scope":
+            if search_type == 'all':
+                return self.app_state.ec_store("user_credential")
+            elif search_type == "scope":
                 output[credential_issuer] = output[credential_issuer] | self.__get_presentation_from_scope(credential_issuer, search)
             elif search_type == "format":
                 output[credential_issuer]= output[credential_issuer] | self.__get_presentation_from_format(credential_issuer, search)
+            elif search_type == "credential_issuer":
+                output[credential_issuer] = output[credential_issuer] | self.__get_presentation_from_issuer(credential_issuer, search)
+            elif search_type == 'credential_type':
+                output[credential_issuer] = output[credential_issuer] | self.__get_presentation_from_type(credential_issuer, search)
+            elif search_type == 'attribute':
+                output[credential_issuer] = output[credential_issuer] | self.__get_presentation_from_attribute(credential_issuer, search)
+
         return output
 
     def __get_presentation_from_scope(self, credential_issuer: str, search: str) -> dict[str,str]:
@@ -56,6 +65,29 @@ class PresentationService(BaseService):
             if credential.get("format") == search:
                 output[credential_issuer] = output[credential_issuer] |  credential
         return output
+
+    def __get_presentation_from_issuer(self,credential_issuer: str, search: str) -> dict[str,str]:
+        logger.debug(f"Entering __get_presentation_from_issuer method. Params [credential_issuer: {credential_issuer}, search: {search}]")
+        if not self.app_state.ec_store(credential_issuer):
+            return {}
+        output = {}
+        if search == credential_issuer:
+            for credential in self.app_state.ec_store(credential_issuer):
+                    output[credential_issuer] = output[credential_issuer] | credential
+        else:
+            return output
+        return output
+
+    def __get_presentation_from_type(self,credential_issuer: str, search: str) -> dict[str,str]:
+        logger.debug(f"Entering __get_presentation_from_type method. Params [credential_issuer: {credential_issuer}, search: {search}]")
+        # @todo define the search with Giuseppe De Marco
+        pass
+
+    def __get_presentation_from_attribute(self,credential_issuer: str, search: str) -> dict[str,str]:
+        logger.debug(f"Entering __get_presentation_from_attribute method. Params [credential_issuer: {credential_issuer}, search: {search}]")
+        # @todo define the search with Giuseppe De Marco
+        pass
+
 
     def _create_header(self, params: dict):
         logger.debug(f"Entering method: _create_header. Params [params: {params}]")

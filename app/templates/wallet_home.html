@@ -111,7 +111,7 @@
         </fieldset>
       </div>
      <form action="/wallet/v1/search" method="post">
-         <div class="container py-4" {% if not wallet_initialized %}style="display:none;"{% endif %}>
+         <div class="container" {% if not wallet_initialized %}style="display:none;"{% endif %}>
              <div id="search_result">
               {% if error_message %}
                 <div class="alert alert-danger d-flex align-items-center" role="alert">
@@ -168,14 +168,14 @@
             </div>
          </div>
          <div class="form-group" {% if not wallet_initialized %}style="display:none;"{% endif %}>
-              <div class="container py-4">
+              <div class="container">
                   <div class="input-group">
                       <div class="select-wrapper">
                           <select id="search_type" name="search_type">
                             <option selected="" value="">Tipo ricerca</option>
                             <option value="all">Tutto</option>
                             <option value="credential_issuer">Credential Issuer</option>
-                            <option value="cedential_type">Tipo credenziale</option>
+                            <option value="scope">Tipo credenziale</option>
                             <option value="attribute">attributo/i contenuti</option>
                           </select>
                       </div>
