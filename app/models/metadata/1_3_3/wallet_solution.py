@@ -16,7 +16,7 @@ class WalletMetadata(BaseModel):
     request_object_signing_alg_values_supported: Optional[list] = None  # ... #todo check value
 
 
-class WalletProvider(BaseModel):
+class WalletSolution(BaseModel):
     logo_uri: HttpUrl
     jwks: JwksSchema
     wallet_metadata: WalletMetadata
