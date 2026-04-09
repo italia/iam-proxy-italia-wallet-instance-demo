@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>Attivazione EU Wallet</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='wallet.css') }}">
+<!--  <link rel="stylesheet" href="{{ url_for('static', filename='wallet.css') }}">-->
      <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap-italia.min.css') }}" />
 
 
@@ -13,11 +13,38 @@
 <body>
   <div class="container">
     <header>
-      <img src="{{ url_for('static', filename='images/wallet_logo.svg') }}" alt="Digital Wallet" />
-      <h1>Benvenuto nel tuo Digital Wallet</h1>
+<!--      <img src="{{ url_for('static', filename='images/wallet_logo.svg') }}" alt="Digital Wallet" />-->
+<!--      <h1>Sblocca il tuo Digital Wallet</h1>-->
+        <div class="it-header-center-wrapper">
+          <div class="container-xl">
+            <div class="row">
+              <div class="col-12">
+                <div class="it-header-center-content-wrapper">
+                  <div class="it-brand-wrapper">
+                    <a href="#">
+                      <svg class="icon" aria-hidden="true">
+                        <use href="/static/svg/sprites.svg#it-card"></use>
+                      </svg>
+                      <div class="it-brand-text">
+                        <div class="it-brand-title">IT-Wallet</div>
+                        <div class="it-brand-tagline d-none d-md-block">Portafoglio digitale</div>
+                      </div>
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
     </header>
     <main>
-      <p>Stai per attivare il tuo Digital Wallet conforme allo standard europeo. Imposta un PIN per proteggerne l'accesso.</p>
+<!--      <p>Stai per attivare il tuo Digital Wallet conforme allo standard europeo. Imposta un PIN per proteggerne l'accesso.</p>-->
+
+      <div class="alert alert-primary d-flex align-items-center my-4" role="alert">
+        <div>
+            Stai per <strong>attivare</strong> il tuo digital wallet! Imposta un <strong>PIN</strong> sicuro per proteggere l'accesso al tuo portafoglio digitale conforme allo standard europeo.
+        </div>
+      </div>
       {% with messages = get_flashed_messages(with_categories=true) %}
           {% if messages %}
               {% set first_category = messages[0][0] %}
@@ -40,7 +67,7 @@
       {% endwith %}
       <form class="activation-form" action="/wallet/activate" method="post">
 
-        <div class="form-group">
+        <div class="form-group my-4">
           <label for="pin">PIN</label>
           <input type="password" data-bs-input class="form-control input-password" id="pin" name="pin" pattern="\d{4,8}"  aria-describedby="infoPassword" required>
           <button type="button" class="password-icon btn" role="switch" aria-checked="false">
