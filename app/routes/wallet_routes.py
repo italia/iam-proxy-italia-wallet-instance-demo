@@ -17,6 +17,7 @@ from app.utils.utils import (
     unescape_json,
     unix_ts_to_str_datetime,
 )
+from app.service.itwallet_service import ItWalletService
 from settings import CONTENT_PDF_BASE_64_PREFIX, ISO_18013_5_NAME, JWT_PREFIX, MSO_MDOC_PREFIX, SD_JWT_PREFIX
 
 logger = logging.getLogger(__name__)
@@ -125,6 +126,7 @@ def activate_wallet():
 
 @wallet_routes.route("/access", methods=["GET", "POST"])
 def wallet_access():
+    logger.info("Entering method: wallet_access. Params []")
     if request.method == "POST":
         if not (pin_attempt := request.form.get("pin_attempt", "")):
             return render_template("wallet_access.html")
@@ -132,15 +134,34 @@ def wallet_access():
         if app_state.stored_hashed_pin and bcrypt.checkpw(pin_attempt.encode(), app_state.stored_hashed_pin):
             session["pin_authenticated"] = True
 
-            # Create new session ID and set as correlation ID for log tracking.
             session_id = generate_nonce()
+
             session["session_id"] = session_id
 
-            # codeql[py/log-injection]
-            logger.info("✅ Effettuato login (sessione inizializzata id=%s).", sanitize_for_logging(session_id))
-            return redirect(url_for("wallet_routes.wallet_home", session_id=session_id))
+            logger.info(f"session_id: {session_id} authenticated successfully.")
+
+            discovery_page_external = extract_claim(current_app.config, "app.discovery_page_external")
+
+            logger.info(f"discovery_page_external: {discovery_page_external}")
+
+            if discovery_page_external or discovery_page_external == "true":
+                service = ItWalletService(session)
+                try:
+                    authorization_endpoint = service.discovery_page()
+                    logger.info(f"Redirecting to discovery page at: {authorization_endpoint}")
+                    return redirect(authorization_endpoint)
+                except ValueError as ve:
+                    logger.error(f"Error, message: {ve}")
+                    error_message = str(ve)
+                except Exception as e:
+                    logger.error(f"Error, message: {e}")
+                    error_message = "Exception when call discovery page. Contact administrator."
+
+                flash(error_message, "error")
+            else:
+                return redirect(url_for("wallet_routes.wallet_home", session_id=session_id))
         else:
-            logger.error("❌ Login fallito: PIN errato")
+            logger.error("Error: Wrong PIN attempt for wallet access.")
             flash("PIN errato. Riprova.", "error")
 
     return render_template("wallet_access.html")

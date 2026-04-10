@@ -39,6 +39,7 @@ from pyeudiw.jwt.jws_helper import JWSHelper
 from pyeudiw.wallet_attestations.issuers.wa_request import WaJswRequestIssuer
 
 from app.models.provider_config import ProviderConfig
+from app.service.authorization.authorization_service import AuthorizationService
 from app.service.itwallet_helpers import (
     apply_credential_issuer_overrides,
     apply_replace_values,
@@ -106,7 +107,7 @@ from settings import (
     PRESENTATION_RESPONSE_MODE_DIRECT_POST_JWT,
     PRESENTATION_RESPONSE_TYPE_VP_TOKEN,
     SD_JWT_PREFIX,
-    WALLET_ATTESTATION_NAME, METADATA_TYPE_WALLET_SOLUTION,
+    WALLET_ATTESTATION_NAME, METADATA_TYPE_WALLET_PROVIDER,
 )
 
 logger = logging.getLogger(__name__)
@@ -126,6 +127,7 @@ class ItWalletService:
         self.federation_service = FederationService(current_app.config, self.proxies, self.no_proxy_domains)
         self.provider_service = ProviderService(current_app.config, self.proxies, self.no_proxy_domains)
         self.issuer_service = IssuerService(current_app.config, self.proxies, self.no_proxy_domains)
+        self.authorization_service = AuthorizationService(current_app.config, self.proxies, self.no_proxy_domains)
 
     def getOnboardedRelyingParties(self):
         """Return list of onboarded Relying Parties (Credential Verifiers) from trust root."""
@@ -229,7 +231,7 @@ class ItWalletService:
         #     raise ValueError("Retrieving wallet_provider entity configuration failed")
 
         wallet_provider_entity_configuration = self.provider_service.wallet_provider_ec(self.provider_service.wallet_provider_list(trust_root_url),extract_claim(current_app.config, "wallet_provider.public_url"))
-        self.provider_service.validate_entity_configuration(expected_url=extract_claim(current_app.config, "wallet_provider.public_url"), payload=wallet_provider_entity_configuration, hint= trust_root_url, metadata_types= [METADATA_TYPE_FEDERATION_ENTITY, METADATA_TYPE_WALLET_SOLUTION])
+        self.provider_service.validate_entity_configuration(expected_url=extract_claim(current_app.config, "wallet_provider.public_url"), payload=wallet_provider_entity_configuration, hint= trust_root_url, metadata_types= [METADATA_TYPE_FEDERATION_ENTITY, METADATA_TYPE_WALLET_PROVIDER])
         app_state.ec_store.add(self.provider_service.wallet_provider_url, wallet_provider_entity_configuration)
 
         credential_issuer_list = self.issuer_service.credential_issuer_list(trust_root_url)
@@ -392,6 +394,27 @@ class ItWalletService:
         self._print_session_data()
 
         return {"success": True, "data": {"redirect_url": authorization_url}}
+
+    def discovery_page(self):
+        logger.info(f"Entering method: discovery_page. Params []")
+
+        trust_anchor_url = extract_claim(current_app.config, f"wallet_instance.trust_anchor")
+
+        if not trust_anchor_url:
+            raise ValueError(f"Trust anchor is not configured for the wallet instance")
+
+        logger.info(f"trust_anchor_url: {trust_anchor_url}")
+
+        if not app_state.ec_store.exists(trust_anchor_url):
+            trust_root_entity_configuration = self.federation_service.issuer_ec(trust_anchor_url)
+            self.federation_service.validate_entity_configuration(payload= trust_root_entity_configuration, expected_url= trust_anchor_url, metadata_types= [METADATA_TYPE_FEDERATION_ENTITY])
+            app_state.ec_store.add(trust_anchor_url, trust_root_entity_configuration)
+
+        authorization_server_ec = self.authorization_service.authorization_ec(self.authorization_service.authorization_list(trust_anchor_url),extract_claim(current_app.config, "wallet_provider.public_url"))
+
+        app_state.ec_store.add(self.authorization_service.authorization_server_url, authorization_server_ec)
+
+        return authorization_server_ec.get("metadata",{}).get(METADATA_TYPE_AUTHORIZATION_SERVER,{}).get("authorization_endpoint")
 
     def complete_initialize_wallet(self):
         """
@@ -2064,7 +2087,7 @@ class ItWalletService:
         Returns:
             (str) wallet provider URL or None if error occurred
         """
-        params = {"entity_type": METADATA_TYPE_WALLET_SOLUTION}
+        params = {"entity_type": METADATA_TYPE_WALLET_PROVIDER}
 
         founded = oid_fed_list(
             base_url=trust_root_url,
@@ -2080,7 +2103,7 @@ class ItWalletService:
             wallet_provider_url = founded[0]
             ec_payload = self._entity_configuration_management(
                 wallet_provider_url,
-                [METADATA_TYPE_FEDERATION_ENTITY, METADATA_TYPE_WALLET_SOLUTION],
+                [METADATA_TYPE_FEDERATION_ENTITY, METADATA_TYPE_WALLET_PROVIDER],
                 trust_root_url
             )
         except Exception as e:
