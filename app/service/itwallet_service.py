@@ -106,7 +106,7 @@ from settings import (
     PRESENTATION_RESPONSE_MODE_DIRECT_POST_JWT,
     PRESENTATION_RESPONSE_TYPE_VP_TOKEN,
     SD_JWT_PREFIX,
-    WALLET_ATTESTATION_NAME, METADATA_TYPE_WALLET_PROVIDER,
+    WALLET_ATTESTATION_NAME, METADATA_TYPE_WALLET_SOLUTION,
 )
 
 logger = logging.getLogger(__name__)
@@ -229,7 +229,7 @@ class ItWalletService:
         #     raise ValueError("Retrieving wallet_provider entity configuration failed")
 
         wallet_provider_entity_configuration = self.provider_service.wallet_provider_ec(self.provider_service.wallet_provider_list(trust_root_url),extract_claim(current_app.config, "wallet_provider.public_url"))
-        self.provider_service.validate_entity_configuration(expected_url=extract_claim(current_app.config, "wallet_provider.public_url"), payload=wallet_provider_entity_configuration, hint= trust_root_url, metadata_types= [METADATA_TYPE_FEDERATION_ENTITY, METADATA_TYPE_WALLET_PROVIDER])
+        self.provider_service.validate_entity_configuration(expected_url=extract_claim(current_app.config, "wallet_provider.public_url"), payload=wallet_provider_entity_configuration, hint= trust_root_url, metadata_types= [METADATA_TYPE_FEDERATION_ENTITY, METADATA_TYPE_WALLET_SOLUTION])
         app_state.ec_store.add(self.provider_service.wallet_provider_url, wallet_provider_entity_configuration)
 
         credential_issuer_list = self.issuer_service.credential_issuer_list(trust_root_url)
@@ -2065,7 +2065,7 @@ class ItWalletService:
         Returns:
             (str) wallet provider URL or None if error occurred
         """
-        params = {"entity_type": METADATA_TYPE_WALLET_PROVIDER}
+        params = {"entity_type": METADATA_TYPE_WALLET_SOLUTION}
 
         founded = oid_fed_list(
             base_url=trust_root_url,
@@ -2081,7 +2081,7 @@ class ItWalletService:
             wallet_provider_url = founded[0]
             ec_payload = self._entity_configuration_management(
                 wallet_provider_url,
-                [METADATA_TYPE_FEDERATION_ENTITY, METADATA_TYPE_WALLET_PROVIDER],
+                [METADATA_TYPE_FEDERATION_ENTITY, METADATA_TYPE_WALLET_SOLUTION],
                 trust_root_url
             )
         except Exception as e:

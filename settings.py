@@ -40,7 +40,7 @@ METADATA_TYPE_FEDERATION_ENTITY = _get("metadata_type_federation_entity")
 METADATA_TYPE_AUTHORIZATION_SERVER = _get("metadata_type_authorization_server")
 METADATA_TYPE_CREDENTIAL_ISSUER = _get("metadata_type_credential_issuer")
 METADATA_TYPE_CREDENTIAL_VERIFIER = _get("metadata_type_credential_verifier")
-METADATA_TYPE_WALLET_PROVIDER = _get("metadata_type_wallet_provider")
+METADATA_TYPE_WALLET_SOLUTION = _get("metadata_type_wallet_solution")
 
 # Sets (comma-separated in env)
 EU_COUNTRIES = _get_set("eu_countries", DEFAULTS["eu_countries"])
