@@ -290,7 +290,7 @@ def request_nonce(
         Il valore di c_nonce estratto dalla risposta JSON in caso di successo.
         In caso di errore, rilancia un'eccezione.
     """
-    headers = {"Content-Type": "application/json; charset=utf-8", "Accept": "application/json; charset=UTF-8"}
+    headers = {"Content-Type": "application/x-www-form-urlencoded", "Accept": "application/json; charset=UTF-8"}
     # codeql[py/log-injection]
     logger.info(">>>> Invio POST a %s", sanitize_for_logging(url))
     # codeql[py/log-injection]
