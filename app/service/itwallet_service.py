@@ -20,7 +20,7 @@ Key components:
 - Token/credential flows use PAR, DPoP, PKCE per OAuth 2.0 / OIDC specs
 - SD-JWT and mDL (ISO 18013-5) credential formats are supported
 """
-
+import base64
 import hashlib
 import json
 import logging
@@ -1120,9 +1120,7 @@ class ItWalletService:
         if not wallet_private_key or not wallet_public_key:
             raise ValueError("Exception generation wallet key")
 
-        wallet_client_id = get_thumbprint_from_private_key(wallet_private_key)
-
-        logger.info(f"wallet_client_id: {wallet_client_id}")
+        wallet_key_thumbprint = get_thumbprint_from_private_key(wallet_private_key)
 
         client_attestation_pop_jwt = generate_wallet_attestation_pop_jwt(
             private_key=wallet_private_key, audience=authorization_server_url
@@ -1165,11 +1163,12 @@ class ItWalletService:
 
         try:
             dpop_bound_access_token_claims = decode_and_verify_jwt(dpop_bound_access_token, authorization_server_jwks)
+            expected_jkt = base64.urlsafe_b64encode(wallet_key_thumbprint.encode()).decode("utf-8").rstrip("=")
             validate_access_token(
                 dpop_bound_access_token_claims,
                 authorization_server_url,
-                wallet_client_id,
-                wallet_client_id,
+                wallet_key_thumbprint,
+                expected_jkt,
             )
             logger.info(
                 f"The access token is valid: {json.dumps(dpop_bound_access_token_claims, indent=2, ensure_ascii=False)} "
@@ -1306,7 +1305,7 @@ class ItWalletService:
             f"Entering method: _credential_issuing_management. Params [credential_issuer_nonce_url: {credential_issuer_nonce_url}]"
         )
 
-        wallet_private_key, wallet_public_key = self._inizializza_wallet_keys(CONFIG_DIR)
+        wallet_private_key, wallet_public_key = self._retrieve_instance_hw_keys(CONFIG_DIR)
         if not wallet_private_key or not wallet_public_key:
             raise ValueError("Generation Key Exception: wallet_private_key or wallet_public_key empty")
 
@@ -1629,7 +1628,7 @@ class ItWalletService:
             current_app.config, "metadata.presentation_flow.status_assertion_supported"
         )
 
-        wallet_private_key, wallet_public_key = self._inizializza_wallet_keys(CONFIG_DIR)
+        wallet_private_key, wallet_public_key = self._retrieve_instance_hw_keys(CONFIG_DIR)
 
         if not wallet_private_key or not wallet_public_key:
             raise ValueError("Public and private Key not found for wallet")
@@ -1884,7 +1883,7 @@ class ItWalletService:
         Metodo privato per generare le chiavi del wallet e salvarle su config dir.
         Ritorna una tupla: (chiave_privata, chiave_pubblica)
         """
-        logger.info(f"Entering method: _inizializza_wallet_keys. Params [config_dir: {config_dir}]")
+        logger.debug(f"Entering method: _retrieve_instance_hw_keys. Params [config_dir: {config_dir}]")
 
         if not os.path.exists(config_dir):
             os.makedirs(config_dir)
