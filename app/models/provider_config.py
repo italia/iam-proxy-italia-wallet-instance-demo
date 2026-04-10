@@ -19,7 +19,7 @@ class ProviderConfig:
     def wallet_name(self) -> str | None:
         return (
             self._config.get("metadata_group", {})
-            .get("wallet_solution", {})
+            .get("wallet_provider", {})
             .get("wallet_metadata", {})
             .get("wallet_name")
         ) or None
