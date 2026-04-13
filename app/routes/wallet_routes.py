@@ -150,18 +150,13 @@ def wallet_access():
                 service = ItWalletService(session, external_discovery=True)
                 try:
                     result = service.initialize_wallet(idp = None, country="IT")
-                    print("result", result)
-                    # flash(jsonify(result), "success_message")
                     return redirect(result.get("data", {}).get("redirect_url"))
                 except ValueError as ve:
                     logger.error(f"Error, message: {ve}")
                     error_message = str(ve)
                 except Exception as e:
-                    import traceback
-                    traceback.print_exc()
                     logger.error(f"Error, message: {e}")
                     error_message = "Exception when call discovery page. Contact administrator."
-
                 flash(error_message, "error")
             else:
                 return redirect(url_for("wallet_routes.wallet_home", session_id=session_id))
@@ -182,14 +177,6 @@ def wallet_home():
     wallet_initialized = app_state.wallet_initialized
     credential_store = app_state.credential_store
     credential_keys = credential_store.get_store()
-
-    # LOCAL TESTING
-    # from ..utils.json_utils import get_value_from_json
-    #
-    # with open("/application/app/routes/example.json") as f:
-    #     credential_list = get_value_from_json(f.read(), "credential_configurations_supported")
-    #     credential_keys = {"issuer_test": credential_list}
-
 
     return render_template(
         "wallet_home.html",
@@ -222,6 +209,25 @@ def wallet_callback():
         logger.info("Ricevuta request GET %s senza query string", sanitize_for_logging(current_path))
 
     session["query_params"] = dict(params_list)  # store params in session
+
+    discovery_page_external = extract_claim(current_app.config, "app.discovery_page_external")
+
+    wallet_initialized = app_state.wallet_initialized
+
+    if discovery_page_external and not wallet_initialized:
+        logger.info("init wallet process")
+        service = ItWalletService(session)
+        try:
+            service.complete_initialize_wallet()
+            flash("Wallet inizializzato con successo!",success_message)
+        except ValueError as value_error:
+            logger.error(f"Error, message: {value_error}")
+            flash(str(ve),"error_message")
+        except Exception as exception:
+            logger.error(f"Error, message: {exception}")
+            flash("Exception when call discovery page. Contact administrator.", "error_message")
+        return redirect(url_for("wallet_routes.wallet_home", session_id=session_id))
+
     return render_template("wallet_cb.html")
 
 
