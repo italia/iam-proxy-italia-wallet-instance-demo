@@ -39,6 +39,7 @@ from pyeudiw.jwt.jws_helper import JWSHelper
 from pyeudiw.wallet_attestations.issuers.wa_request import WaJswRequestIssuer
 
 from app.models.provider_config import ProviderConfig
+from app.service.authorization.authorization_service import AuthorizationService
 from app.service.itwallet_helpers import (
     apply_credential_issuer_overrides,
     apply_replace_values,
@@ -126,6 +127,7 @@ class ItWalletService:
         self.federation_service = FederationService(current_app.config, self.proxies, self.no_proxy_domains)
         self.provider_service = ProviderService(current_app.config, self.proxies, self.no_proxy_domains)
         self.issuer_service = IssuerService(current_app.config, self.proxies, self.no_proxy_domains)
+        self.authorization_service = AuthorizationService(current_app.config, self.proxies, self.no_proxy_domains)
 
     def getOnboardedRelyingParties(self):
         """Return list of onboarded Relying Parties (Credential Verifiers) from trust root."""
@@ -392,6 +394,27 @@ class ItWalletService:
         self._print_session_data()
 
         return {"success": True, "data": {"redirect_url": authorization_url}}
+
+    def discovery_page(self):
+        logger.info(f"Entering method: discovery_page. Params []")
+
+        trust_anchor_url = extract_claim(current_app.config, f"wallet_instance.trust_anchor")
+
+        if not trust_anchor_url:
+            raise ValueError(f"Trust anchor is not configured for the wallet instance")
+
+        logger.info(f"trust_anchor_url: {trust_anchor_url}")
+
+        if not app_state.ec_store.exists(trust_anchor_url):
+            trust_root_entity_configuration = self.federation_service.issuer_ec(trust_anchor_url)
+            self.federation_service.validate_entity_configuration(payload= trust_root_entity_configuration, expected_url= trust_anchor_url, metadata_types= [METADATA_TYPE_FEDERATION_ENTITY])
+            app_state.ec_store.add(trust_anchor_url, trust_root_entity_configuration)
+
+        authorization_server_ec = self.authorization_service.authorization_ec(self.authorization_service.authorization_list(trust_anchor_url),extract_claim(current_app.config, "wallet_provider.public_url"))
+
+        app_state.ec_store.add(self.authorization_service.authorization_server_url, authorization_server_ec)
+
+        return authorization_server_ec.get("metadata",{}).get(METADATA_TYPE_AUTHORIZATION_SERVER,{}).get("authorization_endpoint")
 
     def complete_initialize_wallet(self):
         """
