@@ -100,7 +100,7 @@
         <div class="loader"></div>
       </div>
 
-        <div class="row" {% if wallet_initialized and not init_error_message %}style="display:none;"{% endif %}>
+        <div class="row" {% if wallet_initialized or not init_error_message %}style="display:none;"{% endif %}>
           <div class="col-12 col-md-12 col-lg-12 mb-3 mb-md-4">
             <!--start it-card-->
             <article class="it-card rounded border shadow-sm mb-3">

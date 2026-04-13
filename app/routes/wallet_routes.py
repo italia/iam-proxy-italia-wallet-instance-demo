@@ -174,12 +174,12 @@ def wallet_home():
 
     session_id = request.args.get("session_id", "")
     init_error_message = request.args.get("init_error_message", "")
-    success_message = request.args.get("init_success_message", "")
+    init_success_message = request.args.get("init_success_message", "")
 
     if init_error_message:
-        flash(error_message, "init_error_message")
-    elif success_message:
-        flash(success_message, "init_success_message")
+        flash(init_error_message, "init_error_message")
+    elif init_success_message:
+        flash(init_success_message, "init_success_message")
 
     selected_country = app_state.selected_country
     wallet_initialized = app_state.wallet_initialized
@@ -192,6 +192,8 @@ def wallet_home():
         selected_country=selected_country,
         wallet_initialized=wallet_initialized,
         credential_keys=credential_keys,
+        init_error_message=init_error_message,
+        init_success_message=init_success_message
     )
 
 
