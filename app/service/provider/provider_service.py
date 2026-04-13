@@ -23,12 +23,12 @@ class ProviderService(BaseService):
     def wallet_provider_list(self, url):
         logger.info(f"Entering method: wallet_provider_list. Params [url: {url}]")
         # @Todo Talking with Giuseppe and Team, because we need to understand why in old version we have the query string in the url and now we don't have it. In fact, in old version we have this line:
-        # wallet_provider_list = self.call_endpoint(url,self.LIST_ENDPOINT+f"?{urlencode(self.QUERY_STRING)}",self._create_header(self.APPLICATION_JSON_HEADERS),proxies=self.proxy, no_proxy_domains=self.no_proxy_domains, parse_response= _parse_oid_fed_list)
+        wallet_provider_list = self.call_endpoint(url,self.LIST_ENDPOINT+f"?{urlencode(self.QUERY_STRING)}",self._create_header(self.APPLICATION_JSON_HEADERS),proxies=self.proxy, no_proxy_domains=self.no_proxy_domains, parse_response= _parse_oid_fed_list)
 
-        wallet_provider_list = self.call_endpoint(url, self.LIST_ENDPOINT,
-                                                  self._create_header(self.APPLICATION_JSON_HEADERS),
-                                                  proxies=self.proxy, no_proxy_domains=self.no_proxy_domains,
-                                                  parse_response=_parse_oid_fed_list)
+        # wallet_provider_list = self.call_endpoint(url, self.LIST_ENDPOINT,
+        #                                           self._create_header(self.APPLICATION_JSON_HEADERS),
+        #                                           proxies=self.proxy, no_proxy_domains=self.no_proxy_domains,
+        #                                           parse_response=_parse_oid_fed_list)
         if not wallet_provider_list:
             raise ValueError(f"No wallet_provider was found within the federation. {url}")
         return wallet_provider_list

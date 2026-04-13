@@ -234,7 +234,7 @@ class ItWalletService:
         app_state.ec_store.add("credential_issuer_list", credential_issuer_list)
 
         pid_provider_ec = self.authorization_service.authorization_ec(self.authorization_service.authorization_list(trust_root_url),extract_claim(current_app.config, "wallet_instance.oauth_authorization_server"))
-        app_state.ec_store.add(self.authorization_service.authorization_server_url, authorization_server_ec)
+        app_state.ec_store.add(self.authorization_service.authorization_server_url, pid_provider_ec)
 
         # return authorization_server_ec.get("metadata",{}).get(METADATA_TYPE_AUTHORIZATION_SERVER,{}).get("authorization_endpoint")
 
@@ -243,7 +243,7 @@ class ItWalletService:
         # )
 
         # pid_provider_url = self._get_pid_provider_url(pid_provider_ec, cred_config_id)
-        pid_provider_url = authorization_server_ec.get("metadata", {}).get(METADATA_TYPE_AUTHORIZATION_SERVER, {}).get(
+        pid_provider_url = pid_provider_ec.get("metadata", {}).get(METADATA_TYPE_AUTHORIZATION_SERVER, {}).get(
             "authorization_endpoint")
 
 

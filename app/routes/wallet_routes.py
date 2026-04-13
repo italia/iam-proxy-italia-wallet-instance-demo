@@ -140,14 +140,14 @@ def wallet_access():
 
             logger.info(f"session_id: {session_id} authenticated successfully.")
 
-            oauth_authorization_server = extract_claim(current_app.config, "app.wallet_instance.oauth_authorization_server")
+            oauth_authorization_server = extract_claim(current_app.config, "wallet_instance.oauth_authorization_server")
 
-            logger.info(f"discovery_page_external: {discovery_page_external}")
+            # logger.info(f"discovery_page_external: {discovery_page_external}")
 
             if oauth_authorization_server:
                 app_state.selected_country = "IT"
                 app_state.selected_idp = None
-                service = ItWalletService(session, external_discovery=true)
+                service = ItWalletService(session, external_discovery=True)
                 try:
                     result = service.initialize_wallet(idp = None, country="IT")
                     flash(jsonify(result), "success_message")
