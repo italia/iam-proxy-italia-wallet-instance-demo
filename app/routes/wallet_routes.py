@@ -140,7 +140,7 @@ def wallet_access():
 
             logger.info(f"session_id: {session_id} authenticated successfully.")
 
-            discovery_page_external = extract_claim(current_app.config, "discovery_page_external")
+            discovery_page_external = extract_claim(current_app.config, "app.discovery_page_external")
 
             logger.info(f"discovery_page_external: {discovery_page_external}")
 
@@ -150,12 +150,15 @@ def wallet_access():
                 service = ItWalletService(session, external_discovery=True)
                 try:
                     result = service.initialize_wallet(idp = None, country="IT")
-                    flash(jsonify(result), "success_message")
-                    return redirect(url_for("wallet_routes.wallet_home", session_id=session_id))
+                    print("result", result)
+                    # flash(jsonify(result), "success_message")
+                    return redirect(result.get("data", {}).get("redirect_url"))
                 except ValueError as ve:
                     logger.error(f"Error, message: {ve}")
                     error_message = str(ve)
                 except Exception as e:
+                    import traceback
+                    traceback.print_exc()
                     logger.error(f"Error, message: {e}")
                     error_message = "Exception when call discovery page. Contact administrator."
 

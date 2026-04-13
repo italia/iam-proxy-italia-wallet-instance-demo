@@ -2,7 +2,7 @@ import logging
 from ..base.base_service import BaseService
 from urllib.parse import urlencode
 from app.store import AppState
-from settings import METADATA_TYPE_FEDERATION_ENTITY
+from settings import METADATA_TYPE_WALLET_PROVIDER
 from app.utils.jwtUtils import decode_and_verify_jwt
 from app.utils.oidFedUtils import _parse_oid_fed_list
 from app.utils.oidFedUtils import _parse_entity_statement_jwt
@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 class ProviderService(BaseService):
 
-    QUERY_STRING = {"entity_type": METADATA_TYPE_FEDERATION_ENTITY}
+    QUERY_STRING = {"entity_type": METADATA_TYPE_WALLET_PROVIDER}
 
     def __init__(self, app_state: AppState,  proxy, no_proxy_domains):
         logger.info("Entering method: init for Provider Service")

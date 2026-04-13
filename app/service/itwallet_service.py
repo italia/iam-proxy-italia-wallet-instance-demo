@@ -348,7 +348,7 @@ class ItWalletService:
 
         pid_provider_authorization_url = ""
 
-        if not ouath_authorization_server:
+        if not oauth_authorization_server_url:
             oauth_authorization_server = self.authorization_service.authorization_ec(
                 self.authorization_service.authorization_list(trust_root_url),
                 oauth_authorization_server_url)
