@@ -415,7 +415,7 @@ class ItWalletService:
 
         country = app_state.selected_country
 
-        query_trust_root = f"ms_rust_configuration.{country}.trust_root"
+        query_trust_root = f"ms_trust_configuration.{country}.trust_root"
 
         trust_root_url = extract_claim(current_app.config, query_trust_root)
 
