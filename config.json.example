@@ -1,5 +1,6 @@
 {
   "app": {
+    "discovery_page_external": true,
     "secret_key": "s3cr3t",
     "oid_fed_list_path": "/list",
     "oid_fed_well_known_path": "/.well-known/openid-federation",

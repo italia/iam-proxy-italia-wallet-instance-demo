@@ -233,18 +233,13 @@ class ItWalletService:
         credential_issuer_list = self.issuer_service.credential_issuer_list(trust_root_url)
         app_state.ec_store.add("credential_issuer_list", credential_issuer_list)
 
-        pid_provider_ec = self.authorization_service.authorization_ec(self.authorization_service.authorization_list(trust_root_url),extract_claim(current_app.config, "wallet_instance.oauth_authorization_server"))
-        app_state.ec_store.add(self.authorization_service.authorization_server_url, pid_provider_ec)
+        pid_provider_ec = self._find_pid_provider_and_process_issuers(
+            credential_issuer_list, cred_config_id, trust_root_url
+        )
 
-        # return authorization_server_ec.get("metadata",{}).get(METADATA_TYPE_AUTHORIZATION_SERVER,{}).get("authorization_endpoint")
-
-        # pid_provider_ec = self._find_pid_provider_and_process_issuers(
-        #     credential_issuer_list, cred_config_id, trust_root_url
-        # )
-
-        # pid_provider_url = self._get_pid_provider_url(pid_provider_ec, cred_config_id)
-        pid_provider_url = pid_provider_ec.get("metadata", {}).get(METADATA_TYPE_AUTHORIZATION_SERVER, {}).get(
-            "authorization_endpoint")
+        pid_provider_url = self._get_pid_provider_url(pid_provider_ec, cred_config_id)
+        # pid_provider_url = pid_provider_ec.get("metadata", {}).get(METADATA_TYPE_AUTHORIZATION_SERVER, {}).get(
+        #     "authorization_endpoint")
 
 
         logger.info(
@@ -341,42 +336,46 @@ class ItWalletService:
             no_proxy_domains=self.no_proxy_domains,
         )
 
-        # codeql[py/log-injection]
         logger.info("✅ Ricevuta risposta dal PAR endpoint %s", sanitize_for_logging(pid_provider_as_par_url))
-        # codeql[py/log-injection]
+
         logger.info("%s", sanitize_for_logging(as_par_response))
 
         request_uri = as_par_response.get("request_uri")
         if not request_uri:
             raise ValueError("PAR Response non contiene un claim 'request_uri'")
 
-        initialize_flow_idphint = extract_claim(current_app.config, f"metadata.initialize_flow.idphints.{idp}")
-        # codeql[py/log-injection]
-        logger.info(
-            "ℹ️  Selezionato idp %s: %s",
-            sanitize_for_logging(idp),
-            sanitize_for_logging(initialize_flow_idphint),
-        )
+        oauth_authorization_server_url = extract_claim(current_app.config, "wallet_instance.oauth_authorization_server")
 
-        query_filter = f"metadata.{METADATA_TYPE_AUTHORIZATION_SERVER}.authorization_endpoint"
-        pid_provider_authorization_url = extract_claim(pid_provider_ec, query_filter)
+        pid_provider_authorization_url = ""
+
+        if not ouath_authorization_server:
+            oauth_authorization_server = self.authorization_service.authorization_ec(
+                self.authorization_service.authorization_list(trust_root_url),
+                oauth_authorization_server_url)
+            app_state.ec_store.add(self.authorization_service.authorization_server_url, oauth_authorization_server)
+            pid_provider_authorization_url = self.authorization_service.authorization_server_url
+        else:
+            query_filter = f"metadata.{METADATA_TYPE_AUTHORIZATION_SERVER}.authorization_endpoint"
+            pid_provider_authorization_url = extract_claim(pid_provider_ec, query_filter)
+
+
+        # query_filter = f"metadata.{METADATA_TYPE_AUTHORIZATION_SERVER}.authorization_endpoint"
+        # pid_provider_authorization_url = extract_claim(pid_provider_ec, query_filter)
         params = {
             "client_id": wallet_client_id,
             "request_uri": request_uri,
         }
 
-        # Aggiungi 'idphint' solo se è valorizzato (non None e non stringa vuota)
-        if not self.external_discovery and initialize_flow_idphint:
+        if not self.external_discovery:
+            initialize_flow_idphint = extract_claim(current_app.config, f"metadata.initialize_flow.idphints.{idp}")
             params["idphint"] = initialize_flow_idphint
 
-        # Build authorization URL
         authorization_url = f"{pid_provider_authorization_url}?{urlencode(params)}"
 
         logger.info(
             f"🌐 Apro il browser per inviare un'AUTHORIZE request all'AUTHORIZE endpoint del PID Provider: {authorization_url}"
         )
 
-        # Stampo i dati della sessione
         self._print_session_data()
 
         return {"success": True, "data": {"redirect_url": authorization_url}}
