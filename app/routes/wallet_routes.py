@@ -144,7 +144,7 @@ def wallet_access():
 
             logger.info(f"discovery_page_external: {discovery_page_external}")
 
-            if discovery_page_external or discovery_page_external == "true":
+            if discovery_page_external:
                 service = ItWalletService(session)
                 try:
                     authorization_endpoint = service.discovery_page()

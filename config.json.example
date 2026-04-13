@@ -1,6 +1,6 @@
 {
   "app": {
-    "discovery_page_external":"true", # That means that the discovery page will be accessible from outside wallet instance, if set to false it will be only accessible from inside
+    "discovery_page_external": true, # That means that the discovery page will be accessible from outside wallet instance, if set to false it will be only accessible from inside
     "secret_key": "s3cr3t",
     "oid_fed_list_path": "/list",
     "oid_fed_well_known_path": "/.well-known/openid-federation",

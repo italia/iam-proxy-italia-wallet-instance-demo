@@ -293,7 +293,7 @@ class ItWalletService:
 
         if not (provider_ec := app_state.ec_store.get(self.provider_service.wallet_provider_url)): # find 1st wallet_provider
             raise ValueError("The provider wallet is not present in the wallet")
-        pub_core_jwks = extract_claim(provider_ec, "metadata.wallet_provider.jwks.keys")
+        pub_core_jwks = extract_claim(provider_ec, f"metadata.{METADATA_TYPE_WALLET_PROVIDER}.jwks.keys")
         wallet_attestation_jwt = self._get_or_create_app_attestation(self.provider_service.wallet_provider_url, pub_core_jwks)
 
         # Generazione PKCE
@@ -410,7 +410,7 @@ class ItWalletService:
             self.federation_service.validate_entity_configuration(payload= trust_root_entity_configuration, expected_url= trust_anchor_url, metadata_types= [METADATA_TYPE_FEDERATION_ENTITY])
             app_state.ec_store.add(trust_anchor_url, trust_root_entity_configuration)
 
-        authorization_server_ec = self.authorization_service.authorization_ec(self.authorization_service.authorization_list(trust_anchor_url),extract_claim(current_app.config, "wallet_provider.public_url"))
+        authorization_server_ec = self.authorization_service.authorization_ec(self.authorization_service.authorization_list(trust_anchor_url),extract_claim(current_app.config, "wallet_instance.oauth_authorization_server"))
 
         app_state.ec_store.add(self.authorization_service.authorization_server_url, authorization_server_ec)
 
@@ -619,10 +619,10 @@ class ItWalletService:
             raise ValueError("Cant generate the Wallet Attestation PoP JWT")
         logger.info(f"client_attestation_pop_jwt: {client_attestation_pop_jwt}.")
 
-        if not (provider_ec := app_state.ec_store.all_values("metadata.wallet_provider")): # find 1st wallet_provider
+        if not (provider_ec := app_state.ec_store.all_values(f"metadata.{METADATA_TYPE_WALLET_PROVIDER}")): # find 1st wallet_provider
             raise ValueError("The provider wallet is not present in the wallet")
 
-        pub_core_jwks = extract_claim(provider_ec[0], "metadata.wallet_provider.jwks.keys")
+        pub_core_jwks = extract_claim(provider_ec[0], f"metadata.{METADATA_TYPE_WALLET_PROVIDER}.jwks.keys")
         wallet_attestation_jwt = self._get_or_create_app_attestation(provider_ec[0]["iss"], pub_core_jwks)
 
         # Generazione PKCE
@@ -1174,9 +1174,9 @@ class ItWalletService:
         logger.info(f"client_attestation_pop_jwt: {client_attestation_pop_jwt}")
 
 
-        if not (provider_ec := app_state.ec_store.all_values("metadata.wallet_provider")):  # find 1st wallet_provider
+        if not (provider_ec := app_state.ec_store.all_values(f"metadata.{METADATA_TYPE_WALLET_PROVIDER}")):  # find 1st wallet_provider
             raise ValueError("The provider wallet is not present in the wallet")
-        pub_core_jwks = extract_claim(provider_ec[0], "metadata.wallet_provider.jwks.keys")
+        pub_core_jwks = extract_claim(provider_ec[0], f"metadata.{METADATA_TYPE_WALLET_PROVIDER}.jwks.keys")
         wallet_attestation_jwt = self._get_or_create_app_attestation(provider_ec[0]["iss"], pub_core_jwks)
 
         dpop_token_request = generate_dpop_jwt(

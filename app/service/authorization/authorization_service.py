@@ -44,7 +44,7 @@ class AuthorizationService(BaseService):
         return params
 
     def __check_authorization_server(self, authorization_server_list: list[str], authorization_server: str):
-        logger.info(f"Entering method: __check_authorization_server. Params [authorization_server_list: {authorization_server_list}, authorization_servdr: {authorization_servdr}]")
+        logger.info(f"Entering method: __check_authorization_server. Params [authorization_server_list: {authorization_server_list}, authorization_servdr: {authorization_server}]")
         authorization_server_url = None
         for auth_server in authorization_server_list:
             if auth_server == authorization_server:
