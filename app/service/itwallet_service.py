@@ -116,7 +116,7 @@ logger = logging.getLogger(__name__)
 class ItWalletService:
     """Service for IT Wallet credential issuance and presentation flows."""
 
-    def __init__(self, session):
+    def __init__(self, session, external_discovery: bool = False):
         """Initialize service with Flask session. Loads proxies from config."""
         self.session = session
         self.proxies, self.no_proxy_domains = get_proxies_from_config()
@@ -128,6 +128,7 @@ class ItWalletService:
         self.provider_service = ProviderService(current_app.config, self.proxies, self.no_proxy_domains)
         self.issuer_service = IssuerService(current_app.config, self.proxies, self.no_proxy_domains)
         self.authorization_service = AuthorizationService(current_app.config, self.proxies, self.no_proxy_domains)
+        self.external_discovery = external_discovery
 
     def getOnboardedRelyingParties(self):
         """Return list of onboarded Relying Parties (Credential Verifiers) from trust root."""
@@ -219,16 +220,11 @@ class ItWalletService:
         )
 
         if not app_state.ec_store.exists(trust_root_url):
-            # DEPRECATED
-            # trust_root_ec = self._entity_configuration_management(trust_root_url, [METADATA_TYPE_FEDERATION_ENTITY])
             trust_root_entity_configuration = self.federation_service.issuer_ec(trust_root_url)
             self.federation_service.validate_entity_configuration(payload= trust_root_entity_configuration, expected_url= trust_root_url, metadata_types= [METADATA_TYPE_FEDERATION_ENTITY])
             app_state.ec_store.add(trust_root_url, trust_root_entity_configuration)
             logger.info(f"trust_root_url: {trust_root_url}")
 
-        #  DEPRECATED
-        # if not (wallet_provider_url := self._retrieve_wallet_provider_ec(trust_root_url)):
-        #     raise ValueError("Retrieving wallet_provider entity configuration failed")
 
         wallet_provider_entity_configuration = self.provider_service.wallet_provider_ec(self.provider_service.wallet_provider_list(trust_root_url),extract_claim(current_app.config, "wallet_provider.public_url"))
         self.provider_service.validate_entity_configuration(expected_url=extract_claim(current_app.config, "wallet_provider.public_url"), payload=wallet_provider_entity_configuration, hint= trust_root_url, metadata_types= [METADATA_TYPE_FEDERATION_ENTITY, METADATA_TYPE_WALLET_PROVIDER])
@@ -237,28 +233,20 @@ class ItWalletService:
         credential_issuer_list = self.issuer_service.credential_issuer_list(trust_root_url)
         app_state.ec_store.add("credential_issuer_list", credential_issuer_list)
 
-        # DEPRECATED
-        # params = {"entity_type": METADATA_TYPE_CREDENTIAL_ISSUER}
-        # oid_fed_list_reponse = oid_fed_list(
-        #     base_url=trust_root_url,
-        #     query_string=f"?{urlencode(params)}",
-        #     proxies=self.proxies,
-        #     no_proxy_domains=self.no_proxy_domains,
-        # )
-        # # codeql[py/log-injection]
-        # logger.info("📄 oid_fed_list response: %s", sanitize_for_logging(oid_fed_list_reponse))
+        pid_provider_ec = self.authorization_service.authorization_ec(self.authorization_service.authorization_list(trust_root_url),extract_claim(current_app.config, "wallet_instance.oauth_authorization_server"))
+        app_state.ec_store.add(self.authorization_service.authorization_server_url, authorization_server_ec)
 
+        # return authorization_server_ec.get("metadata",{}).get(METADATA_TYPE_AUTHORIZATION_SERVER,{}).get("authorization_endpoint")
 
-        # DEPRECATED
         # pid_provider_ec = self._find_pid_provider_and_process_issuers(
-        #     oid_fed_list_reponse, cred_config_id, trust_root_url
+        #     credential_issuer_list, cred_config_id, trust_root_url
         # )
 
-        pid_provider_ec = self._find_pid_provider_and_process_issuers(
-            credential_issuer_list, cred_config_id, trust_root_url
-        )
+        # pid_provider_url = self._get_pid_provider_url(pid_provider_ec, cred_config_id)
+        pid_provider_url = authorization_server_ec.get("metadata", {}).get(METADATA_TYPE_AUTHORIZATION_SERVER, {}).get(
+            "authorization_endpoint")
 
-        pid_provider_url = self._get_pid_provider_url(pid_provider_ec, cred_config_id)
+
         logger.info(
             "Trovata entità %s che rilascia credenziali di tipo %s",
             sanitize_for_logging(pid_provider_url),
@@ -273,15 +261,12 @@ class ItWalletService:
         if not wallet_private_key or not wallet_public_key:
             raise ValueError("Fallita generazione coppia di chiavi pvt e pub del wallet")
 
-        # Calcola client_id (thumbprint)
         wallet_client_id = get_thumbprint_from_private_key(wallet_private_key)
-        # codeql[py/log-injection]
         logger.debug(
             "Calcolato client id del wallet come thumbprint della sua chiave pvt: %s",
             sanitize_for_logging(wallet_client_id),
         )
 
-        # Generazione Wallet Attestation PoP jwt
         logger.info("Generazione nuova Wallet Attestation PoP JWT per il wallet...")
         client_attestation_pop_jwt = generate_wallet_attestation_pop_jwt(
             private_key=wallet_private_key, audience=pid_provider_url
@@ -293,6 +278,7 @@ class ItWalletService:
 
         if not (provider_ec := app_state.ec_store.get(self.provider_service.wallet_provider_url)): # find 1st wallet_provider
             raise ValueError("The provider wallet is not present in the wallet")
+
         pub_core_jwks = extract_claim(provider_ec, f"metadata.{METADATA_TYPE_WALLET_PROVIDER}.jwks.keys")
         wallet_attestation_jwt = self._get_or_create_app_attestation(self.provider_service.wallet_provider_url, pub_core_jwks)
 
@@ -380,7 +366,7 @@ class ItWalletService:
         }
 
         # Aggiungi 'idphint' solo se è valorizzato (non None e non stringa vuota)
-        if initialize_flow_idphint:
+        if not self.external_discovery and initialize_flow_idphint:
             params["idphint"] = initialize_flow_idphint
 
         # Build authorization URL
@@ -395,6 +381,7 @@ class ItWalletService:
 
         return {"success": True, "data": {"redirect_url": authorization_url}}
 
+    # @TODO DEPRECATED
     def discovery_page(self):
         logger.info(f"Entering method: discovery_page. Params []")
 

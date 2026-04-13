@@ -140,16 +140,18 @@ def wallet_access():
 
             logger.info(f"session_id: {session_id} authenticated successfully.")
 
-            discovery_page_external = extract_claim(current_app.config, "app.discovery_page_external")
+            discovery_page_external = extract_claim(current_app.config, "app.wallet_instance.oauth_authorization_server")
 
             logger.info(f"discovery_page_external: {discovery_page_external}")
 
             if discovery_page_external:
-                service = ItWalletService(session)
+                app_state.selected_country = "IT"
+                app_state.selected_idp = None
+                service = ItWalletService(session, external_discovery=true)
                 try:
-                    authorization_endpoint = service.discovery_page()
-                    logger.info(f"Redirecting to discovery page at: {authorization_endpoint}")
-                    return redirect(authorization_endpoint)
+                    result = service.initialize_wallet(idp = None, country="IT")
+                    flash(jsonify(result), "success_message")
+                    return redirect(url_for("wallet_routes.wallet_home", session_id=session_id))
                 except ValueError as ve:
                     logger.error(f"Error, message: {ve}")
                     error_message = str(ve)

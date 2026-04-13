@@ -1,6 +1,5 @@
 {
   "app": {
-    "discovery_page_external": true, # That means that the discovery page will be accessible from outside wallet instance, if set to false it will be only accessible from inside
     "secret_key": "s3cr3t",
     "oid_fed_list_path": "/list",
     "oid_fed_well_known_path": "/.well-known/openid-federation",
@@ -21,7 +20,6 @@
       "iso_18045_basic"
     ],
     "certification": "https://registry.example.org",
-    "trust_anchor": "https://trust-anchor.example.org", # This parameter is used only the discovery page is enabled.
     "oauth_authorization_server":"https://iam-proxy-italia.example.org/OpenID4VP" # This parameter is used only the discovery page is enabled.
   },
   "wallet_provider": {
