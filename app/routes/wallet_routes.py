@@ -173,6 +173,14 @@ def wallet_home():
         return redirect(url_for("wallet_routes.wallet_access"))
 
     session_id = request.args.get("session_id", "")
+    init_error_message = request.args.get("init_error_message", "")
+    success_message = request.args.get("init_success_message", "")
+
+    if init_error_message:
+        flash(error_message, "init_error_message")
+    elif success_message:
+        flash(success_message, "init_success_message")
+
     selected_country = app_state.selected_country
     wallet_initialized = app_state.wallet_initialized
     credential_store = app_state.credential_store
@@ -208,26 +216,26 @@ def wallet_callback():
     else:
         logger.info("Ricevuta request GET %s senza query string", sanitize_for_logging(current_path))
 
-    session["query_params"] = dict(params_list)  # store params in session
-
+    session["query_params"] = dict(params_list)
     oauth_authorization_server = extract_claim(current_app.config, "wallet_instance.oauth_authorization_server")
-
     wallet_initialized = app_state.wallet_initialized
 
     if oauth_authorization_server and not wallet_initialized:
         logger.info("init wallet process")
         service = ItWalletService(session)
+        init_success_message = ""
+        init_error_message = ""
         try:
             service.complete_initialize_wallet()
-            flash("Wallet inizializzato con successo!","success_message")
+            init_success_message = "Wallet inizializzato con successo!"
         except ValueError as value_error:
             logger.error(f"Error, message: {value_error}")
-            flash(str(value_error),"error_message")
+            init_error_message = str(value_error)
         except Exception as exception:
             logger.error(f"Error, message: {exception}")
-            flash("Exception when call discovery page. Contact administrator.", "error_message")
+            init_error_message = "Exception when call discovery page. Contact administrator."
         session_id = request.args.get("session_id", "")
-        return redirect(url_for("wallet_routes.wallet_home", session_id=session_id))
+        return redirect(url_for("wallet_routes.wallet_home", session_id=session_id, init_success_message= init_success_message, init_error_message = init_error_message))
 
     return render_template("wallet_cb.html")
 

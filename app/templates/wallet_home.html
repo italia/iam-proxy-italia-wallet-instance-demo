@@ -79,12 +79,28 @@
       <div id="result"></div>
 <!--        </div>-->
 <!--      </div>-->
+      <div id="init_result">
+          {% if init_error_message %}
+            <div class="alert alert-danger d-flex align-items-center" role="alert">
+              <div>
+                <strong>Errore:</strong> {{ init_error_message }}
+              </div>
+            </div>
+          {% endif %}
+          {% if init_success_message %}
+            <div class="alert alert-success d-flex align-items-center" role="alert">
+              <div>
+                <strong>Successo:</strong> {{ init_success_message }}
+              </div>
+            </div>
+          {% endif %}
+      </div>
 
       <div id="overlay" style="display:none;">
         <div class="loader"></div>
       </div>
 
-        <div class="row" {% if wallet_initialized %}style="display:none;"{% endif %}>
+        <div class="row" {% if wallet_initialized and not init_error_message %}style="display:none;"{% endif %}>
           <div class="col-12 col-md-12 col-lg-12 mb-3 mb-md-4">
             <!--start it-card-->
             <article class="it-card rounded border shadow-sm mb-3">
@@ -235,7 +251,7 @@
                </div>
          </div>
     </form>
-    <div class="d-grid gap-2 my-4">
+    <div class="d-grid gap-2 my-4" {% if not init_error_message %}style="display:none;"{% endif %}>
         <button id="init-btn" class="btn btn-primary"{% if wallet_initialized %} style="display:none;"{% endif %}{% if not wallet_initialized %} disabled{% endif %}>
             <span class="rounded-icon">
               <svg class="icon icon-white">
