@@ -140,11 +140,11 @@ def wallet_access():
 
             logger.info(f"session_id: {session_id} authenticated successfully.")
 
-            discovery_page_external = extract_claim(current_app.config, "app.discovery_page_external")
+            oauth_authorization_server = extract_claim(current_app.config, "wallet_instance.oauth_authorization_server")
 
-            logger.info(f"discovery_page_external: {discovery_page_external}")
+            wallet_initialized = app_state.wallet_initialized
 
-            if discovery_page_external:
+            if oauth_authorization_server and not wallet_initialized:
                 app_state.selected_country = "IT"
                 app_state.selected_idp = None
                 service = ItWalletService(session, external_discovery=True)
@@ -210,22 +210,23 @@ def wallet_callback():
 
     session["query_params"] = dict(params_list)  # store params in session
 
-    discovery_page_external = extract_claim(current_app.config, "app.discovery_page_external")
+    oauth_authorization_server = extract_claim(current_app.config, "wallet_instance.oauth_authorization_server")
 
     wallet_initialized = app_state.wallet_initialized
 
-    if discovery_page_external and not wallet_initialized:
+    if oauth_authorization_server and not wallet_initialized:
         logger.info("init wallet process")
         service = ItWalletService(session)
         try:
             service.complete_initialize_wallet()
-            flash("Wallet inizializzato con successo!",success_message)
+            flash("Wallet inizializzato con successo!","success_message")
         except ValueError as value_error:
             logger.error(f"Error, message: {value_error}")
-            flash(str(ve),"error_message")
+            flash(str(value_error),"error_message")
         except Exception as exception:
             logger.error(f"Error, message: {exception}")
             flash("Exception when call discovery page. Contact administrator.", "error_message")
+        session_id = request.args.get("session_id", "")
         return redirect(url_for("wallet_routes.wallet_home", session_id=session_id))
 
     return render_template("wallet_cb.html")

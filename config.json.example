@@ -1,6 +1,5 @@
 {
   "app": {
-    "discovery_page_external": true,
     "secret_key": "s3cr3t",
     "oid_fed_list_path": "/list",
     "oid_fed_well_known_path": "/.well-known/openid-federation",
@@ -21,7 +20,7 @@
       "iso_18045_basic"
     ],
     "certification": "https://registry.example.org",
-    "oauth_authorization_server":"https://iam-proxy-italia.example.org/OpenID4VP" # This parameter is used only the discovery page is enabled.
+    "oauth_authorization_server":"https://iam-proxy-italia.example.org/OpenID4VP"
   },
   "wallet_provider": {
     "wallet_link": "https://wallet-solution.example.org",

@@ -406,18 +406,17 @@ class ItWalletService:
         """
         Metodo pubblico per completare l'Inizializzazione dell'IT Wallet.
         """
-        logger.info("➡️  Richiesta di completamento dell'Inizializzazione del wallet")
+        logger.info("Entering method: complete_initialize_wallet. Params []")
 
         # Recupera la tipologia di credenziale da richiedere per l'inizializazzione del wallet dalla configurazione
         CREDENTIAL_CONFIGURATION_ID_FOR_INITIALIZING = extract_claim(
             current_app.config, "metadata.initialize_flow.credential_configuration_id"
         )
 
-        # recupero selected_country dalla memoria
         country = app_state.selected_country
 
-        # recupero trust_root_url dalla configurazione
-        query_trust_root = f"ms_trust_configuration.{country}.trust_root"
+        query_trust_root = f"ms_rust_configuration.{country}.trust_root"
+
         trust_root_url = extract_claim(current_app.config, query_trust_root)
 
         if not trust_root_url:
