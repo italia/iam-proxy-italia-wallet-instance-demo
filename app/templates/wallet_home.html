@@ -100,7 +100,7 @@
         <div class="loader"></div>
       </div>
 
-        <div class="row" {% if wallet_initialized or not init_error_message %}style="display:none;"{% endif %}>
+        <div id="state_container" class="row" {% if wallet_initialized or init_error_message %}style="display:none;"{% endif %}>
           <div class="col-12 col-md-12 col-lg-12 mb-3 mb-md-4">
             <!--start it-card-->
             <article class="it-card rounded border shadow-sm mb-3">
@@ -251,7 +251,7 @@
                </div>
          </div>
     </form>
-    <div class="d-grid gap-2 my-4" {% if not init_error_message %}style="display:none;"{% endif %}>
+    <div id="buttons_containers" class="d-grid gap-2 my-4" {% if init_error_message %}style="display:none;"{% endif %}>
         <button id="init-btn" class="btn btn-primary"{% if wallet_initialized %} style="display:none;"{% endif %}{% if not wallet_initialized %} disabled{% endif %}>
             <span class="rounded-icon">
               <svg class="icon icon-white">
@@ -330,6 +330,7 @@
     const result = document.getElementById("result");
     const spinner = document.getElementById("overlay");
     const selectElement = document.querySelector('#select');
+    const INIT_ERROR_MESSAGE = "{{ init_error_message|escape }}";
 
     document.addEventListener('DOMContentLoaded', function () {
       new Splide('.it-carousel-wrapper', {
@@ -349,8 +350,39 @@
       spinner.hasPopupFocusHandler = true;
     }
 
+    function handleInitErrorUI() {
+      if (!INIT_ERROR_MESSAGE) return;
+      console.log("Init error rilevato:", INIT_ERROR_MESSAGE);
+      const idpDiv = document.getElementById("idp");
+      const state_container = document.getElementById("state_container");
+      const buttonsContainer = document.getElementById("buttons_containers");
+      if (idpDiv) {
+        const radios = idpDiv.querySelectorAll("input[type='radio']");
+        radios.forEach(radio => radio.disabled = true);
+        idpDiv.style.opacity = "0.5";
+        idpDiv.style.pointerEvents = "none";
+        state_container.style.display = "none";
+      }
+      const select = document.getElementById("select");
+      if (select) {
+        select.disabled = true;
+      }
+      if (buttonsContainer) {
+        const buttons = buttonsContainer.querySelectorAll("button, a");
+        buttons.forEach(btn => {
+          btn.disabled = true;
+          btn.classList.add("disabled");
+        });
+        buttonsContainer.style.opacity = "0.5";
+        buttonsContainer.style.pointerEvents = "none";
+        buttonsContainer.style.display = "none";
+      }
+    }
+
     window.onload = function () {
       console.log("Tutto caricato");
+
+      handleInitErrorUI();
 
       // Chiudi popup CRED con ESC
       document.addEventListener("keydown", (e) => {
