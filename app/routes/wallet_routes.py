@@ -134,9 +134,13 @@ def wallet_access():
         if app_state.stored_hashed_pin and bcrypt.checkpw(pin_attempt.encode(), app_state.stored_hashed_pin):
             session["pin_authenticated"] = True
 
-            session_id = generate_nonce()
-
-            session["session_id"] = session_id
+            if not request.args.get("session_id"):
+                logger.info("No session_id in request, generating new one.")
+                session_id = generate_nonce()
+                session["session_id"] = session_id
+            else:
+                session_id = request.args.get("session_id")
+                session["session_id"] = session_id
 
             logger.info(f"session_id: {session_id} authenticated successfully.")
 
@@ -169,8 +173,15 @@ def wallet_access():
 
 @wallet_routes.route("/home", methods=["GET"])
 def wallet_home():
+    logger.info(f"Entering method: wallet_home. Params [session_id: {request.args.get("session_id", "")}]")
+
     if not session.get("pin_authenticated"):
         return redirect(url_for("wallet_routes.wallet_access"))
+
+    oauth_authorization_server = extract_claim(current_app.config, "wallet_instance.oauth_authorization_server")
+    wallet_initialized = app_state.wallet_initialized
+    if oauth_authorization_server and not wallet_initialized:
+        return render_template("wallet_access.html")
 
     session_id = request.args.get("session_id", "")
     init_error_message = request.args.get("init_error_message", "")
@@ -182,7 +193,6 @@ def wallet_home():
         flash(init_success_message, "init_success_message")
 
     selected_country = app_state.selected_country
-    wallet_initialized = app_state.wallet_initialized
     credential_store = app_state.credential_store
     credential_keys = credential_store.get_store()
 
