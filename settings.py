@@ -28,6 +28,7 @@ DEFAULT_CORRELATION_ID = _get("default_correlation_id")
 
 # Domain / OAuth / OIDC / metadata
 WALLET_ATTESTATION_NAME = _get("wallet_attestation_name")
+WALLET_UNIT_ATTESTATION_NAME = _get("wallet_unit_attestation_name")
 AAL_VALUE_BASIC = _get("aal_value_basic")
 AAL_VALUE_MEDIUM = _get("aal_value_medium")
 AAL_VALUE_HIGH = _get("aal_value_high")

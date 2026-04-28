@@ -61,7 +61,6 @@ from app.utils.itwalletUtils import (
     generate_dpop_jwt,
     generate_par_request_object_jwt,
     generate_proof_jwt,
-    generate_request_object_jwt,
     generate_response_uri_request_jwe,
     generate_response_uri_request_jws,
     generate_status_assertion_request_object_jwt,
@@ -107,7 +106,7 @@ from settings import (
     PRESENTATION_RESPONSE_MODE_DIRECT_POST_JWT,
     PRESENTATION_RESPONSE_TYPE_VP_TOKEN,
     SD_JWT_PREFIX,
-    WALLET_ATTESTATION_NAME, METADATA_TYPE_WALLET_PROVIDER,
+    WALLET_ATTESTATION_NAME, METADATA_TYPE_WALLET_PROVIDER, WALLET_UNIT_ATTESTATION_NAME,
 )
 
 logger = logging.getLogger(__name__)
@@ -275,7 +274,7 @@ class ItWalletService:
             raise ValueError("The provider wallet is not present in the wallet")
 
         pub_core_jwks = extract_claim(provider_ec, f"metadata.{METADATA_TYPE_WALLET_PROVIDER}.jwks.keys")
-        wallet_attestation_jwt = self._get_or_create_app_attestation(self.provider_service.wallet_provider_url, pub_core_jwks)
+        wallet_attestation_jwt, _ = self._get_or_create_wallet_attestations(self.provider_service.wallet_provider_url, pub_core_jwks)
 
         # Generazione PKCE
         pkce = generate_pkce_pair()
@@ -295,22 +294,21 @@ class ItWalletService:
         authorization_details = [{"type": "openid_credential", "credential_configuration_id": cred_config_id}]
 
         initialize_flow_response_type = extract_claim(current_app.config, "metadata.initialize_flow.response_type")
-        initialize_flow_response_mode = extract_claim(current_app.config, "metadata.initialize_flow.response_mode")
         initialize_flow_redirect_uri = extract_claim(current_app.config, "metadata.initialize_flow.redirect_uri")
 
         session_id = self.session.get("session_id")
         if not session_id:
             raise ValueError("Sessione non inizializzata")
 
-        request_object_jwt = generate_request_object_jwt(
+        request_object_jwt = generate_par_request_object_jwt(
             issuer_private_key=wallet_private_key,
             audience=pid_provider_url,
             state=session_id,
             code_challenge=pkce["code_challenge"],
             code_challenge_method=pkce["code_challenge_method"],
             response_type=initialize_flow_response_type,
-            response_mode=initialize_flow_response_mode,
             redirect_uri=initialize_flow_redirect_uri,
+            scope="pid",
             authorization_details=authorization_details,
         )
         if not request_object_jwt:
@@ -608,7 +606,7 @@ class ItWalletService:
             raise ValueError("The provider wallet is not present in the wallet")
 
         pub_core_jwks = extract_claim(provider_ec[0], f"metadata.{METADATA_TYPE_WALLET_PROVIDER}.jwks.keys")
-        wallet_attestation_jwt = self._get_or_create_app_attestation(provider_ec[0]["iss"], pub_core_jwks)
+        wallet_attestation_jwt, _ = self._get_or_create_wallet_attestations(provider_ec[0]["iss"], pub_core_jwks)
 
         # Generazione PKCE
         pkce = generate_pkce_pair()
@@ -645,6 +643,7 @@ class ItWalletService:
             code_challenge_method=pkce["code_challenge_method"],
             response_type=credential_flow_response_type,
             redirect_uri=credential_flow_redirect_uri,
+            scope="mDL", #todo check it
             authorization_details=authorization_details,
         )
         if not request_object_jwt:
@@ -1162,7 +1161,7 @@ class ItWalletService:
         if not (provider_ec := app_state.ec_store.all_values(f"metadata.{METADATA_TYPE_WALLET_PROVIDER}")):  # find 1st wallet_provider
             raise ValueError("The provider wallet is not present in the wallet")
         pub_core_jwks = extract_claim(provider_ec[0], f"metadata.{METADATA_TYPE_WALLET_PROVIDER}.jwks.keys")
-        wallet_attestation_jwt = self._get_or_create_app_attestation(provider_ec[0]["iss"], pub_core_jwks)
+        wallet_attestation_jwt, _ = self._get_or_create_wallet_attestations(provider_ec[0]["iss"], pub_core_jwks)
 
         dpop_token_request = generate_dpop_jwt(
             issuer_private_key=wallet_private_key, http_method="POST", http_url=authorization_server_token_url
@@ -1233,12 +1232,15 @@ class ItWalletService:
 
         return dpop_bound_access_token, matching_identifiers
 
-    def _get_or_create_app_attestation(self, provider_url: str, provider_jwks: list[dict]) -> str:
+    def _get_or_create_wallet_attestations(self, provider_url: str, provider_jwks: list[dict]) -> tuple[str, str]:
         """Get wallet attestation JWT from store, or create if missing/expired. Returns JWT string."""
         logger.info(f"Entering method: _get_or_create_wallet_attestation. Params [provider_url: {provider_url}]")
 
         wa_id = JWT_PREFIX + "_" + WALLET_ATTESTATION_NAME
-        jwt_val = app_state.ec_store.get(wa_id)
+        w_unit_att_is = JWT_PREFIX + "_" + WALLET_UNIT_ATTESTATION_NAME
+
+        jwt_app_attestation = app_state.ec_store.get(wa_id) or ""
+        jwt_unit_attestation = app_state.ec_store.get(w_unit_att_is) or ""
 
         def validate_jws(value):
             try:
@@ -1251,12 +1253,15 @@ class ItWalletService:
                 logger.error("Validation of the app wallet attestation jwt failed: {}".format(e))
                 return None
 
-        if not jwt_val or not validate_jws(jwt_val):
+        if not validate_jws(jwt_app_attestation) or not validate_jws(jwt_unit_attestation):
             attestations = self._retrieve_attestations_jws(provider_url)
-            if app_attestation := attestations.get("wallet_app_attestation"):
-                app_state.ec_store.add(wa_id, app_attestation)
-                jwt_val = app_attestation
-        return jwt_val
+            jwt_app_attestation = attestations.get("wallet_app_attestation", "")
+            jwt_unit_attestation = attestations.get("wallet_unit_attestation", "")
+            if jwt_app_attestation and jwt_unit_attestation:
+                app_state.ec_store.add(wa_id, jwt_app_attestation)
+                app_state.ec_store.add(w_unit_att_is, jwt_unit_attestation)
+
+        return jwt_app_attestation, jwt_unit_attestation
 
     def _decode_and_validate_single_credential(
         self, cred: dict, index: int, credential_id: str, credential_configuration_id: str, credential_issuer_jwks: dict
@@ -1289,6 +1294,7 @@ class ItWalletService:
         credential_url: str,
         wallet_private_key,
         dpop_bound_access_token: str,
+        key_attestation: str
     ) -> list:
         """Fetch credentials for given credential_id via nonce+proof+request. Returns list of credential dicts."""
         logger.info(
@@ -1297,7 +1303,8 @@ class ItWalletService:
 
         nonce_resp = request_nonce(url=nonce_url, proxies=self.proxies, no_proxy_domains=self.no_proxy_domains)
 
-        proof_jwt = generate_proof_jwt(issuer_private_key=wallet_private_key, audience=credential_url, nonce=nonce_resp)
+        proof_jwt = generate_proof_jwt(issuer_private_key=wallet_private_key, audience=credential_url, nonce=nonce_resp,
+                                       key_attestation=key_attestation)
 
         dpop_req = generate_dpop_jwt(
             issuer_private_key=wallet_private_key,
@@ -1313,7 +1320,7 @@ class ItWalletService:
             access_token=dpop_bound_access_token,
             dpop_proof_jwt=dpop_req,
             proxies=self.proxies,
-            no_proxy_domains=self.no_proxy_domains,
+            no_proxy_domains=self.no_proxy_domains
         )
 
         credentials = cred_resp.get("credentials", [])
@@ -1341,6 +1348,11 @@ class ItWalletService:
         if not wallet_private_key or not wallet_public_key:
             raise ValueError("Generation Key Exception: wallet_private_key or wallet_public_key empty")
 
+        if not (provider_ec := app_state.ec_store.all_values(f"metadata.{METADATA_TYPE_WALLET_PROVIDER}")):  # find 1st wallet_provider
+            raise ValueError("The provider wallet is not present in the wallet")
+        pub_core_jwks = extract_claim(provider_ec[0], f"metadata.{METADATA_TYPE_WALLET_PROVIDER}.jwks.keys")
+        _, key_attestation = self._get_or_create_wallet_attestations(provider_ec[0]["iss"], pub_core_jwks)
+
         wallet_client_id = get_thumbprint_from_private_key(wallet_private_key)
 
         logger.debug(f"wallet_client_id: {wallet_client_id}")
@@ -1356,6 +1368,7 @@ class ItWalletService:
                 credential_issuer_credential_url,
                 wallet_private_key,
                 dpop_bound_access_token,
+                key_attestation
             )
             for index, cred in enumerate(credentials, start=1):
                 result = self._decode_and_validate_single_credential(

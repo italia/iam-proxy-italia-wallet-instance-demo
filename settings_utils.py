@@ -24,7 +24,8 @@ DEFAULTS = {
     "correlation_id_fallback": "N/A",
     "default_correlation_id": "default-id",
     # Domain / OAuth / OIDC
-    "wallet_attestation_name": "WalletAttestation",
+    "wallet_attestation_name": "WalletInstanceAttestation",
+    "wallet_unit_attestation_name": "WalletUnitAttestation",
     "aal_value_basic": "https://trust-list.eu/aal/basic",
     "aal_value_medium": "https://trust-list.eu/aal/medium",
     "aal_value_high": "https://trust-list.eu/aal/high",
