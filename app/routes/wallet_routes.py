@@ -180,12 +180,21 @@ def wallet_home():
 
     oauth_authorization_server = extract_claim(current_app.config, "wallet_instance.oauth_authorization_server")
     wallet_initialized = app_state.wallet_initialized
-    if oauth_authorization_server and not wallet_initialized:
-        return render_template("wallet_access.html")
 
     session_id = request.args.get("session_id", "")
     init_error_message = request.args.get("init_error_message", "")
     init_success_message = request.args.get("init_success_message", "")
+
+    show_wallet_access = (
+            oauth_authorization_server
+            and not wallet_initialized
+            and not init_error_message
+            and not init_success_message
+    )
+
+    if show_wallet_access:
+        return render_template("wallet_access.html")
+
 
     if init_error_message:
         flash(init_error_message, "init_error_message")
