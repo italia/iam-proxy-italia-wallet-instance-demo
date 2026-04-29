@@ -211,25 +211,14 @@ class ItWalletService:
         init_response_type = extract_claim(current_app.config, "metadata.initialize_flow.response_type")
         validate_response_type(init_response_type, [AUTH_RESPONSE_TYPE_CODE], "inizializzazione wallet")
 
-        trust_root_url = extract_claim(current_app.config, f"ms_trust_configuration.{country}.trust_root")
-        if not trust_root_url:
-            raise ValueError(f"Nessun Trust root per il paese {country}")
+        trust_root_url = self._get_trust_root_url(country)
         logger.info(
             "Trust root individuato per il paese %s: %s",
             sanitize_for_logging(country),
             sanitize_for_logging(trust_root_url),
         )
-
-        if not app_state.ec_store.exists(trust_root_url):
-            trust_root_entity_configuration = self.federation_service.issuer_ec(trust_root_url)
-            self.federation_service.validate_entity_configuration(payload= trust_root_entity_configuration, expected_url= trust_root_url, metadata_types= [METADATA_TYPE_FEDERATION_ENTITY])
-            app_state.ec_store.add(trust_root_url, trust_root_entity_configuration)
-            logger.info(f"trust_root_url: {trust_root_url}")
-
-
-        wallet_provider_entity_configuration = self.provider_service.wallet_provider_ec(self.provider_service.wallet_provider_list(trust_root_url),extract_claim(current_app.config, "wallet_provider.public_url"))
-        self.provider_service.validate_entity_configuration(expected_url=extract_claim(current_app.config, "wallet_provider.public_url"), payload=wallet_provider_entity_configuration, hint= trust_root_url, metadata_types= [METADATA_TYPE_FEDERATION_ENTITY, METADATA_TYPE_WALLET_PROVIDER])
-        app_state.ec_store.add(self.provider_service.wallet_provider_url, wallet_provider_entity_configuration)
+        self._ensure_trust_root_ec(trust_root_url)
+        self._load_wallet_provider_ec(trust_root_url)
 
         credential_issuer_list = self.issuer_service.credential_issuer_list(trust_root_url)
         app_state.ec_store.add("credential_issuer_list", credential_issuer_list)
@@ -344,19 +333,7 @@ class ItWalletService:
         if not request_uri:
             raise ValueError("PAR Response non contiene un claim 'request_uri'")
 
-        oauth_authorization_server_url = extract_claim(current_app.config, "wallet_instance.oauth_authorization_server")
-
-        pid_provider_authorization_url = ""
-
-        if not oauth_authorization_server_url:
-            oauth_authorization_server = self.authorization_service.authorization_ec(
-                self.authorization_service.authorization_list(trust_root_url),
-                oauth_authorization_server_url)
-            app_state.ec_store.add(self.authorization_service.authorization_server_url, oauth_authorization_server)
-            pid_provider_authorization_url = self.authorization_service.authorization_server_url
-        else:
-            query_filter = f"metadata.{METADATA_TYPE_AUTHORIZATION_SERVER}.authorization_endpoint"
-            pid_provider_authorization_url = extract_claim(pid_provider_ec, query_filter)
+        pid_provider_authorization_url = self._get_pid_provider_authorization_url(pid_provider_ec, trust_root_url)
 
 
         # query_filter = f"metadata.{METADATA_TYPE_AUTHORIZATION_SERVER}.authorization_endpoint"
@@ -366,9 +343,7 @@ class ItWalletService:
             "request_uri": request_uri,
         }
 
-        if not self.external_discovery:
-            initialize_flow_idphint = extract_claim(current_app.config, f"metadata.initialize_flow.idphints.{idp}")
-            params["idphint"] = initialize_flow_idphint
+        self._maybe_add_initialize_idphint(params, idp)
 
         authorization_url = f"{pid_provider_authorization_url}?{urlencode(params)}"
 
@@ -379,6 +354,56 @@ class ItWalletService:
         self._print_session_data()
 
         return {"success": True, "data": {"redirect_url": authorization_url}}
+
+    def _get_trust_root_url(self, country: str) -> str:
+        trust_root_url = extract_claim(current_app.config, f"ms_trust_configuration.{country}.trust_root")
+        if not trust_root_url:
+            raise ValueError(f"Nessun Trust root per il paese {country}")
+        return trust_root_url
+
+    def _ensure_trust_root_ec(self, trust_root_url: str) -> None:
+        if app_state.ec_store.exists(trust_root_url):
+            return
+        trust_root_entity_configuration = self.federation_service.issuer_ec(trust_root_url)
+        self.federation_service.validate_entity_configuration(
+            payload=trust_root_entity_configuration,
+            expected_url=trust_root_url,
+            metadata_types=[METADATA_TYPE_FEDERATION_ENTITY],
+        )
+        app_state.ec_store.add(trust_root_url, trust_root_entity_configuration)
+        logger.info(f"trust_root_url: {trust_root_url}")
+
+    def _load_wallet_provider_ec(self, trust_root_url: str) -> None:
+        provider_public_url = extract_claim(current_app.config, "wallet_provider.public_url")
+        wallet_provider_entity_configuration = self.provider_service.wallet_provider_ec(
+            self.provider_service.wallet_provider_list(trust_root_url),
+            provider_public_url,
+        )
+        self.provider_service.validate_entity_configuration(
+            expected_url=provider_public_url,
+            payload=wallet_provider_entity_configuration,
+            hint=trust_root_url,
+            metadata_types=[METADATA_TYPE_FEDERATION_ENTITY, METADATA_TYPE_WALLET_PROVIDER],
+        )
+        app_state.ec_store.add(self.provider_service.wallet_provider_url, wallet_provider_entity_configuration)
+
+    def _get_pid_provider_authorization_url(self, pid_provider_ec: dict, trust_root_url: str) -> str:
+        oauth_authorization_server_url = extract_claim(current_app.config, "wallet_instance.oauth_authorization_server")
+        if oauth_authorization_server_url:
+            query_filter = f"metadata.{METADATA_TYPE_AUTHORIZATION_SERVER}.authorization_endpoint"
+            return extract_claim(pid_provider_ec, query_filter)
+        oauth_authorization_server = self.authorization_service.authorization_ec(
+            self.authorization_service.authorization_list(trust_root_url),
+            oauth_authorization_server_url,
+        )
+        app_state.ec_store.add(self.authorization_service.authorization_server_url, oauth_authorization_server)
+        return self.authorization_service.authorization_server_url
+
+    def _maybe_add_initialize_idphint(self, params: dict, idp: str) -> None:
+        if self.external_discovery:
+            return
+        initialize_flow_idphint = extract_claim(current_app.config, f"metadata.initialize_flow.idphints.{idp}")
+        params["idphint"] = initialize_flow_idphint
 
     # @TODO DEPRECATED
     def discovery_page(self):
@@ -651,14 +676,7 @@ class ItWalletService:
         if not request_object_jwt:
             raise ValueError("PAR Request Generate Exception")
 
-        query_filter = f"metadata.{METADATA_TYPE_AUTHORIZATION_SERVER}.pushed_authorization_request_endpoint"
-
-        logger.info(f"query_filter: {query_filter}")
-
-        eaa_provider_as_par_url = extract_claim(eaa_provider_ec, query_filter)
-
-        logger.info(f"sanitize_for_logging(eaa_provider_as_par_url): {sanitize_for_logging(eaa_provider_as_par_url)}")
-
+        eaa_provider_as_par_url = self._get_eaa_par_url(eaa_provider_ec)
         as_par_response = request_as_par(
             url=eaa_provider_as_par_url,
             wallet_attestation_jwt=wallet_attestation_jwt,
@@ -671,14 +689,8 @@ class ItWalletService:
 
         logger.info(f"Par response: {as_par_response}")
 
-        request_uri = as_par_response.get("request_uri")
-
-        if not request_uri:
-            raise ValueError("PAR Response from EAA Provider 'request_uri' not present")
-
-        query_filter = f"metadata.{METADATA_TYPE_AUTHORIZATION_SERVER}.authorization_endpoint"
-
-        eaa_provider_authorization_url = extract_claim(eaa_provider_ec, query_filter)
+        request_uri = self._require_request_uri(as_par_response, "PAR Response from EAA Provider 'request_uri' not present")
+        eaa_provider_authorization_url = self._get_eaa_authorization_url(eaa_provider_ec)
         params = {
             "client_id": wallet_client_id,
             "request_uri": request_uri,
@@ -713,15 +725,9 @@ class ItWalletService:
             f"eaa_provider_verifier_jwks: {json.dumps(eaa_provider_verifier_jwks, indent=2, ensure_ascii=False)}"
         )
 
-        try:
-            jwt_payload = decode_and_verify_jwt(authorize_response, eaa_provider_verifier_jwks)
-            credentials_requested, rp_state, rp_nonce, rp_response_uri = parse_rp_authorization_request(
-                jwt_payload, eaa_provider_url
-            )
-            logger.info("📄 Request_uri response JWT payload:")
-            logger.info(f"jwt_payload {json.dumps(jwt_payload, indent=2, ensure_ascii=False)}")
-        except ValueError as ve:
-            raise ValueError(f"Validation JWT failed: {ve}")
+        credentials_requested, rp_state, rp_nonce, rp_response_uri = self._decode_rp_authorization_response(
+            authorize_response, eaa_provider_verifier_jwks, eaa_provider_url
+        )
 
         # Memorizzazione in sessione del relying party state, nonce e response_uri
         self.session["rp_state"] = rp_state
@@ -729,6 +735,41 @@ class ItWalletService:
         self.session["rp_response_uri"] = rp_response_uri
 
         return {"success": True, "data": credentials_requested}
+
+    def _get_eaa_par_url(self, eaa_provider_ec: dict) -> str:
+        query_filter = f"metadata.{METADATA_TYPE_AUTHORIZATION_SERVER}.pushed_authorization_request_endpoint"
+        logger.info(f"query_filter: {query_filter}")
+        eaa_provider_as_par_url = extract_claim(eaa_provider_ec, query_filter)
+        logger.info(f"sanitize_for_logging(eaa_provider_as_par_url): {sanitize_for_logging(eaa_provider_as_par_url)}")
+        return eaa_provider_as_par_url
+
+    def _require_request_uri(self, response: dict, error_message: str) -> str:
+        request_uri = response.get("request_uri")
+        if not request_uri:
+            raise ValueError(error_message)
+        return request_uri
+
+    def _get_eaa_authorization_url(self, eaa_provider_ec: dict) -> str:
+        query_filter = f"metadata.{METADATA_TYPE_AUTHORIZATION_SERVER}.authorization_endpoint"
+        return extract_claim(eaa_provider_ec, query_filter)
+
+    def _decode_rp_authorization_response(
+        self,
+        authorize_response: str,
+        eaa_provider_verifier_jwks: dict,
+        eaa_provider_url: str,
+    ) -> tuple[list[dict], str, str, str]:
+        try:
+            jwt_payload = decode_and_verify_jwt(authorize_response, eaa_provider_verifier_jwks)
+        except ValueError as ve:
+            raise ValueError(f"Validation JWT failed: {ve}")
+
+        credentials_requested, rp_state, rp_nonce, rp_response_uri = parse_rp_authorization_request(
+            jwt_payload, eaa_provider_url
+        )
+        logger.info("📄 Request_uri response JWT payload:")
+        logger.info(f"jwt_payload {json.dumps(jwt_payload, indent=2, ensure_ascii=False)}")
+        return credentials_requested, rp_state, rp_nonce, rp_response_uri
 
     def complete_add_credential_wallet(self, credentials_presenting: list[dict]):
         """
@@ -1355,14 +1396,46 @@ class ItWalletService:
         pub_core_jwks = extract_claim(provider_ec[0], f"metadata.{METADATA_TYPE_WALLET_PROVIDER}.jwks.keys")
         _, key_attestation = self._get_or_create_wallet_attestations(provider_ec[0]["iss"], pub_core_jwks)
 
-        wallet_client_id = get_thumbprint_from_private_key(wallet_private_key)
+        issued = self._collect_last_valid_issued_credential(
+            credential_identifiers,
+            credential_issuer_nonce_url,
+            credential_issuer_credential_url,
+            wallet_private_key,
+            dpop_bound_access_token,
+            key_attestation,
+            credential_configuration_id,
+            credential_issuer_jwks,
+        )
+        if not issued:
+            logger.info("❌ Nessuna credenziale valida ricevuta")
+            raise ValueError("Nessuna credenziale valida ricevuta")
 
-        logger.debug(f"wallet_client_id: {wallet_client_id}")
+        credential_id, last_valid_credential, last_valid_credential_vct, last_valid_credential_claims = issued
+        app_state.wallet_initialized = True
+        app_state.credential_store.add(
+            credential_id, last_valid_credential, last_valid_credential_vct, last_valid_credential_claims
+        )
+        logger.info("✅ Salvata in memoria credenziale %s", sanitize_for_logging(credential_id))
+        self._maybe_fetch_status_assertion(
+            credential_id,
+            credential_issuer_status_assertion_url,
+            credential_issuer_jwks,
+            last_valid_credential,
+        )
+        return credential_id
 
-        last_valid_credential = None
-
-        last_valid_credential_claims = None
-
+    def _collect_last_valid_issued_credential(
+        self,
+        credential_identifiers: list,
+        credential_issuer_nonce_url: str,
+        credential_issuer_credential_url: str,
+        wallet_private_key,
+        dpop_bound_access_token: str,
+        key_attestation,
+        credential_configuration_id: str,
+        credential_issuer_jwks: dict,
+    ):
+        last_valid = None
         for credential_id in credential_identifiers:
             credentials = self._fetch_credentials_for_id(
                 credential_id,
@@ -1370,42 +1443,36 @@ class ItWalletService:
                 credential_issuer_credential_url,
                 wallet_private_key,
                 dpop_bound_access_token,
-                key_attestation
+                key_attestation,
             )
             for index, cred in enumerate(credentials, start=1):
                 result = self._decode_and_validate_single_credential(
                     cred, index, credential_id, credential_configuration_id, credential_issuer_jwks
                 )
                 if result:
-                    last_valid_credential, last_valid_credential_vct, last_valid_credential_claims = result
+                    last_valid = (credential_id, *result)
+        return last_valid
 
-        if last_valid_credential and last_valid_credential_claims:
-            # Salvataggio credenziale nel credential store presente in memoria Flask
-            app_state.wallet_initialized = True
-            app_state.credential_store.add(
-                credential_id, last_valid_credential, last_valid_credential_vct, last_valid_credential_claims
+    def _maybe_fetch_status_assertion(
+        self,
+        credential_id: str,
+        credential_issuer_status_assertion_url: str,
+        credential_issuer_jwks: dict,
+        last_valid_credential: str,
+    ) -> None:
+        if not credential_id.startswith(SD_JWT_PREFIX):
+            return
+        try:
+            self._status_assertion_management(
+                credential_issuer_status_assertion_url,
+                credential_issuer_jwks,
+                credential_id,
+                last_valid_credential,
             )
-
-            logger.info("✅ Salvata in memoria credenziale %s", sanitize_for_logging(credential_id))
-
-            if credential_id.startswith(SD_JWT_PREFIX):
-                try:
-                    # recupero status assertion
-                    self._status_assertion_management(
-                        credential_issuer_status_assertion_url,
-                        credential_issuer_jwks,
-                        credential_id,
-                        last_valid_credential,
-                    )
-                except Exception as e:
-                    logger.warning(
-                        f"⚠️  Non è stato possibile recuperare la status assertion per la credenziale {credential_id}: {e}"
-                    )
-
-            return credential_id
-        else:
-            logger.info("❌ Nessuna credenziale valida ricevuta")
-            raise ValueError("Nessuna credenziale valida ricevuta")
+        except Exception as e:
+            logger.warning(
+                f"⚠️  Non è stato possibile recuperare la status assertion per la credenziale {credential_id}: {e}"
+            )
 
     def _validate_and_get_status_assertion(self, responses: list, jwks: dict) -> tuple[str, dict]:
         """Validate status assertion responses, return (jwt, claims) of last valid. Raises if none valid."""
