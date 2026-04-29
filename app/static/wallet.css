@@ -3,6 +3,7 @@
 * {
   box-sizing: border-box;
 }
+
 /*
 body {
   background-color: #f4f6f9;
@@ -118,7 +119,7 @@ main p {
   align-items: center;
   justify-content: center;
   padding: 4px;
-  background-color: hsl(210, 100%, 40%);
+  background-color: hsl(210deg 100% 40%);
 }
 
 .state-flag {
@@ -1187,38 +1188,13 @@ main p {
   color: #c586c0;
 }
 
-#states {
-  margin-bottom: 1.5rem;
-}
-
-
-
-
-/* pallino interno checked */
-.form-check-input[type="radio"]:checked {
-  border-color: #0066cc !important;
-  background-color: #fff;
-}
-
-.form-check-input[type="radio"]:checked::before {
-  content: "";
-  position: absolute;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background-color: #0066cc;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-}
-
 /* focus pulito, niente bordo nero */
 .form-check-input[type="radio"]:focus,
 .form-check-input[type="radio"]:focus-visible,
 .form-check-input[type="radio"]:active,
 .form-check-input[type="radio"]:hover {
   outline: none !important;
-  box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.2) !important;
+  box-shadow: 0 0 0 3px rgb(0 102 204 / 0.2) !important;
   border-color: #0066cc !important;
 }
 
@@ -1226,7 +1202,7 @@ main p {
 
 /* contenitore radio un po' più pulito */
 
-/*.form-check {
+/* .form-check {
   display: flex;
   align-items: center;
   gap: 0.65rem;
@@ -1253,9 +1229,6 @@ main p {
 
 .form-check-input[type="radio"] {
   appearance: none !important;
-  -webkit-appearance: none !important;
-  -moz-appearance: none !important;
-
   flex: 0 0 auto;
   width: 20px !important;
   height: 20px !important;
@@ -1294,7 +1267,7 @@ main p {
 .form-check-input[type="radio"]:focus-visible,
 .form-check-input[type="radio"]:active {
   outline: none !important;
-  box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.22) !important;
+  box-shadow: 0 0 0 3px rgb(0 102 204 / 0.22) !important;
   border-color: #0066cc !important;
 }
 
@@ -1310,7 +1283,7 @@ input[type="radio"]:active,
 input.form-check-input:focus,
 input.form-check-input:focus-visible {
   outline: none !important;
-  box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.22) !important;
+  box-shadow: 0 0 0 3px rgb(0 102 204 / 0.22) !important;
   border-color: #0066cc !important;
 }
 
@@ -1319,7 +1292,7 @@ input.form-check-input:focus-visible {
 
 
 /* Textarea popup */
-#extraInfo {
+#extra-info {
   width: 100%;
   min-height: 120px;
   padding: 0.75rem 1rem;
@@ -1360,8 +1333,6 @@ input.form-check-input:focus-visible {
 /* Responsive */
 
 @media (width <= 480px) {
-
-
   header h1 {
     font-size: 1.5rem;
   }

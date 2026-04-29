@@ -452,7 +452,7 @@ async function loginToRelyingParty() {
   if (!selectedValue) return;
 
   try {
-    const qrCodeContentTextArea = document.getElementById("extraInfo");
+    const qrCodeContentTextArea = document.getElementById("extra-info");
 
     // Mostra spinner durante la richiesta
     credPopupBody.innerHTML = `

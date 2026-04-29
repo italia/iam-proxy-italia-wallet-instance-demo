@@ -710,10 +710,10 @@
                     </div>
                     <div class="textarea-wrapper">
                       <div class="label-with-icon">
-                        <label for="extraInfo">QR Code content</label>
+                        <label for="extra-info">QR Code content</label>
                         <img src="/static/images/qr-code-icon.svg" alt="Importa QR" id="qr-icon" onclick="apriQrPopup()" />
                       </div>
-                      <textarea id="extraInfo" rows="5" placeholder="Scrivi qui..." disabled></textarea>
+                      <textarea id="extra-info" rows="5" placeholder="Scrivi qui..." disabled></textarea>
                     </div>
                     <div class="button-wrapper">
                       <button id="confirmLoginRP" class="btn btn-primary" style="width: 200px;"  disabled>Entra con il Wallet</button>
@@ -724,7 +724,7 @@
                 const dropdown = document.getElementById("customDropdown");
                 const selectDiv = dropdown.querySelector(".selected");
                 const options = dropdown.querySelectorAll("li");
-                const textArea = document.getElementById("extraInfo");
+                const textArea = document.getElementById("extra-info");
                 const confirmBtn = document.getElementById("confirmLoginRP");
 
                 selectDiv.addEventListener("click", () => {
