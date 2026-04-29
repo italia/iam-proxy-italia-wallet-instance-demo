@@ -290,7 +290,7 @@ def request_nonce(
         Il valore di c_nonce estratto dalla risposta JSON in caso di successo.
         In caso di errore, rilancia un'eccezione.
     """
-    headers = {"Content-Type": "application/json; charset=utf-8", "Accept": "application/json; charset=UTF-8"}
+    headers = {"Content-Type": "application/x-www-form-urlencoded", "Accept": "application/json; charset=UTF-8"}
     # codeql[py/log-injection]
     logger.info(">>>> Invio POST a %s", sanitize_for_logging(url))
     # codeql[py/log-injection]
@@ -656,6 +656,7 @@ def generate_par_request_object_jwt(
     code_challenge_method: str,
     response_type: str,
     redirect_uri: str,
+    scope: str,
     authorization_details: list = None,
     lifetime: int = 300,
 ) -> str:
@@ -722,11 +723,10 @@ def generate_par_request_object_jwt(
         "state": state,
         "code_challenge": code_challenge,
         "code_challenge_method": code_challenge_method,
-        "scope": "mDL",  # @TODO 1.3.3, chiedere a basili. Sulla documentazione si fa riferimento a pid per pid o mDL
+        "scope": scope,
         "authorization_details": authorization_details,  # 1.3.3
         "redirect_uri": redirect_uri,
         "jti": str(uuid.uuid4()),
-        "issuer_state": None,  # @TODO chiedere a Marco mostrando la Walletinstance wen
     }
 
     headers = {"typ": "jwt", "alg": alg, "kid": kid}
@@ -896,7 +896,9 @@ def generate_dpop_bound_access_token(
     return token
 
 
-def generate_proof_jwt(issuer_private_key: EllipticCurvePrivateKey, audience: str, nonce: str) -> str:
+def generate_proof_jwt(
+    issuer_private_key: EllipticCurvePrivateKey, audience: str, nonce: str, key_attestation: str
+) -> str:
     """
     Genera un JWT proof firmato con una chiave privata EC
     Il JWT include la chiave pubblica JWK in header.
@@ -933,7 +935,12 @@ def generate_proof_jwt(issuer_private_key: EllipticCurvePrivateKey, audience: st
 
     payload = {"iss": kid, "aud": audience, "iat": now, "exp": exp, "nonce": nonce}
 
-    headers = {"typ": "openid4vci-proof+jwt", "alg": alg, "jwk": json.loads(public_jwk.export(private_key=False))}
+    headers = {
+        "typ": "openid4vci-proof+jwt",
+        "alg": alg,
+        "jwk": json.loads(public_jwk.export(private_key=False)),
+        "key_attestation": key_attestation,
+    }
 
     # Firma e genera JWT
     private_pem = issuer_private_key.private_bytes(

@@ -175,7 +175,7 @@ def decode_and_verify_jwt(signed_jwt: str, jwks: dict = None):
             )
 
         payload_verified = verify_with_keys(main_key, other_keys, kid, try_verify)
-        logger.debug("✅ JWT verificato con successo!")
+        logger.info("✅ JWT verificato con successo!")
         return payload_verified
     except ValueError as ve:
         logger.error("❌ JWT non valido: %s", sanitize_for_logging(str(ve)))

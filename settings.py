@@ -28,6 +28,7 @@ DEFAULT_CORRELATION_ID = _get("default_correlation_id")
 
 # Domain / OAuth / OIDC / metadata
 WALLET_ATTESTATION_NAME = _get("wallet_attestation_name")
+WALLET_UNIT_ATTESTATION_NAME = _get("wallet_unit_attestation_name")
 AAL_VALUE_BASIC = _get("aal_value_basic")
 AAL_VALUE_MEDIUM = _get("aal_value_medium")
 AAL_VALUE_HIGH = _get("aal_value_high")
@@ -40,6 +41,7 @@ METADATA_TYPE_FEDERATION_ENTITY = _get("metadata_type_federation_entity")
 METADATA_TYPE_AUTHORIZATION_SERVER = _get("metadata_type_authorization_server")
 METADATA_TYPE_CREDENTIAL_ISSUER = _get("metadata_type_credential_issuer")
 METADATA_TYPE_CREDENTIAL_VERIFIER = _get("metadata_type_credential_verifier")
+METADATA_TYPE_WALLET_PROVIDER = _get("metadata_type_wallet_provider")
 
 # Sets (comma-separated in env)
 EU_COUNTRIES = _get_set("eu_countries", DEFAULTS["eu_countries"])

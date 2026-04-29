@@ -3,8 +3,10 @@ import logging
 from datetime import datetime
 
 import bcrypt
-from flask import Blueprint, current_app, flash, redirect, render_template, request, session, url_for
+from flask import Blueprint, current_app, flash, jsonify, redirect, render_template, request, session, url_for
 
+from app.service.itwallet_service import ItWalletService
+from app.service.v1.service import Service
 from app.store import app_state
 from app.utils.itwalletUtils import get_status_description
 from app.utils.utils import (
@@ -124,6 +126,7 @@ def activate_wallet():
 
 @wallet_routes.route("/access", methods=["GET", "POST"])
 def wallet_access():
+    logger.info("Entering method: wallet_access. Params []")
     if request.method == "POST":
         if not (pin_attempt := request.form.get("pin_attempt", "")):
             return render_template("wallet_access.html")
@@ -131,15 +134,38 @@ def wallet_access():
         if app_state.stored_hashed_pin and bcrypt.checkpw(pin_attempt.encode(), app_state.stored_hashed_pin):
             session["pin_authenticated"] = True
 
-            # Create new session ID and set as correlation ID for log tracking.
-            session_id = generate_nonce()
-            session["session_id"] = session_id
+            if not request.args.get("session_id"):
+                logger.info("No session_id in request, generating new one.")
+                session_id = generate_nonce()
+                session["session_id"] = session_id
+            else:
+                session_id = request.args.get("session_id")
+                session["session_id"] = session_id
 
-            # codeql[py/log-injection]
-            logger.info("✅ Effettuato login (sessione inizializzata id=%s).", sanitize_for_logging(session_id))
-            return redirect(url_for("wallet_routes.wallet_home", session_id=session_id))
+            logger.info(f"session_id: {session_id} authenticated successfully.")
+
+            oauth_authorization_server = extract_claim(current_app.config, "wallet_instance.oauth_authorization_server")
+
+            wallet_initialized = app_state.wallet_initialized
+
+            if oauth_authorization_server and not wallet_initialized:
+                app_state.selected_country = "IT"
+                app_state.selected_idp = None
+                service = ItWalletService(session, external_discovery=True)
+                try:
+                    result = service.initialize_wallet(idp=None, country="IT")
+                    return redirect(result.get("data", {}).get("redirect_url"))
+                except ValueError as ve:
+                    logger.error(f"Error, message: {ve}")
+                    error_message = str(ve)
+                except Exception as e:
+                    logger.error(f"Error, message: {e}")
+                    error_message = "Exception when call discovery page. Contact administrator."
+                flash(error_message, "error")
+            else:
+                return redirect(url_for("wallet_routes.wallet_home", session_id=session_id))
         else:
-            logger.error("❌ Login fallito: PIN errato")
+            logger.error("Error: Wrong PIN attempt for wallet access.")
             flash("PIN errato. Riprova.", "error")
 
     return render_template("wallet_access.html")
@@ -147,14 +173,33 @@ def wallet_access():
 
 @wallet_routes.route("/home", methods=["GET"])
 def wallet_home():
+    logger.info(f"Entering method: wallet_home. Params [session_id: {request.args.get('session_id', '')}]")
+
     if not session.get("pin_authenticated"):
         return redirect(url_for("wallet_routes.wallet_access"))
 
-    session_id = request.args.get("session_id", "")
-    selected_country = app_state.selected_country
+    oauth_authorization_server = extract_claim(current_app.config, "wallet_instance.oauth_authorization_server")
     wallet_initialized = app_state.wallet_initialized
+
+    session_id = request.args.get("session_id", "")
+    init_error_message = request.args.get("init_error_message", "")
+    init_success_message = request.args.get("init_success_message", "")
+
+    show_wallet_access = (
+        oauth_authorization_server and not wallet_initialized and not init_error_message and not init_success_message
+    )
+
+    if show_wallet_access:
+        return render_template("wallet_access.html")
+
+    if init_error_message:
+        flash(init_error_message, "init_error_message")
+    elif init_success_message:
+        flash(init_success_message, "init_success_message")
+
+    selected_country = app_state.selected_country
     credential_store = app_state.credential_store
-    credential_keys = credential_store.keys()  # Retrieve all credential keys
+    credential_keys = credential_store.get_store()
 
     return render_template(
         "wallet_home.html",
@@ -162,6 +207,8 @@ def wallet_home():
         selected_country=selected_country,
         wallet_initialized=wallet_initialized,
         credential_keys=credential_keys,
+        init_error_message=init_error_message,
+        init_success_message=init_success_message,
     )
 
 
@@ -186,8 +233,73 @@ def wallet_callback():
     else:
         logger.info("Ricevuta request GET %s senza query string", sanitize_for_logging(current_path))
 
-    session["query_params"] = dict(params_list)  # store params in session
+    session["query_params"] = dict(params_list)
+    oauth_authorization_server = extract_claim(current_app.config, "wallet_instance.oauth_authorization_server")
+    wallet_initialized = app_state.wallet_initialized
+
+    if oauth_authorization_server and not wallet_initialized:
+        logger.info("init wallet process")
+        service = ItWalletService(session)
+        init_success_message = ""
+        init_error_message = ""
+        try:
+            service.complete_initialize_wallet()
+            init_success_message = "Wallet inizializzato con successo!"
+        except ValueError as value_error:
+            logger.error(f"Error, message: {value_error}")
+            init_error_message = str(value_error)
+        except Exception as exception:
+            logger.error(f"Error, message: {exception}")
+            init_error_message = "Exception when call discovery page. Contact administrator."
+        session_id = request.args.get("session_id", "")
+        return redirect(
+            url_for(
+                "wallet_routes.wallet_home",
+                session_id=session_id,
+                init_success_message=init_success_message,
+                init_error_message=init_error_message,
+            )
+        )
+
     return render_template("wallet_cb.html")
+
+
+@wallet_routes.route("/v1/search", methods=["POST"])
+def search():
+    logger.info(
+        f"Entering method: search. Params [search_type: {request.form.get('search_type')}, search_element: {request.form.get('search_element')}]"
+    )
+    result = {}
+    error_message = None
+    success_message = None
+    status_code = 200
+    try:
+        service = Service(session)
+        result = service.search(request.form.get("search_type"), request.form.get("search_element"))
+    except ValueError as ve:
+        logger.error(f"Error, message: {ve}")
+        error_message = str(ve)
+        credential_store = app_state.credential_store
+        result = credential_store.get_store()
+        status_code = 400
+    except Exception as e:
+        logger.error(f"Error, message: {e}")
+        error_message = "Si è verificato un errore interno durante la ricerca."
+        status_code = 500
+
+    session_id = request.args.get("session_id", "")
+    selected_country = app_state.selected_country
+    wallet_initialized = app_state.wallet_initialized
+    credential_keys = result
+    return render_template(
+        "wallet_home.html",
+        session_id=session_id,
+        selected_country=selected_country,
+        wallet_initialized=wallet_initialized,
+        credential_keys=credential_keys,
+        success_message=success_message,
+        error_message=error_message,
+    ), status_code
 
 
 @wallet_routes.route("/template/<credential_type>", methods=["GET"])

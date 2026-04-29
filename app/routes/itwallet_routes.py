@@ -60,8 +60,9 @@ def wallet_reset():
 
 
 @wallet_api_bp.route("/init", methods=["GET"])
-def initItWallet():
+def init_wallet():
     """Endpoint for Wallet initialization via required query parameters (e.g., country, idp)."""
+    logger.info("Entering method: init_wallet.")
     _clear_session()
     try:
         country = request.args.get("country")
@@ -121,24 +122,38 @@ def completedInitItWallet():
 @wallet_api_bp.route("/credentialSupported", methods=["GET"])
 def credentialSupported():
     """Endpoint to fetch supported Wallet credential types."""
+    logger.debug("Entering method: credentialSupported.")
     try:
-        supported_creds = extract_claim(
-            current_app.config, "metadata.credential_flow.credential_configurations_supported"
-        )
-        if not supported_creds:
-            raise ValueError("Nessuna tipologia credenziale configurata")
+        # @Todo remove static name "credential_issuer_list" and define a constant for it
+        credential_issuer_list = app_state.ec_store.get("credential_issuer_list", [])
 
-        logger.info("Tipologie di credenziali supportate dal wallet:")
-        result = []
-        for c in list(supported_creds):
-            logger.info(" - %s", sanitize_for_logging(c))
-            cred = dict(id=c, label=c, icon=guess_credential_configuration_icon(c))
-            result.append(cred)
+        issuer_existing = app_state.ec_store.get("user_credential", {})
 
-        logger.info(
-            "ℹ️  Nel wallet hai al momento: %s", sanitize_for_logging(app_state.credential_store.keys_with_vct())
-        )
-        return jsonify({"success": True, "data": result}), 200
+        output = [
+            {"id": key, "label": key, "icon": guess_credential_configuration_icon(key)}
+            for cred_issuer in credential_issuer_list
+            for key, value in app_state.ec_store.get(cred_issuer, {}).items()
+            if key not in issuer_existing.get(cred_issuer, {})
+        ]
+
+        # @todo Deprecated, remove this code
+        # supported_creds = extract_claim(
+        #     current_app.config, "metadata.credential_flow.credential_configurations_supported"
+        # )
+        # if not supported_creds:
+        #     raise ValueError("Nessuna tipologia credenziale configurata")
+
+        # logger.info("Tipologie di credenziali supportate dal wallet:")
+        # result = []
+        # for c in list(supported_creds):
+        #     logger.info(" - %s", sanitize_for_logging(c))
+        #     cred = dict(id=c, label=c, icon=guess_credential_configuration_icon(c))
+        #     result.append(cred)
+        #
+        # logger.info(
+        #     "ℹ️  Nel wallet hai al momento: %s", sanitize_for_logging(app_state.credential_store.keys_with_vct())
+        # )
+        return jsonify({"success": True, "data": output}), 200
 
     except ValueError as ve:
         logger.error("❌ %s", sanitize_for_logging(str(ve)))
