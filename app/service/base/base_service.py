@@ -6,13 +6,13 @@ from settings import METADATA_TYPE_FEDERATION_ENTITY
 
 logger = logging.getLogger(__name__)
 
-class  BaseService:
 
+class BaseService:
     APPLICATION_JSON_HEADERS = {"Accept": "application/json"}
     ENTITY_STATEMENT_HEADERS = {"Accept": "application/entity-statement+jwt"}
 
     WELL_KNOWN_FEDERATION_PATH = "/.well-known/openid-federation"
-    WELL_KNOWN_CREDENTIAL_PATH ="/.well-known/openid-credential-issuer"
+    WELL_KNOWN_CREDENTIAL_PATH = "/.well-known/openid-credential-issuer"
     LIST_ENDPOINT = "/list"
 
     def __init__(self, app_state: AppState):
@@ -21,15 +21,15 @@ class  BaseService:
 
     @staticmethod
     def call_endpoint(
-            url: str = None,
-            type_endpoint: str = None,
-            headers: dict = None,
-            retries: int = 3,
-            delay: float = 1.0,
-            proxies: dict = None,
-            no_proxy_domains: list[str] = None,
-            parse_response = None
-        ) :
+        url: str = None,
+        type_endpoint: str = None,
+        headers: dict = None,
+        retries: int = 3,
+        delay: float = 1.0,
+        proxies: dict = None,
+        no_proxy_domains: list[str] = None,
+        parse_response=None,
+    ):
         logger.debug(f"Entering method: __well_known_path. Params [url: {url}, type_endpoint: {type_endpoint}]")
         url = url.rstrip("/") + type_endpoint
         logger.debug(f"url define: {url}")
@@ -41,20 +41,18 @@ class  BaseService:
             retry_delay=delay,
             proxies=proxies,
             no_proxy_domains=no_proxy_domains,
-            parse_response=parse_response
+            parse_response=parse_response,
         )
 
-    def _create_header(self, params: dict ):
+    def _create_header(self, params: dict):
         pass
 
     def validate_entity_configuration(
-            self,
-            payload: dict,
-            expected_url: str,
-            metadata_types: list,
-            hint: any = None
+        self, payload: dict, expected_url: str, metadata_types: list, hint: any = None
     ) -> None:
-        logger.debug(f"Entering method: validate_entity_configuration. Params [payload: {payload}, expected_url: {expected_url}, metadata_types: {metadata_types}, hint:{hint}]")
+        logger.debug(
+            f"Entering method: validate_entity_configuration. Params [payload: {payload}, expected_url: {expected_url}, metadata_types: {metadata_types}, hint:{hint}]"
+        )
         if not payload:
             raise ValueError("Entity Configuration empty")
         self._validate_iss_sub(payload, expected_url)
@@ -68,13 +66,17 @@ class  BaseService:
             raise ValueError(f"iss/sub expected: '{expected}'")
 
     def _validate_authority_hints(self, payload: dict, expected_hint: any) -> None:
-        logger.debug(f"Entering method: _validate_authority_hints. Params [payload: {payload}, expected_hint: {expected_hint}]")
+        logger.debug(
+            f"Entering method: _validate_authority_hints. Params [payload: {payload}, expected_hint: {expected_hint}]"
+        )
         hints = payload.get("authority_hints", [])
         if not isinstance(hints, list) or not hints or expected_hint not in hints:
             raise ValueError(f"Authority expected: '{expected_hint}'")
 
     def _validate_metadata_and_jwks(self, payload: dict, expected_metadata_types: list) -> None:
-        logger.debug(f"Entering method: _validate_metadata_and_jwks. Params [payload: {payload}, expected_metadata_types: {expected_metadata_types}]")
+        logger.debug(
+            f"Entering method: _validate_metadata_and_jwks. Params [payload: {payload}, expected_metadata_types: {expected_metadata_types}]"
+        )
         actual = payload.get("metadata", {})
         missing = [type for type in expected_metadata_types if type not in actual]
         if missing:

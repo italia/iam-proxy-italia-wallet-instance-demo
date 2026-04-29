@@ -658,7 +658,7 @@ def generate_par_request_object_jwt(
     redirect_uri: str,
     scope: str,
     authorization_details: list = None,
-    lifetime: int = 300
+    lifetime: int = 300,
 ) -> str:
     """
     Genera un Request Object JWT firmato con chiave EC per la versione 1.3.3
@@ -726,7 +726,7 @@ def generate_par_request_object_jwt(
         "scope": scope,
         "authorization_details": authorization_details,  # 1.3.3
         "redirect_uri": redirect_uri,
-        "jti": str(uuid.uuid4())
+        "jti": str(uuid.uuid4()),
     }
 
     headers = {"typ": "jwt", "alg": alg, "kid": kid}
@@ -896,7 +896,9 @@ def generate_dpop_bound_access_token(
     return token
 
 
-def generate_proof_jwt(issuer_private_key: EllipticCurvePrivateKey, audience: str, nonce: str, key_attestation: str) -> str:
+def generate_proof_jwt(
+    issuer_private_key: EllipticCurvePrivateKey, audience: str, nonce: str, key_attestation: str
+) -> str:
     """
     Genera un JWT proof firmato con una chiave privata EC
     Il JWT include la chiave pubblica JWK in header.
@@ -933,8 +935,12 @@ def generate_proof_jwt(issuer_private_key: EllipticCurvePrivateKey, audience: st
 
     payload = {"iss": kid, "aud": audience, "iat": now, "exp": exp, "nonce": nonce}
 
-    headers = {"typ": "openid4vci-proof+jwt", "alg": alg, "jwk": json.loads(public_jwk.export(private_key=False)),
-               "key_attestation": key_attestation}
+    headers = {
+        "typ": "openid4vci-proof+jwt",
+        "alg": alg,
+        "jwk": json.loads(public_jwk.export(private_key=False)),
+        "key_attestation": key_attestation,
+    }
 
     # Firma e genera JWT
     private_pem = issuer_private_key.private_bytes(

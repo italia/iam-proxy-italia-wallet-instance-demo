@@ -5,8 +5,7 @@ import jmespath
 
 
 class EntityConfigurationStore:
-
-    #@ TODO Talking with Giuseppe for cleanup_interval and ttl default values
+    # @ TODO Talking with Giuseppe for cleanup_interval and ttl default values
 
     def __init__(self, cleanup_interval=1):
         self._store = {}
@@ -28,7 +27,6 @@ class EntityConfigurationStore:
             if ttl is not None:
                 self._expiry[key] = time.time() + ttl
 
-
     def _start_cleanup_thread(self):
         thread = threading.Thread(target=self._cleanup_loop, daemon=True)
         thread.start()
@@ -43,7 +41,7 @@ class EntityConfigurationStore:
                     self._expiry.pop(key, None)
             time.sleep(self._cleanup_interval)
 
-    def get(self, key) -> dict|None:
+    def get(self, key) -> dict | None:
         with self._lock:
             return self._store.get(key)
 

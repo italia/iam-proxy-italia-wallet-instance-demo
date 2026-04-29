@@ -130,11 +130,7 @@ def credentialSupported():
         issuer_existing = app_state.ec_store.get("user_credential", {})
 
         output = [
-            {
-                "id": key,
-                "label": key,
-                "icon": guess_credential_configuration_icon(key)
-            }
+            {"id": key, "label": key, "icon": guess_credential_configuration_icon(key)}
             for cred_issuer in credential_issuer_list
             for key, value in app_state.ec_store.get(cred_issuer, {}).items()
             if key not in issuer_existing.get(cred_issuer, {})

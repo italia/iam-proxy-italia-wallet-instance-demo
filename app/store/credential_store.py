@@ -11,10 +11,10 @@ class CredentialStore:
         self._store = {}
 
     def count(self):
-        '''
+        """
         Return the number of credentials stored in the store.
         @return int
-        '''
+        """
         count = 0
         if not self._store:
             return 0
@@ -73,10 +73,10 @@ class CredentialStore:
         return list(self._store.keys())
 
     def get_store(self):
-        '''
+        """
         Return all dictionary of the store.
         @return dict
-        '''
+        """
         return self._store
 
     def keys_with_vct(self) -> list[str]:

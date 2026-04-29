@@ -20,6 +20,7 @@ Key components:
 - Token/credential flows use PAR, DPoP, PKCE per OAuth 2.0 / OIDC specs
 - SD-JWT and mDL (ISO 18013-5) credential formats are supported
 """
+
 import base64
 import hashlib
 import json
@@ -231,7 +232,6 @@ class ItWalletService:
         # pid_provider_url = pid_provider_ec.get("metadata", {}).get(METADATA_TYPE_AUTHORIZATION_SERVER, {}).get(
         #     "authorization_endpoint")
 
-
         logger.info(
             "Trovata entità %s che rilascia credenziali di tipo %s",
             sanitize_for_logging(pid_provider_url),
@@ -261,11 +261,15 @@ class ItWalletService:
 
         logger.info("Wallet Attestation PoP JWT generata.")
 
-        if not (provider_ec := app_state.ec_store.get(self.provider_service.wallet_provider_url)): # find 1st wallet_provider
+        if not (
+            provider_ec := app_state.ec_store.get(self.provider_service.wallet_provider_url)
+        ):  # find 1st wallet_provider
             raise ValueError("The provider wallet is not present in the wallet")
 
         pub_core_jwks = extract_claim(provider_ec, f"metadata.{METADATA_TYPE_WALLET_PROVIDER}.jwks.keys")
-        wallet_attestation_jwt, _ = self._get_or_create_wallet_attestations(self.provider_service.wallet_provider_url, pub_core_jwks)
+        wallet_attestation_jwt, _ = self._get_or_create_wallet_attestations(
+            self.provider_service.wallet_provider_url, pub_core_jwks
+        )
 
         # Generazione PKCE
         pkce = generate_pkce_pair()
@@ -334,7 +338,6 @@ class ItWalletService:
             raise ValueError("PAR Response non contiene un claim 'request_uri'")
 
         pid_provider_authorization_url = self._get_pid_provider_authorization_url(pid_provider_ec, trust_root_url)
-
 
         # query_filter = f"metadata.{METADATA_TYPE_AUTHORIZATION_SERVER}.authorization_endpoint"
         # pid_provider_authorization_url = extract_claim(pid_provider_ec, query_filter)
@@ -418,14 +421,25 @@ class ItWalletService:
 
         if not app_state.ec_store.exists(trust_anchor_url):
             trust_root_entity_configuration = self.federation_service.issuer_ec(trust_anchor_url)
-            self.federation_service.validate_entity_configuration(payload= trust_root_entity_configuration, expected_url= trust_anchor_url, metadata_types= [METADATA_TYPE_FEDERATION_ENTITY])
+            self.federation_service.validate_entity_configuration(
+                payload=trust_root_entity_configuration,
+                expected_url=trust_anchor_url,
+                metadata_types=[METADATA_TYPE_FEDERATION_ENTITY],
+            )
             app_state.ec_store.add(trust_anchor_url, trust_root_entity_configuration)
 
-        authorization_server_ec = self.authorization_service.authorization_ec(self.authorization_service.authorization_list(trust_anchor_url),extract_claim(current_app.config, "wallet_instance.oauth_authorization_server"))
+        authorization_server_ec = self.authorization_service.authorization_ec(
+            self.authorization_service.authorization_list(trust_anchor_url),
+            extract_claim(current_app.config, "wallet_instance.oauth_authorization_server"),
+        )
 
         app_state.ec_store.add(self.authorization_service.authorization_server_url, authorization_server_ec)
 
-        return authorization_server_ec.get("metadata",{}).get(METADATA_TYPE_AUTHORIZATION_SERVER,{}).get("authorization_endpoint")
+        return (
+            authorization_server_ec.get("metadata", {})
+            .get(METADATA_TYPE_AUTHORIZATION_SERVER, {})
+            .get("authorization_endpoint")
+        )
 
     def complete_initialize_wallet(self):
         """
@@ -629,7 +643,9 @@ class ItWalletService:
             raise ValueError("Cant generate the Wallet Attestation PoP JWT")
         logger.info(f"client_attestation_pop_jwt: {client_attestation_pop_jwt}.")
 
-        if not (provider_ec := app_state.ec_store.all_values(f"metadata.{METADATA_TYPE_WALLET_PROVIDER}")): # find 1st wallet_provider
+        if not (
+            provider_ec := app_state.ec_store.all_values(f"metadata.{METADATA_TYPE_WALLET_PROVIDER}")
+        ):  # find 1st wallet_provider
             raise ValueError("The provider wallet is not present in the wallet")
 
         pub_core_jwks = extract_claim(provider_ec[0], f"metadata.{METADATA_TYPE_WALLET_PROVIDER}.jwks.keys")
@@ -670,7 +686,7 @@ class ItWalletService:
             code_challenge_method=pkce["code_challenge_method"],
             response_type=credential_flow_response_type,
             redirect_uri=credential_flow_redirect_uri,
-            scope="mDL", #todo check it
+            scope="mDL",  # todo check it
             authorization_details=authorization_details,
         )
         if not request_object_jwt:
@@ -689,7 +705,9 @@ class ItWalletService:
 
         logger.info(f"Par response: {as_par_response}")
 
-        request_uri = self._require_request_uri(as_par_response, "PAR Response from EAA Provider 'request_uri' not present")
+        request_uri = self._require_request_uri(
+            as_par_response, "PAR Response from EAA Provider 'request_uri' not present"
+        )
         eaa_provider_authorization_url = self._get_eaa_authorization_url(eaa_provider_ec)
         params = {
             "client_id": wallet_client_id,
@@ -1200,8 +1218,9 @@ class ItWalletService:
         )
         logger.info(f"client_attestation_pop_jwt: {client_attestation_pop_jwt}")
 
-
-        if not (provider_ec := app_state.ec_store.all_values(f"metadata.{METADATA_TYPE_WALLET_PROVIDER}")):  # find 1st wallet_provider
+        if not (
+            provider_ec := app_state.ec_store.all_values(f"metadata.{METADATA_TYPE_WALLET_PROVIDER}")
+        ):  # find 1st wallet_provider
             raise ValueError("The provider wallet is not present in the wallet")
         pub_core_jwks = extract_claim(provider_ec[0], f"metadata.{METADATA_TYPE_WALLET_PROVIDER}.jwks.keys")
         wallet_attestation_jwt, _ = self._get_or_create_wallet_attestations(provider_ec[0]["iss"], pub_core_jwks)
@@ -1337,7 +1356,7 @@ class ItWalletService:
         credential_url: str,
         wallet_private_key,
         dpop_bound_access_token: str,
-        key_attestation: str
+        key_attestation: str,
     ) -> list:
         """Fetch credentials for given credential_id via nonce+proof+request. Returns list of credential dicts."""
         logger.info(
@@ -1346,8 +1365,12 @@ class ItWalletService:
 
         nonce_resp = request_nonce(url=nonce_url, proxies=self.proxies, no_proxy_domains=self.no_proxy_domains)
 
-        proof_jwt = generate_proof_jwt(issuer_private_key=wallet_private_key, audience=credential_url, nonce=nonce_resp,
-                                       key_attestation=key_attestation)
+        proof_jwt = generate_proof_jwt(
+            issuer_private_key=wallet_private_key,
+            audience=credential_url,
+            nonce=nonce_resp,
+            key_attestation=key_attestation,
+        )
 
         dpop_req = generate_dpop_jwt(
             issuer_private_key=wallet_private_key,
@@ -1363,7 +1386,7 @@ class ItWalletService:
             access_token=dpop_bound_access_token,
             dpop_proof_jwt=dpop_req,
             proxies=self.proxies,
-            no_proxy_domains=self.no_proxy_domains
+            no_proxy_domains=self.no_proxy_domains,
         )
 
         credentials = cred_resp.get("credentials", [])
@@ -1391,7 +1414,9 @@ class ItWalletService:
         if not wallet_private_key or not wallet_public_key:
             raise ValueError("Generation Key Exception: wallet_private_key or wallet_public_key empty")
 
-        if not (provider_ec := app_state.ec_store.all_values(f"metadata.{METADATA_TYPE_WALLET_PROVIDER}")):  # find 1st wallet_provider
+        if not (
+            provider_ec := app_state.ec_store.all_values(f"metadata.{METADATA_TYPE_WALLET_PROVIDER}")
+        ):  # find 1st wallet_provider
             raise ValueError("The provider wallet is not present in the wallet")
         pub_core_jwks = extract_claim(provider_ec[0], f"metadata.{METADATA_TYPE_WALLET_PROVIDER}.jwks.keys")
         _, key_attestation = self._get_or_create_wallet_attestations(provider_ec[0]["iss"], pub_core_jwks)
@@ -2115,7 +2140,7 @@ class ItWalletService:
         if not self._hw_key_tag or not self._hw_private_jwk:
             raise ValueError("Unable to retrieve instance wallet keys, please initialize instance wallet again")
 
-        provider_url = provider_url[: -1] + provider_url[-1].replace("/", "")
+        provider_url = provider_url[:-1] + provider_url[-1].replace("/", "")
         http_headers = {"Accept": "application/json"}
         nonce_url = provider_url + "/nonce"
         nonce_response = http_request_with_retry("GET", url=nonce_url, headers=http_headers)
@@ -2169,9 +2194,7 @@ class ItWalletService:
         try:
             wallet_provider_url = founded[0]
             ec_payload = self._entity_configuration_management(
-                wallet_provider_url,
-                [METADATA_TYPE_FEDERATION_ENTITY, METADATA_TYPE_WALLET_PROVIDER],
-                trust_root_url
+                wallet_provider_url, [METADATA_TYPE_FEDERATION_ENTITY, METADATA_TYPE_WALLET_PROVIDER], trust_root_url
             )
         except Exception as e:
             logger.error("Unable to retrieve entity configuration for provider - error: {}".format(e))

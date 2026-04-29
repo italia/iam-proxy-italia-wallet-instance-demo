@@ -13,11 +13,11 @@ def get_json_from_response(response: requests.Response) -> str:
 
 
 def get_dictionary_from_json(input: str) -> dict:
-    '''
+    """
     Parses a JSON string and returns the dict.
     if input is empty return empty dictionary.
     if input is not a valid JSON string, raises a ValueError with an appropriate message.
-    '''
+    """
 
     logger.debug(f"Entering method: get_dictionary_from_json. Params [input: {input}]")
     if not input:
@@ -30,12 +30,13 @@ def get_dictionary_from_json(input: str) -> dict:
     except json.JSONDecodeError as e:
         raise ValueError(f"Invalid JSON string: {e}")
 
+
 def get_value_from_json(input: str, key: str) -> any:
-    '''
+    """
     if input is empty return None.
     if key is empty or not a string, raises a ValueError with an appropriate message.
     Returns the value associated with the specified key.
-    '''
+    """
 
     logger.debug(f"Entering method: get_key_from_json. Params [input: {input}, key: {key}]")
     if not input:

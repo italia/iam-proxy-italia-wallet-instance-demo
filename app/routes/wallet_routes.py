@@ -153,7 +153,7 @@ def wallet_access():
                 app_state.selected_idp = None
                 service = ItWalletService(session, external_discovery=True)
                 try:
-                    result = service.initialize_wallet(idp = None, country="IT")
+                    result = service.initialize_wallet(idp=None, country="IT")
                     return redirect(result.get("data", {}).get("redirect_url"))
                 except ValueError as ve:
                     logger.error(f"Error, message: {ve}")
@@ -186,15 +186,11 @@ def wallet_home():
     init_success_message = request.args.get("init_success_message", "")
 
     show_wallet_access = (
-            oauth_authorization_server
-            and not wallet_initialized
-            and not init_error_message
-            and not init_success_message
+        oauth_authorization_server and not wallet_initialized and not init_error_message and not init_success_message
     )
 
     if show_wallet_access:
         return render_template("wallet_access.html")
-
 
     if init_error_message:
         flash(init_error_message, "init_error_message")
@@ -212,7 +208,7 @@ def wallet_home():
         wallet_initialized=wallet_initialized,
         credential_keys=credential_keys,
         init_error_message=init_error_message,
-        init_success_message=init_success_message
+        init_success_message=init_success_message,
     )
 
 
@@ -256,14 +252,23 @@ def wallet_callback():
             logger.error(f"Error, message: {exception}")
             init_error_message = "Exception when call discovery page. Contact administrator."
         session_id = request.args.get("session_id", "")
-        return redirect(url_for("wallet_routes.wallet_home", session_id=session_id, init_success_message= init_success_message, init_error_message = init_error_message))
+        return redirect(
+            url_for(
+                "wallet_routes.wallet_home",
+                session_id=session_id,
+                init_success_message=init_success_message,
+                init_error_message=init_error_message,
+            )
+        )
 
     return render_template("wallet_cb.html")
 
 
 @wallet_routes.route("/v1/search", methods=["POST"])
 def search():
-    logger.info(f"Entering method: search. Params [search_type: {request.form.get('search_type')}, search_element: {request.form.get('search_element')}]")
+    logger.info(
+        f"Entering method: search. Params [search_type: {request.form.get('search_type')}, search_element: {request.form.get('search_element')}]"
+    )
     result = {}
     error_message = None
     success_message = None
@@ -275,7 +280,7 @@ def search():
         logger.error(f"Error, message: {ve}")
         error_message = str(ve)
         credential_store = app_state.credential_store
-        result =  credential_store.get_store()
+        result = credential_store.get_store()
         status_code = 400
     except Exception as e:
         logger.error(f"Error, message: {e}")
@@ -292,9 +297,10 @@ def search():
         selected_country=selected_country,
         wallet_initialized=wallet_initialized,
         credential_keys=credential_keys,
-        success_message = success_message,
-        error_message = error_message
+        success_message=success_message,
+        error_message=error_message,
     ), status_code
+
 
 @wallet_routes.route("/template/<credential_type>", methods=["GET"])
 def credentialTypeTemplate(credential_type):

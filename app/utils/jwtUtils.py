@@ -184,6 +184,7 @@ def decode_and_verify_jwt(signed_jwt: str, jwks: dict = None):
         logger.error("❌ Errore interno durante la decodifica/verifica del JWT: %s", sanitize_for_logging(str(e)))
         raise
 
+
 def extract_key_for_enc(jwks: dict) -> str:
     """
     Estrae la prima chiave JWK trovata in jwks con 'use' == 'enc' e se non la trova, prende la prima senza il claim 'use'
