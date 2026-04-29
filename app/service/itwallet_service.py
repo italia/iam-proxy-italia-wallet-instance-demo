@@ -1445,7 +1445,7 @@ class ItWalletService:
 
         app_state.wallet_initialized = True
 
-        app_state.credential_store.add_credential(credential_issuer_ur, credential_id, last_valid_credential, last_valid_credential_vct,
+        app_state.credential_store.add_credential(credential_issuer_url, credential_id, last_valid_credential, last_valid_credential_vct,
                                                   last_valid_credential_claims)
 
         # app_state.credential_store.add(

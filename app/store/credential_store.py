@@ -32,7 +32,7 @@ class CredentialStore:
 
     def add_credential(self, issuer: str, key, data_row, vct, claims=None, status_assertion=None, status=None):
         logger.debug(f"Entering method: add_credential_from_issuer. Params [issuer: {issuer}, key: {key}, data_row: {data_row}, vct: {vct}, claims: {claims}, status_assertion: {status_assertion}, status: {status}]")
-        if not self._store[issuer]:
+        if not self._store.get(issuer):
             # Issuer is not present, i can add the credential directly
             self.__add_credential_into_store(issuer, key, data_row, vct, claims, status_assertion, status)
         else:
@@ -43,7 +43,6 @@ class CredentialStore:
             else:
                 # The credential is already present, @TODO to decide if update it or not, need to talking with Giuseppe
                 logger.debug(f"Credential with key {key} already present for issuer {issuer}! Update not performed.")
-        self.add(key, data_row, vct, claims, status_assertion, status)
 
 
     def __add_credential_into_store(self, issuer: str, key, data_row, vct, claims=None, status_assertion=None, status=None):
