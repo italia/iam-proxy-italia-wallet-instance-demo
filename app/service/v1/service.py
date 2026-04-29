@@ -1,11 +1,10 @@
 import logging
 
+from app.service.itwallet_helpers import get_proxies_from_config
+from app.store import AppState
+
 from .. import PresentationService
 from ..itwallet_service import ItWalletService
-from app.store import AppState
-from app.service.itwallet_helpers import (
-    get_proxies_from_config
-)
 
 logger = logging.getLogger(__name__)
 

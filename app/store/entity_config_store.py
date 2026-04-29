@@ -1,6 +1,7 @@
-import jmespath
 import threading
 import time
+
+import jmespath
 
 
 class EntityConfigurationStore:

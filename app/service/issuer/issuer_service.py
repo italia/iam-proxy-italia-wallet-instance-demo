@@ -1,10 +1,11 @@
 import logging
-from ..base.base_service import BaseService
-from app.store import AppState
-from settings import METADATA_TYPE_CREDENTIAL_ISSUER
 from urllib.parse import urlencode
-from app.utils.oidFedUtils import _parse_oid_fed_list
 
+from app.store import AppState
+from app.utils.oidFedUtils import _parse_oid_fed_list
+from settings import METADATA_TYPE_CREDENTIAL_ISSUER
+
+from ..base.base_service import BaseService
 
 logger = logging.getLogger('issuer')
 

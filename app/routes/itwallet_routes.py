@@ -122,7 +122,7 @@ def completedInitItWallet():
 @wallet_api_bp.route("/credentialSupported", methods=["GET"])
 def credentialSupported():
     """Endpoint to fetch supported Wallet credential types."""
-    logger.debug(f"Entering method: credentialSupported.")
+    logger.debug("Entering method: credentialSupported.")
     try:
         # @Todo remove static name "credential_issuer_list" and define a constant for it
         credential_issuer_list = app_state.ec_store.get("credential_issuer_list", [])

@@ -3,10 +3,11 @@ import logging
 from datetime import datetime
 
 import bcrypt
-from flask import Blueprint, current_app, flash, redirect, render_template, request, session, url_for, jsonify
+from flask import Blueprint, current_app, flash, jsonify, redirect, render_template, request, session, url_for
 
-from app.store import app_state
+from app.service.itwallet_service import ItWalletService
 from app.service.v1.service import Service
+from app.store import app_state
 from app.utils.itwalletUtils import get_status_description
 from app.utils.utils import (
     extract_claim,
@@ -17,7 +18,6 @@ from app.utils.utils import (
     unescape_json,
     unix_ts_to_str_datetime,
 )
-from app.service.itwallet_service import ItWalletService
 from settings import CONTENT_PDF_BASE_64_PREFIX, ISO_18013_5_NAME, JWT_PREFIX, MSO_MDOC_PREFIX, SD_JWT_PREFIX
 
 logger = logging.getLogger(__name__)
@@ -173,7 +173,7 @@ def wallet_access():
 
 @wallet_routes.route("/home", methods=["GET"])
 def wallet_home():
-    logger.info(f"Entering method: wallet_home. Params [session_id: {request.args.get("session_id", "")}]")
+    logger.info(f"Entering method: wallet_home. Params [session_id: {request.args.get('session_id', '')}]")
 
     if not session.get("pin_authenticated"):
         return redirect(url_for("wallet_routes.wallet_access"))

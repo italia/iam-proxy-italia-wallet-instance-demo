@@ -1,9 +1,12 @@
 
 import logging
-from ..base.base_service import BaseService
+
 from app.store import AppState
-from app.utils.oidFedUtils import _parse_entity_statement_jwt
 from app.utils.jwtUtils import decode_and_verify_jwt
+from app.utils.oidFedUtils import _parse_entity_statement_jwt
+
+from ..base.base_service import BaseService
+
 logger = logging.getLogger(__name__)
 
 class FederationService(BaseService):

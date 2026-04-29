@@ -1,11 +1,12 @@
 import logging
-from ..base.base_service import BaseService
 from urllib.parse import urlencode
+
 from app.store import AppState
-from settings import METADATA_TYPE_WALLET_PROVIDER
 from app.utils.jwtUtils import decode_and_verify_jwt
-from app.utils.oidFedUtils import _parse_oid_fed_list
-from app.utils.oidFedUtils import _parse_entity_statement_jwt
+from app.utils.oidFedUtils import _parse_entity_statement_jwt, _parse_oid_fed_list
+from settings import METADATA_TYPE_WALLET_PROVIDER
+
+from ..base.base_service import BaseService
 
 logger = logging.getLogger(__name__)
 

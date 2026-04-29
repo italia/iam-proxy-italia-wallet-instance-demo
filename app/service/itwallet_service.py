@@ -26,7 +26,6 @@ import json
 import logging
 import os
 import re
-from app.service import *
 from typing import Optional, Tuple
 from urllib.parse import parse_qs, urlencode, urlparse
 
@@ -39,6 +38,7 @@ from pyeudiw.jwt.jws_helper import JWSHelper
 from pyeudiw.wallet_attestations.issuers.wa_request import WaJswRequestIssuer
 
 from app.models.provider_config import ProviderConfig
+from app.service import FederationService, IssuerService, ProviderService
 from app.service.authorization.authorization_service import AuthorizationService
 from app.service.itwallet_helpers import (
     apply_credential_issuer_overrides,
@@ -102,11 +102,13 @@ from settings import (
     METADATA_TYPE_CREDENTIAL_ISSUER,
     METADATA_TYPE_CREDENTIAL_VERIFIER,
     METADATA_TYPE_FEDERATION_ENTITY,
+    METADATA_TYPE_WALLET_PROVIDER,
     MSO_MDOC_PREFIX,
     PRESENTATION_RESPONSE_MODE_DIRECT_POST_JWT,
     PRESENTATION_RESPONSE_TYPE_VP_TOKEN,
     SD_JWT_PREFIX,
-    WALLET_ATTESTATION_NAME, METADATA_TYPE_WALLET_PROVIDER, WALLET_UNIT_ATTESTATION_NAME,
+    WALLET_ATTESTATION_NAME,
+    WALLET_UNIT_ATTESTATION_NAME,
 )
 
 logger = logging.getLogger(__name__)
@@ -380,12 +382,12 @@ class ItWalletService:
 
     # @TODO DEPRECATED
     def discovery_page(self):
-        logger.info(f"Entering method: discovery_page. Params []")
+        logger.info("Entering method: discovery_page. Params []")
 
-        trust_anchor_url = extract_claim(current_app.config, f"wallet_instance.trust_anchor")
+        trust_anchor_url = extract_claim(current_app.config, "wallet_instance.trust_anchor")
 
         if not trust_anchor_url:
-            raise ValueError(f"Trust anchor is not configured for the wallet instance")
+            raise ValueError("Trust anchor is not configured for the wallet instance")
 
         logger.info(f"trust_anchor_url: {trust_anchor_url}")
 
