@@ -20,6 +20,6 @@ class Service(ItWalletService):
         logger.info(f"Entering method: search. Params [search_type: {search_type}, search_element: {search_element}]")
         if not search_type or not search_element:
             raise ValueError("Search type and search element cannot be empty.")
-        if search_type not in ["scope", "format"]:
-            raise ValueError("Search type must be either 'scope' or 'format'.")
+        if search_type not in ["scope", "credential_issuer", "attribute"]:
+            raise ValueError("Search type must be either 'scope', 'attribute' or 'credential_issuer'.")
         return self.presentation_service.get_presentation_from_credential(search_type, search_element)

@@ -41,9 +41,9 @@ class PresentationService(BaseService):
         if not search_type or not search:
             raise ValueError("Search type and search value cannot be empty.")
         output = {}
-        for credential_issuer in self.app_state.ec_store("user_credential"):
+        for credential_issuer in self.app_state.credential_store():
             if search_type == "all":
-                return self.app_state.ec_store("user_credential")
+                return self.app_state.credential_store()
             elif search_type == "scope":
                 output[credential_issuer] = output[credential_issuer] | self.__get_presentation_from_scope(
                     credential_issuer, search
