@@ -536,8 +536,10 @@ class ItWalletService:
             redirect_uri=redirect_uri,
         )
 
+
         # gestione rilascio della credenziale
-        credential_id = self._credential_issuing_management(
+        credential_id = self._credential_issuing_management_v1_3(
+            credential_issuer_url=pid_provider_url,
             credential_issuer_nonce_url=credential_issuer_nonce_url,
             credential_issuer_credential_url=credential_issuer_credential_url,
             credential_issuer_status_assertion_url=credential_issuer_status_assertion_url,
@@ -1395,30 +1397,34 @@ class ItWalletService:
             raise ValueError("credentials empty")
         return credentials
 
-    def _credential_issuing_management(
-        self,
-        credential_issuer_nonce_url: str,
-        credential_issuer_credential_url: str,
-        credential_issuer_status_assertion_url: str,
-        credential_issuer_jwks: dict,
-        credential_configuration_id: str,
-        credential_identifiers: list,
-        dpop_bound_access_token: str,
+    def _credential_issuing_management_v1_3(
+            self,
+            credential_issuer_url: str,
+            credential_issuer_nonce_url: str,
+            credential_issuer_credential_url: str,
+            credential_issuer_status_assertion_url: str,
+            credential_issuer_jwks: dict,
+            credential_configuration_id: str,
+            credential_identifiers: list,
+            dpop_bound_access_token: str,
     ) -> str:
         """Request credentials via nonce+proof, decode/validate, store in credential_store. Returns credential_id."""
         logger.info(
-            f"Entering method: _credential_issuing_management. Params [credential_issuer_nonce_url: {credential_issuer_nonce_url}]"
+            f"Entering method: _credential_issuing_management_v1_3. Params [credential_issuer_url: {credential_issuer_url}, credential_issuer_nonce_url: {credential_issuer_nonce_url}]"
         )
 
         wallet_private_key, wallet_public_key = self._retrieve_instance_hw_keys(CONFIG_DIR)
+
         if not wallet_private_key or not wallet_public_key:
             raise ValueError("Generation Key Exception: wallet_private_key or wallet_public_key empty")
 
         if not (
-            provider_ec := app_state.ec_store.all_values(f"metadata.{METADATA_TYPE_WALLET_PROVIDER}")
+                provider_ec := app_state.ec_store.all_values(f"metadata.{METADATA_TYPE_WALLET_PROVIDER}")
         ):  # find 1st wallet_provider
             raise ValueError("The provider wallet is not present in the wallet")
+
         pub_core_jwks = extract_claim(provider_ec[0], f"metadata.{METADATA_TYPE_WALLET_PROVIDER}.jwks.keys")
+
         _, key_attestation = self._get_or_create_wallet_attestations(provider_ec[0]["iss"], pub_core_jwks)
 
         issued = self._collect_last_valid_issued_credential(
@@ -1436,10 +1442,84 @@ class ItWalletService:
             raise ValueError("Nessuna credenziale valida ricevuta")
 
         credential_id, last_valid_credential, last_valid_credential_vct, last_valid_credential_claims = issued
+
         app_state.wallet_initialized = True
-        app_state.credential_store.add(
-            credential_id, last_valid_credential, last_valid_credential_vct, last_valid_credential_claims
+
+        app_state.credential_store.add_credential(credential_issuer_ur, credential_id, last_valid_credential, last_valid_credential_vct,
+                                                  last_valid_credential_claims)
+
+        # app_state.credential_store.add(
+        #     credential_id, last_valid_credential, last_valid_credential_vct, last_valid_credential_claims
+        # )
+
+
+        # @TODO Talking with Giuseppe: We need status_assertion also for v1.3 flow?
+        # logger.info("✅ Salvata in memoria credenziale %s", sanitize_for_logging(credential_id))
+        # self._maybe_fetch_status_assertion(
+        #     credential_id,
+        #     credential_issuer_status_assertion_url,
+        #     credential_issuer_jwks,
+        #     last_valid_credential,
+        # )
+        return credential_id
+
+    def _credential_issuing_management(
+        self,
+        credential_issuer_nonce_url: str,
+        credential_issuer_credential_url: str,
+        credential_issuer_status_assertion_url: str,
+        credential_issuer_jwks: dict,
+        credential_configuration_id: str,
+        credential_identifiers: list,
+        dpop_bound_access_token: str,
+    ) -> str:
+        """Request credentials via nonce+proof, decode/validate, store in credential_store. Returns credential_id."""
+        logger.info(
+            f"Entering method: _credential_issuing_management. Params [credential_issuer_nonce_url: {credential_issuer_nonce_url}]"
         )
+
+        wallet_private_key, wallet_public_key = self._retrieve_instance_hw_keys(CONFIG_DIR)
+
+
+        if not wallet_private_key or not wallet_public_key:
+            raise ValueError("Generation Key Exception: wallet_private_key or wallet_public_key empty")
+
+        if not (
+            provider_ec := app_state.ec_store.all_values(f"metadata.{METADATA_TYPE_WALLET_PROVIDER}")
+        ):  # find 1st wallet_provider
+            raise ValueError("The provider wallet is not present in the wallet")
+
+        pub_core_jwks = extract_claim(provider_ec[0], f"metadata.{METADATA_TYPE_WALLET_PROVIDER}.jwks.keys")
+
+        _, key_attestation = self._get_or_create_wallet_attestations(provider_ec[0]["iss"], pub_core_jwks)
+
+        issued = self._collect_last_valid_issued_credential(
+            credential_identifiers,
+            credential_issuer_nonce_url,
+            credential_issuer_credential_url,
+            wallet_private_key,
+            dpop_bound_access_token,
+            key_attestation,
+            credential_configuration_id,
+            credential_issuer_jwks,
+        )
+        if not issued:
+            logger.info("❌ Nessuna credenziale valida ricevuta")
+            raise ValueError("Nessuna credenziale valida ricevuta")
+
+        credential_id, last_valid_credential, last_valid_credential_vct, last_valid_credential_claims = issued
+
+        app_state.wallet_initialized = True
+
+
+        app_state.credential_store.add_credential(credential_id, last_valid_credential, last_valid_credential_vct, last_valid_credential_claims)
+
+        # app_state.credential_store.add(
+        #     credential_id, last_valid_credential, last_valid_credential_vct, last_valid_credential_claims
+        # )
+
+
+
         logger.info("✅ Salvata in memoria credenziale %s", sanitize_for_logging(credential_id))
         self._maybe_fetch_status_assertion(
             credential_id,
