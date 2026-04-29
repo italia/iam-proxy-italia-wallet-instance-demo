@@ -927,15 +927,15 @@ class ItWalletService:
             credential_configuration_id=credential_configuration_id,
             redirect_uri=redirect_uri,
         )
-
-        credential_id = self._credential_issuing_management(
+        credential_id = self._credential_issuing_management_v1_3(
+            credential_issuer_url=credential_issuer_credential_url,
             credential_issuer_nonce_url=credential_issuer_nonce_url,
             credential_issuer_credential_url=credential_issuer_credential_url,
             credential_issuer_status_assertion_url=credential_issuer_status_assertion_url,
             credential_issuer_jwks=credential_issuer_jwks,
             credential_configuration_id=credential_configuration_id,
             credential_identifiers=credential_identifiers,
-            dpop_bound_access_token=dpop_bound_access_token,
+            dpop_bound_access_token=dpop_bound_access_token
         )
 
         self._print_session_data()
@@ -1359,6 +1359,7 @@ class ItWalletService:
         wallet_private_key,
         dpop_bound_access_token: str,
         key_attestation: str,
+        issuer_url: str
     ) -> list:
         """Fetch credentials for given credential_id via nonce+proof+request. Returns list of credential dicts."""
         logger.info(
@@ -1369,7 +1370,7 @@ class ItWalletService:
 
         proof_jwt = generate_proof_jwt(
             issuer_private_key=wallet_private_key,
-            audience=credential_url,
+            audience=issuer_url,
             nonce=nonce_resp,
             key_attestation=key_attestation,
         )
@@ -1436,6 +1437,7 @@ class ItWalletService:
             key_attestation,
             credential_configuration_id,
             credential_issuer_jwks,
+            credential_issuer_url
         )
         if not issued:
             logger.info("❌ Nessuna credenziale valida ricevuta")
@@ -1502,6 +1504,7 @@ class ItWalletService:
             key_attestation,
             credential_configuration_id,
             credential_issuer_jwks,
+            None
         )
         if not issued:
             logger.info("❌ Nessuna credenziale valida ricevuta")
@@ -1539,6 +1542,7 @@ class ItWalletService:
         key_attestation,
         credential_configuration_id: str,
         credential_issuer_jwks: dict,
+        credential_issuer_url
     ):
         last_valid = None
         for credential_id in credential_identifiers:
@@ -1549,6 +1553,7 @@ class ItWalletService:
                 wallet_private_key,
                 dpop_bound_access_token,
                 key_attestation,
+                credential_issuer_url
             )
             for index, cred in enumerate(credentials, start=1):
                 result = self._decode_and_validate_single_credential(
