@@ -1,0 +1,16 @@
+<div id="init_result">
+  {% if init_error_message %}
+    <div class="alert alert-danger d-flex align-items-center" role="alert">
+      <div>
+        <strong>Errore:</strong> {{ init_error_message }}
+      </div>
+    </div>
+  {% endif %}
+  {% if init_success_message %}
+    <div class="alert alert-success d-flex align-items-center" role="alert">
+      <div>
+        <strong>Successo:</strong> {{ init_success_message }}
+      </div>
+    </div>
+  {% endif %}
+</div>

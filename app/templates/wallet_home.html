@@ -68,33 +68,29 @@
         <p class="h3 my-4">Benvenuto nel tuo Digital Wallet</p>
     </header>
     <main>
-<!--      <div class="row">-->
-<!--        <div class="form-group col-md-12">-->
-<!--            <p class="form-label d-block mb-3">Qui puoi gestire le tue credenziali digitali in modo sicuro e conforme agli standard europei. </p>-->
-<!--        </div>-->
-<!--      </div>-->
 
-<!--      <div class="row">-->
-<!--        <div class="form-group col-md-12">-->
       <div id="result"></div>
-<!--        </div>-->
+
+      <!-- Message Tempplate -->ù
+      {% include 'message/message_template.html' %}
+      <!-- Message Template -->
+
+<!--      <div id="init_result">-->
+<!--          {% if init_error_message %}-->
+<!--            <div class="alert alert-danger d-flex align-items-center" role="alert">-->
+<!--              <div>-->
+<!--                <strong>Errore:</strong> {{ init_error_message }}-->
+<!--              </div>-->
+<!--            </div>-->
+<!--          {% endif %}-->
+<!--          {% if init_success_message %}-->
+<!--            <div class="alert alert-success d-flex align-items-center" role="alert">-->
+<!--              <div>-->
+<!--                <strong>Successo:</strong> {{ init_success_message }}-->
+<!--              </div>-->
+<!--            </div>-->
+<!--          {% endif %}-->
 <!--      </div>-->
-      <div id="init_result">
-          {% if init_error_message %}
-            <div class="alert alert-danger d-flex align-items-center" role="alert">
-              <div>
-                <strong>Errore:</strong> {{ init_error_message }}
-              </div>
-            </div>
-          {% endif %}
-          {% if init_success_message %}
-            <div class="alert alert-success d-flex align-items-center" role="alert">
-              <div>
-                <strong>Successo:</strong> {{ init_success_message }}
-              </div>
-            </div>
-          {% endif %}
-      </div>
 
       <div id="overlay" style="display:none;">
         <div class="loader"></div>
