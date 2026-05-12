@@ -1,0 +1,34 @@
+<div id="buttons_containers" class="d-grid gap-2 my-4" {% if init_error_message %}style="display:none;"{% endif %}>
+    <button id="init-btn" class="btn btn-primary"{% if wallet_initialized %} style="display:none;"{% endif %}{% if not wallet_initialized %} disabled{% endif %}>
+        <span class="rounded-icon">
+          <svg class="icon icon-white">
+              <use href="{{ (url_for('static', filename='svg/sprites.svg') ~ '#it-settings') | safe }}"></use>
+          </svg>
+        </span>
+        <span>Inizializza</span>
+    </button>
+    <a href="/wallet/logout" class="btn btn-outline-danger">
+        <span class="rounded-icon">
+          <svg class="icon icon-danger">
+              <use href="{{ (url_for('static', filename='svg/sprites.svg') ~ '#it-locked') | safe }}"></use>
+          </svg>
+        </span>
+        <span>Blocca</span>
+    </a>
+    <button id="add-btn" class="btn btn-primary"{% if not wallet_initialized %} style="display:none;"{% endif %}>
+          <span class="rounded-icon">
+            <svg class="icon icon-white">
+                <use href="{{ (url_for('static', filename='svg/sprites.svg') ~ '#it-plus') | safe }}"></use>
+            </svg>
+          </span>
+          <span>Aggiungi</span>
+    </button>
+    <button id="rp-btn" class="btn btn-secondary"{% if not wallet_initialized %} style="display:none;" {% endif %}>
+      <span class="rounded-icon">
+        <svg class="icon icon-secondary">
+             <use href="{{ (url_for('static', filename='svg/sprites.svg') ~ '#it-info-circle') | safe }}"></use>
+        </svg>
+      </span>
+      <span>Relying Party</span>
+    </button>
+</div>

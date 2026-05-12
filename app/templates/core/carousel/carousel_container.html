@@ -1,0 +1,82 @@
+<div class="container" {% if not wallet_initialized %}style="display:none;"{% endif %}>
+  <div class="row">
+    <article class="it-card it-card-image rounded shadow-sm border">
+      <h3 class="it-card-title ">
+        <div id="search_result">
+          {% if error_message %}
+            <div class="alert alert-danger d-flex align-items-center" role="alert">
+              <div>
+                <strong>Errore:</strong> {{ error_message }}
+              </div>
+            </div>
+          {% endif %}
+          {% if success_message %}
+            <div class="alert alert-success d-flex align-items-center" role="alert">
+              <div>
+                <strong>Successo:</strong> {{ success_message }}
+              </div>
+            </div>
+          {% endif %}
+        </div>
+      </h3>
+      <div class="it-card-body">
+        <div class="it-carousel-wrapper splide it-carousel-landscape-abstract-three-cols-arrow-visible" data-bs-carousel-splide data-splide='{"height":"auto"}'>
+          <div class="splide__track">
+            <ul class="splide__list">
+                {% for credential_issuer, credential_list in credential_keys.items() %}
+                    {% for credential_type, credential_object in credential_list.items() %}
+                        {% set credential_format = credential_object.get("format") %}
+                        {% set credential_label = (
+                            credential_object.get("credential_metadata", {}).get("display", [])
+                            | selectattr("locale", "equalto", "it-IT")
+                            | map(attribute="description")
+                            | first
+                        ) %}
+                        {% set id_credential = credential_issuer ~ ':' ~ credential_type %}
+                          <li class="splide__slide lined_slide">
+                            <div class="it-single-slide-wrapper h-100 p-2">
+                              <article class="it-card it-card-height-full rounded shadow-sm border">
+                                <h3 class="it-card-title it-card-title-icon ">
+                                  {{ credential_type }}
+                                </h3>
+                                <div class="it-card-body">
+                                  <address class="it-card-signature">{{ credential_format }}</address>
+                                  <p class="it-card-text">{{ credential_label }} </p>
+                                </div>
+                                <footer class="it-card-related it-card-footer">
+                                  <div class="it-card-taxonomy">
+                                        <button id="{{ id_credential }}" role="button" class="btn btn-outline-primary">Dettaglio</button>
+                                  </div>
+                                  <time class="it-card-date">{{ credential_issuer }}</time>
+                                </footer>
+                              </article>
+                            </div>
+                          </li>
+                    {% endfor %}
+                {% endfor %}
+            </ul>
+          </div>
+        </div>
+      </div>
+      <footer class="it-card-related it-card-footer">
+          <div class="input-group">
+              <div class="select-wrapper">
+                  <select id="search_type" name="search_type">
+                    <option selected="" value="">Tipo ricerca</option>
+                    <option value="all">Tutto</option>
+                    <option value="credential_issuer">Credential Issuer</option>
+                    <option value="scope">Tipo credenziale</option>
+                    <option value="attribute">attributo/i contenuti</option>
+                  </select>
+              </div>
+          </div>
+          <div class="input-group">
+              <input type="text" class="form-control" id="search_element" name="search_element">
+              <div class="input-group-append">
+                <button class="btn btn-primary" type="submit" id="search-btn">Cerca</button>
+              </div>
+          </div>
+      </footer>
+    </article>
+   </div>
+</div>
