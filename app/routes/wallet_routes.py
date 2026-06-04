@@ -327,14 +327,14 @@ def credentialTypeTemplate():
 
     # @TODO Talking with Giuseppe for Status list
 
-    status = value.get("status", "")
-    status_descr = get_status_description(status)
-    logger.info(
-        "La credenziale %s è in stato: %s %s",
-        sanitize_for_logging(key),
-        sanitize_for_logging(status),
-        sanitize_for_logging(status_descr),
-    )
+    # status = value.get("status", "")
+    # status_descr = get_status_description(status)
+    # logger.info(
+    #     "La credenziale %s è in stato: %s %s",
+    #     sanitize_for_logging(key),
+    #     sanitize_for_logging(status),
+    #     sanitize_for_logging(status_descr),
+    # )
 
     claims = response.get("claims", {})
     claims = unescape_json(claims)
