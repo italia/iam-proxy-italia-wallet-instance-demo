@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <title>Accesso al Wallet</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='template_custom.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap-italia.min.css') }}" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+    <div class="modal fade bd-example-modal-xl show" tabindex="-1" aria-labelledby="template_detail" style="display: block;" data-focus-mouse="false" aria-modal="true" role="dialog">
+      <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h2 class="modal-title h5 no_toc" id="template_detail">Credential Detail</h2>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Chiudi finestra modale" data-focus-mouse="false"></button>
+          </div>
+          <div class="modal-body">
+              <ul class="nav nav-tabs nav-tabs-cards" id="card-simple" role="tablist">
+                  <li class="nav-item">
+                      <a class="nav-link active" id="card-simple1-tab" data-bs-toggle="tab" href="#card-simpletab1" role="tab" aria-controls="card-simpletab1" aria-selected="true">
+                          <svg class="icon">
+                              <use href="{{ (url_for('static', filename='svg/sprites.svg') ~ '#it-presentation') | safe }}"></use>
+                          </svg>
+                          Grafico
+                      </a>
+                  </li>
+                  <li class="nav-item">
+                      <a class="nav-link" id="card-simple2-tab" data-bs-toggle="tab" href="#card-simpletab2" role="tab" aria-controls="card-simpletab2" aria-selected="false">
+                          <svg class="icon">
+                              <use href="{{ (url_for('static', filename='svg/sprites.svg') ~ '#it-file-json') | safe }}"></use>
+                          </svg>
+                          Json
+                      </a>
+                  </li>
+                  <li class="nav-item">
+                      <a class="nav-link" id="card-simple3-tab" data-bs-toggle="tab" href="#card-simpletab3" role="tab" aria-controls="card-simpletab3" aria-selected="false">
+                          <svg class="icon">
+                              <use href="{{ (url_for('static', filename='svg/sprites.svg') ~ '#it-file') | safe }}"></use>
+                          </svg>
+                          JWT
+                      </a>
+                  </li>
+              </ul>
+              <div class="tab-content" id="card-simpleContent">
+                  <div class="tab-pane p-4 fade show active" id="card-simpletab1" role="tabpanel" aria-labelledby="card-simple1-tab">
+                      {% include 'core/template/tab/presentation.html' %}
+                  </div>
+                  <div class="tab-pane p-4 fade" id="card-simpletab2" role="tabpanel" aria-labelledby="card-simple2-tab">
+                      {% include 'core/template/tab/json.html' %}
+                  </div>
+                  <div class="tab-pane p-4 fade" id="card-simpletab3" role="tabpanel" aria-labelledby="card-simple3-tab">
+                      {% include 'core/template/tab/jwt.html' %}
+                  </div>
+              </div>
+          </div>
+        </div>
+      </div>
+    </div>
+   <script src="{{ url_for('static', filename='js/bootstrap-italia.bundle.min.js') }}"></script>
+</body>
+</html>

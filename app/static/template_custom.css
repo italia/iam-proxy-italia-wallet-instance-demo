@@ -1,0 +1,30 @@
+#json {
+  background: #1e1e1e;  /* fondo scuro */
+  color: #dcdcdc;       /* colore base */
+  padding: 10px;
+  border-radius: 8px;
+  min-height: 380px;
+  max-height: 380px;
+  font-family: Consolas, Monaco, 'Courier New', monospace;
+  font-size: 0.8rem;
+  line-height: 1.2;
+  overflow: auto;       /* scroll sia verticale che orizzontale */
+  white-space: pre-wrap;
+  word-break: break-all;
+  text-align: left;
+}
+#jwt {
+  background: #1e1e1e;  /* fondo scuro */
+  color: #dcdcdc;       /* colore base */
+  padding: 10px;
+  border-radius: 8px;
+  min-height: 380px;
+  max-height: 380px;
+  font-family: Consolas, Monaco, 'Courier New', monospace;
+  font-size: 0.8rem;
+  line-height: 1.2;
+  overflow: auto;       /* scroll sia verticale che orizzontale */
+  white-space: pre-wrap;
+  word-break: break-all;
+  text-align: left;
+}

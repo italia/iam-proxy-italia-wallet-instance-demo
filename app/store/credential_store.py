@@ -59,6 +59,13 @@ class CredentialStore:
 
         self._store[issuer][key] = entry
 
+    def _get_credential_into_store(self, issuer: str, key: str) -> Optional[dict]:
+        '''
+        Return the credential entry for the given issuer and key, or None if not found.
+        '''
+        logger.debug(f"Entering method: _get_credential_into_store. Params [issuer: {issuer}, key: {key}]")
+        return self._store.get(issuer, {}).get(key)
+
 
 
     def __get_entity_store(self, data_row, vct, claims=None, status_assertion=None, status=None) -> dict:
@@ -176,6 +183,7 @@ class CredentialStore:
                 return v
         return None
 
+    # @TODO DEPRECATED - to remove after refactor of find_by_prefix method
     def find_by_prefix_with_key(self, prefix: str) -> Optional[Tuple[str, dict]]:
         """
         Restituisce la prima credenziale trovata la cui chiave inizia con il prefisso dato (case insensitive),
