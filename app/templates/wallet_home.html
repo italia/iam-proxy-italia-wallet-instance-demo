@@ -84,15 +84,19 @@
     </main>
 
   </div>
-  <!-- Popup Modal Moderno -->
-  <div id="cred-popup" class="modal">
-    <div class="cred-popup-content">
-      <button id="cred-popup-trash" class="btn btn-outline-danger" onclick="deleteCredential()">🗑️</button>
-      <button id="cred-popup-close" class="btn btn-outline-secondary" onclick="closeCredPopup()">❌</button>
-      <div id="cred-popup-title">&nbsp;</div>
-      <div id="cred-popup-body">Caricamento...</div>
-    </div>
-  </div>
+
+  {% include 'template.html' %}
+<!--  <div id="credential_detail">
+  </div>-->
+
+<!--  <div id="cred-popup" class="modal">-->
+<!--    <div class="cred-popup-content">-->
+<!--      <button id="cred-popup-trash" class="btn btn-outline-danger" onclick="deleteCredential()">🗑️</button>-->
+<!--      <button id="cred-popup-close" class="btn btn-outline-secondary" onclick="closeCredPopup()">❌</button>-->
+<!--      <div id="cred-popup-title">&nbsp;</div>-->
+<!--      <div id="cred-popup-body">Caricamento...</div>-->
+<!--    </div>-->
+<!--  </div>-->
   <script>
     let popupHtml;
     let lastOpenedButtonId = null;
@@ -110,6 +114,9 @@
     const trashPopup = document.getElementById("trash-popup");
     const trashPopupConfirm = document.getElementById("trash-popup-confirm-btn");
     const trashPopupCancel = document.getElementById("trash-popup-cancel-btn");
+
+    // Modale Template
+    const template = document.getElementById("detail_template");
 
     const credPopup = document.getElementById("cred-popup");
     const credPopupTitle = document.getElementById("cred-popup-title");
@@ -216,6 +223,34 @@
 
           trashPopupCancel.hasTrashPopupCancelHandler = true; // previene duplicazione listener
       }
+
+      template.addEventListener('shown.bs.modal', async function (event) {
+        const button = event.relatedTarget;
+
+        console.log('Aperta da:', button);
+
+        const button_split = button.id.split(":");
+
+        const input_body = {
+          issuer: button_split.slice(0, -1).join(":"),
+          key: button_split.pop()
+        };
+
+        try {
+          const response = await executeFetch("/wallet/detail", "POST", input_body);
+
+          if (!response.ok) {
+            const errorMessage = await getErrorMessage(response);
+            throw new Error(errorMessage);
+          }
+
+          const html = await response.text();
+          credPopupBody.innerHTML = html;
+
+        } catch (err) {
+          console.error(err);
+        }
+      });
 
       // Confirm trash
       if (trashPopupConfirm && !trashPopupConfirm.hasTrashPopupConfirmHandler) {
@@ -663,65 +698,6 @@
         }
       });
 
-      // --- Bottone mostra credenziale ---
-      document.addEventListener("click", async (e) => {
-        if (e.target.closest(".btn-outline-primary")) {
-          const button = e.target.closest(".btn-outline-primary");
-          lastOpenedButtonId = button.id;
-          console.log("Aperto popup da bottone id:", lastOpenedButtonId);
-
-          // cancello eventuali messaggi
-          result.innerHTML = "";
-
-          // disabilito il pulsante
-          button.disabled = true;
-
-          // mostra popup e carica contenuto...
-          credPopup.classList.add("show");
-          credPopupBody.style.minHeight = "300px";
-          credPopupTitle.innerHTML = `Gestione Credenziale (${tagCredenziale(lastOpenedButtonId)})`;
-          credPopupBody.innerHTML = `
-            <div class="spinner-wrapper">
-              <div class="spinner"></div>
-              <p>Caricamento in corso...</p>
-            </div>
-          `;
-
-          // Ritardo opzionale per mostrare lo spinner
-          await new Promise(resolve => setTimeout(resolve, 300));
-
-          try {
-
-            var button_split = button.id.split(":");
-            console.log("button_split:", button_split);
-            var input_body = {
-              "issuer": button_split.slice(0, -1).join(":"),
-              "key": button_split.pop()
-            }
-
-            console.log("Input per fetch dettaglio credenziale:", input_body);
-
-            const response = await executeFetch("/wallet/detail", "POST", input_body);
-
-            if (!response.ok) {
-              const errorMessage = await getErrorMessage(response);
-              throw new Error(`${errorMessage}`);
-            }
-
-            const html = await response.text();
-            credPopupBody.innerHTML = html;
-          } catch (err) {
-            const message = err?.message || "Errore sconosciuto";
-            credPopupBody.innerHTML = `
-              <div class="flash-container flash-error">
-                <p>Fallito caricamento del template: ${message}</p>
-              </div>`;
-          } finally {
-            // abilita il pulsante
-            button.disabled = false;
-          }
-        }
-      });
     }
 
     // Ricezione eventi

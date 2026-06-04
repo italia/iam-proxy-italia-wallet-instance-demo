@@ -13,7 +13,7 @@
   word-break: break-all;
   text-align: left;
 }
-#jwt {
+#raw {
   background: #1e1e1e;  /* fondo scuro */
   color: #dcdcdc;       /* colore base */
   padding: 10px;
