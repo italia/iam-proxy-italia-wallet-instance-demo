@@ -5,10 +5,10 @@ TYPE_DEGREE="degree"
 TYPE_ENROLLMENT="enrollment"
 
 def get_type_from_key(key: str):
-    if key.contains(TYPE_PID):
+    if TYPE_PID in key :
         return TYPE_PID
-    elif key.contains(TYPE_DEGREE):
+    elif TYPE_DEGREE in key:
         return TYPE_DEGREE
-    elif key.contains(TYPE_ENROLLMENT):
+    elif TYPE_ENROLLMENT in key:
         return TYPE_ENROLLMENT
     return None
