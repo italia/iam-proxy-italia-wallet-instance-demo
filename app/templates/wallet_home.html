@@ -226,27 +226,19 @@
 
       template.addEventListener('shown.bs.modal', async function (event) {
         const button = event.relatedTarget;
-
-        console.log('Aperta da:', button);
-
         const button_split = button.id.split(":");
-
         const input_body = {
           issuer: button_split.slice(0, -1).join(":"),
           key: button_split.pop()
         };
-
         try {
           const response = await executeFetch("/wallet/detail", "POST", input_body);
-
           if (!response.ok) {
             const errorMessage = await getErrorMessage(response);
             throw new Error(errorMessage);
           }
-
           const html = await response.text();
-          credPopupBody.innerHTML = html;
-
+          document.getElementById(("modal-body-detail").innerHTML = html;
         } catch (err) {
           console.error(err);
         }

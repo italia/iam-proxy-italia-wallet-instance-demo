@@ -365,7 +365,7 @@ def credentialTypeTemplate():
 
     try:
         return render_template(
-            "template.html",
+            "template_detail.html",
             data_row=data_row,
             claims=claims,
             metadata=metadata,
