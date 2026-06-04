@@ -1,4 +1,10 @@
 
+{% if type == 'pid' %}
+    {% include 'core/template/tab/presentation/pid.html' %}
+{% else %}
+    <!-- NEED TO OTHER -->
+{% endif %}
+
 <button id="remove-credential" class="btn btn-outline-danger">
       <span class="rounded-icon">
         <svg class="icon icon-danger">

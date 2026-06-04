@@ -18,6 +18,7 @@ from app.utils.utils import (
     unescape_json,
     unix_ts_to_str_datetime,
 )
+from ..utils.type_utils import get_type_from_key
 from settings import CONTENT_PDF_BASE_64_PREFIX, ISO_18013_5_NAME, JWT_PREFIX, MSO_MDOC_PREFIX, SD_JWT_PREFIX
 
 logger = logging.getLogger(__name__)
@@ -372,6 +373,7 @@ def credentialTypeTemplate():
             status=status,
             statusDecr=status_descr,
             contentList=content_list,
+            type= get_type_from_key(key)
         )
     except Exception as e:
         logger.error("%s", sanitize_for_logging(str(e)))
