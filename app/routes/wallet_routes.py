@@ -18,6 +18,7 @@ from app.utils.utils import (
     unescape_json,
     unix_ts_to_str_datetime,
 )
+from ..utils.type_utils import get_type_from_key
 from settings import CONTENT_PDF_BASE_64_PREFIX, ISO_18013_5_NAME, JWT_PREFIX, MSO_MDOC_PREFIX, SD_JWT_PREFIX
 
 logger = logging.getLogger(__name__)
@@ -302,63 +303,77 @@ def search():
     ), status_code
 
 
-@wallet_routes.route("/template/<credential_type>", methods=["GET"])
-def credentialTypeTemplate(credential_type):
+@wallet_routes.route("/detail", methods=["POST"] , strict_slashes=False)
+def credentialTypeTemplate():
 
+    logger.debug(f"Entering method: credentialTypeTemplate.")
+    body = request.get_json()
+    issuer = body["issuer"]
+    key = body["key"]
     _clear_session()  # todo can remove it?
+    #if not (result := app_state.credential_store.find_by_prefix_with_key(credential_type)):
 
-    if not (result := app_state.credential_store.find_by_prefix_with_key(credential_type)):
-        logger.error("Nessuna credenziale di tipo %s trovata nella memoria", sanitize_for_logging(credential_type))
-        return "Nessuna credenziale di tipo richiesto trovata nel wallet", 400
+    if not (response := app_state.credential_store._get_credential_into_store(issuer, key)):
+        logger.error(f"CredentialTypeTemplate: issuer or key not found in credentialStore for key: {key}")
+        return "Nessuna credenziale di tipo richiesto trovata nel wallet", 400 # i18n? @Todo Talking with Giuseppe for i18n implementation
 
-    key, value = result
-    logger.info("Recuperata dalla memoria credenziale con chiave %s", sanitize_for_logging(key))
+    logger.info(f"credentialTypeTemplate: result: {response}")
 
-    vct = value.get("vct", "")
-    logger.info("Il vct della credenziale %s è: %s", sanitize_for_logging(key), sanitize_for_logging(vct))
+    # key, value = result
+    # logger.info("Recuperata dalla memoria credenziale con chiave %s", sanitize_for_logging(key))
 
-    status = value.get("status", "")
-    status_descr = get_status_description(status)
-    logger.info(
-        "La credenziale %s è in stato: %s %s",
-        sanitize_for_logging(key),
-        sanitize_for_logging(status),
-        sanitize_for_logging(status_descr),
-    )
+    # vct = value.get("vct", "")
+    # logger.info("Il vct della credenziale %s è: %s", sanitize_for_logging(key), sanitize_for_logging(vct))
 
-    claims = value.get("claims", {})
+
+    # @TODO Talking with Giuseppe for Status list
+
+    # status = value.get("status", "")
+    # status_descr = get_status_description(status)
+    # logger.info(
+    #     "La credenziale %s è in stato: %s %s",
+    #     sanitize_for_logging(key),
+    #     sanitize_for_logging(status),
+    #     sanitize_for_logging(status_descr),
+    # )
+
+    claims = response.get("claims", {})
     claims = unescape_json(claims)
 
-    data_row = value.get("data_row", {})
+    status = "0x01"
+    status_descr = "VALIDO"
+
+    data_row = response.get("data_row", {})
     content = claims.get("content")
 
+    # @TODO Decprecated
     content_list = []
-    if content and content.startswith(CONTENT_PDF_BASE_64_PREFIX):
-        logger.debug("La credenziale presenta un claim 'content' contenente dati pdf_base64")
-        content_list = extract_text_from_base64_pdf(content)
-
-        if content_list and len(content_list) > 0:
-            logger.debug("Il PDF contiene almeno una pagina con contenuto.")
-            for i, pagina in enumerate(content_list, start=1):
-                logger.debug("Pagina %d:\n%s\n%s", i, sanitize_for_logging(pagina), "-" * 40)
+    # if content and content.startswith(CONTENT_PDF_BASE_64_PREFIX):
+    #     logger.debug("La credenziale presenta un claim 'content' contenente dati pdf_base64")
+    #     content_list = extract_text_from_base64_pdf(content)
+    #
+    #     if content_list and len(content_list) > 0:
+    #         logger.debug("Il PDF contiene almeno una pagina con contenuto.")
+    #         for i, pagina in enumerate(content_list, start=1):
+    #             logger.debug("Pagina %d:\n%s\n%s", i, sanitize_for_logging(pagina), "-" * 40)
 
     metadata = _create_credential_metadata(key, claims)
-    logger.info("Il metadata della credenziale %s è: %s", sanitize_for_logging(key), sanitize_for_logging(metadata))
 
-    template_name = _get_template_name_for_credential_key(key)
-    if not template_name:
-        logger.error("Nessun template configurato per la credenziale con chiave %s", sanitize_for_logging(key))
-        return "Nessun template trovato per la credenziale nel wallet", 500
+    # template_name = _get_template_name_for_credential_key(key)
+    # if not template_name:
+    #     logger.error("Nessun template configurato per la credenziale con chiave %s", sanitize_for_logging(key))
+    #     return "Nessun template trovato per la credenziale nel wallet", 500
 
     try:
         return render_template(
-            template_name + ".html",
+            "template_detail.html",
             data_row=data_row,
             claims=claims,
             metadata=metadata,
             status=status,
             statusDecr=status_descr,
             contentList=content_list,
+            type= get_type_from_key(key)
         )
     except Exception as e:
         logger.error("%s", sanitize_for_logging(str(e)))
@@ -366,7 +381,10 @@ def credentialTypeTemplate(credential_type):
 
 
 def _create_credential_metadata(credential_key, claims):
+    logger.info(f"Credential key: {credential_key} claims: {claims}")
     parsed_claims = _parse_credential_claims_by_key(credential_key, claims)
+
+    logger.info(f"Credential key: {credential_key} claims: {parsed_claims}")
 
     dt_iat_local_formatted = parsed_claims["dt_iat_local_formatted"]
     dt_exp_local_formatted = parsed_claims["dt_exp_local_formatted"]
@@ -374,7 +392,9 @@ def _create_credential_metadata(credential_key, claims):
     issuing_country = parsed_claims["issuing_country"]
 
     if dt_iat_local_formatted and dt_exp_local_formatted:
+
         metadata = f"Credenziale emessa da {issuing_authority} ({issuing_country}) il {dt_iat_local_formatted}, scade il {dt_exp_local_formatted}."
+        logger.info(f"Credential metadata: {metadata}")
     else:
         logger.error(
             "Non è stato possibile leggere l'intervallo di validità della credenziale %s",
@@ -406,6 +426,7 @@ def _parse_credential_claims_by_key(credential_key, claims):
         )
 
     elif credential_key.startswith(SD_JWT_PREFIX):
+        logger.info("credential_key.startswith(SD_JWT_PREFIX):")
         issuing_country = claims.get("issuing_country")
         issuing_authority = claims.get("issuing_authority")
         iat = claims.get("iat")  # Unix timestamp in UTC
