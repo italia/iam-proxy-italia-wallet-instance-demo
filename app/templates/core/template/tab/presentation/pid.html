@@ -1,37 +1,53 @@
-<div class="container">
+<form>
   <div class="row">
-    <div class="form-group col-md-6">
-      <label for="formNome">Nome</label>
-      <input type="text" class="form-control" id="formNome" value="{{ claims.given_name }}">
+    <div class="col-lg-6">
+      <div class="form-group">
+        <label>Nome: {{ claims.given_name }}</label>
+      </div>
     </div>
-    <div class="form-group col-md-6">
-      <label for="formCognome">Cognome</label>
-      <input type="text" class="form-control" id="formCognome" value="{{ claims.family_name }}">
+
+    <div class="col-lg-6">
+      <div class="form-group">
+        <label>Cognome: {{ claims.family_name }}</label>
+      </div>
     </div>
   </div>
+
   <div class="row">
-    <div class="form-group col-md-6">
-      <label for="DataDiNascita">Data di nascita</label>
-      <input type="text" class="form-control" id="DataDiNascita" value="{{ claims.birth_date }}">
+    <div class="col-lg-4">
+      <div class="form-group">
+        <label>Data di nascita: {{ claims.birthdate }}</label>
+      </div>
     </div>
-    <div class="form-group col-md">
-      <label for="Luogo">Luogo di nascita:</label>
-      <input type="text" class="form-control" id="Luogo" value="{{ claims.birth_place }}">
+
+    <div class="col-lg-4">
+      <div class="form-group">
+        <label>Luogo di nascita: {{ claims.place_of_birth.locality }}</label>
+      </div>
     </div>
-    <div class="form-group col-md">
-      <label for="Nazionalita">Nazionalità:</label>
-      <input type="text" class="form-control" id="Nazionalita" value="{{ claims.nationalities | join(', ') }}">
+
+    <div class="col-lg-4">
+      <div class="form-group">
+        <label >Nazionalità: {{ claims.nationalities | join(', ') }}</label>
+      </div>
     </div>
   </div>
+
   <div class="row">
-    <div class="form-group col-md-6">
-      <label for="taxID">Data di nascita</label>
-      <input type="text" class="form-control" id="taxID" value="{{ claims.tax_id_code }}">
+    <div class="col-lg-6">
+      <div class="form-group">
+        <label >Codice fiscale: {{ claims.tax_id_code }}</label>
+      </div>
     </div>
   </div>
+
+  {% if metadata %}
   <div class="row">
-    <div class="form-group col-md-6">
-      <label>{{ metadata }}</label>
+    <div class="col-12">
+      <div class="alert alert-info" role="alert">
+        {{ metadata }}
+      </div>
     </div>
   </div>
-</div>
+  {% endif %}
+</form>
