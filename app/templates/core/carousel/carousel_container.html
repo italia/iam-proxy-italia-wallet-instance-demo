@@ -25,33 +25,33 @@
             <ul class="splide__list">
                 {% for credential_issuer, credential_list in credential_keys.items() %}
                     {% for credential_type, credential_object in credential_list.items() %}
-                        {% set credential_format = credential_object.get("format") %}
-                        {% set credential_label = (
-                            credential_object.get("credential_metadata", {}).get("display", [])
-                            | selectattr("locale", "equalto", "it-IT")
-                            | map(attribute="description")
-                            | first
-                        ) %}
-                        {% set id_credential = credential_issuer ~ ':' ~ credential_type %}
-                          <li class="splide__slide lined_slide">
-                            <div class="it-single-slide-wrapper h-100 p-2">
-                              <article class="it-card it-card-height-full rounded shadow-sm border">
-                                <h3 class="it-card-title it-card-title-icon ">
-                                  {{ credential_type }}
-                                </h3>
-                                <div class="it-card-body">
-                                  <address class="it-card-signature">{{ credential_format }}</address>
-                                  <p class="it-card-text">{{ credential_label }} </p>
-                                </div>
-                                <footer class="it-card-related it-card-footer">
-                                  <div class="it-card-taxonomy">
-                                        <button id="{{ id_credential }}" role="button" class="btn btn-outline-primary">Dettaglio</button>
-                                  </div>
-                                  <time class="it-card-date">{{ credential_issuer }}</time>
-                                </footer>
-                              </article>
+                    {% set credential_format = credential_object.get("format") %}
+                    {% set credential_label = (
+                        credential_object.get("credential_metadata", {}).get("display", [])
+                        | selectattr("locale", "equalto", "it-IT")
+                        | map(attribute="description")
+                        | first
+                    ) %}
+                    {% set id_credential = credential_issuer ~ ':' ~ credential_type %}
+                      <li class="splide__slide lined_slide">
+                        <div class="it-single-slide-wrapper h-100 p-2">
+                          <article class="it-card it-card-height-full rounded shadow-sm border">
+                            <h3 class="it-card-title it-card-title-icon ">
+                              {{ credential_type }}
+                            </h3>
+                            <div class="it-card-body">
+                              <address class="it-card-signature">{{ credential_format }}</address>
+                              <p class="it-card-text">{{ credential_label }} </p>
                             </div>
-                          </li>
+                            <footer class="it-card-related it-card-footer">
+                              <div class="it-card-taxonomy">
+                                    <button id="{{ id_credential }}" type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target=".credential-detail-modal-xl">Dettaglio</button>
+                              </div>
+                              <time class="it-card-date">{{ credential_issuer }}</time>
+                            </footer>
+                          </article>
+                        </div>
+                      </li>
                     {% endfor %}
                 {% endfor %}
             </ul>
