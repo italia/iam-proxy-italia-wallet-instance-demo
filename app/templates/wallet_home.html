@@ -24,18 +24,6 @@
       <img src="{{ url_for('static', filename='images/trash-delete-icon.svg') }}" alt="Cestino" class="trash-icon" {% if not wallet_initialized %}style="display:none;"{% endif %}/>
     </div>
     <header>
-<!--      <div class="logo-with-flag">-->
-<!--        <img src="{{ url_for('static', filename='images/wallet_logo.svg') }}"-->
-<!--            alt="Digital Wallet"-->
-<!--            class="wallet-logo" />-->
-<!--        <div id="state-selected" class="flag-container">-->
-<!--          <img-->
-<!--            id="flagImage"-->
-<!--            class="state-flag"-->
-<!--            src="{{ url_for('static', filename='images/flags/4x3/' + (selected_country|lower if selected_country else 'eu') + '.svg') }}"-->
-<!--            alt="{{ selected_country or 'European Union' }}" />-->
-<!--        </div>-->
-<!--      </div>-->
         <div class="it-header-center-wrapper">
           <div class="container-xl">
             <div class="row">
@@ -68,234 +56,47 @@
         <p class="h3 my-4">Benvenuto nel tuo Digital Wallet</p>
     </header>
     <main>
-<!--      <div class="row">-->
-<!--        <div class="form-group col-md-12">-->
-<!--            <p class="form-label d-block mb-3">Qui puoi gestire le tue credenziali digitali in modo sicuro e conforme agli standard europei. </p>-->
-<!--        </div>-->
-<!--      </div>-->
 
-<!--      <div class="row">-->
-<!--        <div class="form-group col-md-12">-->
       <div id="result"></div>
-<!--        </div>-->
-<!--      </div>-->
-      <div id="init_result">
-          {% if init_error_message %}
-            <div class="alert alert-danger d-flex align-items-center" role="alert">
-              <div>
-                <strong>Errore:</strong> {{ init_error_message }}
-              </div>
-            </div>
-          {% endif %}
-          {% if init_success_message %}
-            <div class="alert alert-success d-flex align-items-center" role="alert">
-              <div>
-                <strong>Successo:</strong> {{ init_success_message }}
-              </div>
-            </div>
-          {% endif %}
-      </div>
+
+      <!-- Message Tempplate -->
+      {% include 'message/message_template.html' %}
+      <!-- Message Template -->
 
       <div id="overlay" style="display:none;">
         <div class="loader"></div>
       </div>
 
-        <div id="state_container" class="row" {% if wallet_initialized or init_error_message %}style="display:none;"{% endif %}>
-          <div class="col-12 col-md-12 col-lg-12 mb-3 mb-md-4">
-            <!--start it-card-->
-            <article class="it-card rounded border shadow-sm mb-3">
-              <h8 class="it-card-title ">
-                Seleziona il tuo <strong>stato membro:</strong>
-              </h8>
-              <div class="it-card-body">
-                <div id="states" class="select-wrapper" >
-                    <select id="select">
-                      <option value="" disabled selected>-- Scegli dal menu --</option>
-                      <option value="IT"{% if selected_country == 'IT' %} selected{% endif %}>🇮🇹 Italia</option>
-                      <option value="FR"{% if selected_country == 'FR' %} selected{% endif %}>🇫🇷 Francia</option>
-                      <option value="DE"{% if selected_country == 'DE' %} selected{% endif %}>🇩🇪 Germania</option>
-                      <option value="ES"{% if selected_country == 'ES' %} selected{% endif %}>🇪🇸 Spagna</option>
-                      <option value="NL"{% if selected_country == 'NL' %} selected{% endif %}>🇳🇱 Paesi Bassi</option>
-                      <option value="BE"{% if selected_country == 'BE' %} selected{% endif %}>🇧🇪 Belgio</option>
-                      <option value="AT"{% if selected_country == 'AT' %} selected{% endif %}>🇦🇹 Austria</option>
-                      <option value="PT"{% if selected_country == 'PT' %} selected{% endif %}>🇵🇹 Portogallo</option>
-                      <option value="GR"{% if selected_country == 'GR' %} selected{% endif %}>🇬🇷 Grecia</option>
-                      <option value="IE"{% if selected_country == 'IE' %} selected{% endif %}>🇮🇪 Irlanda</option>
-                      <option value="PL"{% if selected_country == 'PL' %} selected{% endif %}>🇵🇱 Polonia</option>
-                      <option value="RO"{% if selected_country == 'RO' %} selected{% endif %}>🇷🇴 Romania</option>
-                      <option value="SE"{% if selected_country == 'SE' %} selected{% endif %}>🇸🇪 Svezia</option>
-                      <option value="FI"{% if selected_country == 'FI' %} selected{% endif %}>🇫🇮 Finlandia</option>
-                      <option value="DK"{% if selected_country == 'DK' %} selected{% endif %}>🇩🇰 Danimarca</option>
-                      <option value="CZ"{% if selected_country == 'CZ' %} selected{% endif %}>🇨🇿 Repubblica Ceca</option>
-                      <option value="SK"{% if selected_country == 'SK' %} selected{% endif %}>🇸🇰 Slovacchia</option>
-                      <option value="HU"{% if selected_country == 'HU' %} selected{% endif %}>🇭🇺 Ungheria</option>
-                      <option value="BG"{% if selected_country == 'BG' %} selected{% endif %}>🇧🇬 Bulgaria</option>
-                      <option value="HR"{% if selected_country == 'HR' %} selected{% endif %}>🇭🇷 Croazia</option>
-                      <option value="SI"{% if selected_country == 'SI' %} selected{% endif %}>🇸🇮 Slovenia</option>
-                      <option value="LT"{% if selected_country == 'LT' %} selected{% endif %}>🇱🇹 Lituania</option>
-                      <option value="LV"{% if selected_country == 'LV' %} selected{% endif %}>🇱🇻 Lettonia</option>
-                      <option value="EE"{% if selected_country == 'EE' %} selected{% endif %}>🇪🇪 Estonia</option>
-                      <option value="LU"{% if selected_country == 'LU' %} selected{% endif %}>🇱🇺 Lussemburgo</option>
-                      <option value="CY"{% if selected_country == 'CY' %} selected{% endif %}>🇨🇾 Cipro</option>
-                      <option value="MT"{% if selected_country == 'MT' %} selected{% endif %}>🇲🇹 Malta</option>
-                    </select>
-                </div>
-              </div>
-              <div id="idp" {% if wallet_initialized %}style="display:none;"{% endif %}>
-                <fieldset>
-                <legend>Scegli come verificare la tua identità</legend>
-                  <div class="form-check">
-                    <input  type="radio" name="idpRadio" value="CIE3" id="cie3"
-                          {% if selected_idp == 'CIE3' or not selected_idp %}checked{% endif %}>
-                    <label  for="cie3">CIE (Livello 3)</label>
-                  </div>
+      <!-- State Member Selection -->
+      {% include 'core/member_state/member_selection.html' %}
+      <!-- End State Member Selection -->
 
-                  <div class="form-check">
-                    <input  type="radio" name="idpRadio" value="CIE2" id="cie2"
-                          {% if selected_idp == 'CIE2' %}checked{% endif %}>
-                    <label  for="cie2">CIE (Livello 2)</label>
-                  </div>
+      <!-- Carousel section -->
+      <form action="/wallet/v1/search" method="post">
+          {% include 'core/carousel/carousel_container.html' %}
+      </form>
+      <!-- Carousel section -->
 
-                  <div class="form-check">
-                    <input  type="radio" name="idpRadio" value="SPID2" id="spid2"
-                          {% if selected_idp == 'SPID' %}checked{% endif %}>
-                    <label  for="spid2">SPID (Livello 2)</label>
-                  </div>
-                </fieldset>
-              </div>
-            </article>
-          </div>
-        </div>
+      <!-- Button section -->
+      {% include 'core/buttons/button_section.html' %}
+      <!-- End Button Section -->
 
-     <form action="/wallet/v1/search" method="post">
-         <div class="container" {% if not wallet_initialized %}style="display:none;"{% endif %}>
-            <div class="row">
-                <article class="it-card it-card-image rounded shadow-sm border">
-                  <h3 class="it-card-title ">
-                    <div id="search_result">
-                      {% if error_message %}
-                        <div class="alert alert-danger d-flex align-items-center" role="alert">
-                          <div>
-                            <strong>Errore:</strong> {{ error_message }}
-                          </div>
-                        </div>
-                      {% endif %}
-                      {% if success_message %}
-                        <div class="alert alert-success d-flex align-items-center" role="alert">
-                          <div>
-                            <strong>Successo:</strong> {{ success_message }}
-                          </div>
-                        </div>
-                      {% endif %}
-                    </div>
-                  </h3>
-                  <div class="it-card-body">
-                    <div class="it-carousel-wrapper splide it-carousel-landscape-abstract-three-cols-arrow-visible" data-bs-carousel-splide data-splide='{"height":"auto"}'>
-                      <div class="splide__track">
-                        <ul class="splide__list">
-                            {% for credential_issuer, credential_list in credential_keys.items() %}
-                                {% for credential_type, credential_object in credential_list.items() %}
-                                    {% set credential_format = credential_object.get("format") %}
-                                    {% set credential_label = (
-                                        credential_object.get("credential_metadata", {}).get("display", [])
-                                        | selectattr("locale", "equalto", "it-IT")
-                                        | map(attribute="description")
-                                        | first
-                                    ) %}
-                                    {% set id_credential = credential_issuer ~ ':' ~ credential_type %}
-                                      <li class="splide__slide lined_slide">
-                                        <div class="it-single-slide-wrapper h-100 p-2">
-                                          <article class="it-card it-card-height-full rounded shadow-sm border">
-                                            <h3 class="it-card-title it-card-title-icon ">
-                                              {{ credential_type }}
-                                            </h3>
-                                            <div class="it-card-body">
-                                              <address class="it-card-signature">{{ credential_format }}</address>
-                                              <p class="it-card-text">{{ credential_label }} </p>
-                                            </div>
-                                            <footer class="it-card-related it-card-footer">
-                                              <div class="it-card-taxonomy">
-                                                    <button id="{{ id_credential }}" role="button" class="btn btn-outline-primary">Dettaglio</button>
-                                              </div>
-                                              <time class="it-card-date">{{ credential_issuer }}</time>
-                                            </footer>
-                                          </article>
-                                        </div>
-                                      </li>
-                                {% endfor %}
-                            {% endfor %}
-                        </ul>
-                      </div>
-                    </div>
-                  </div>
-                  <footer class="it-card-related it-card-footer">
-                      <div class="input-group">
-                          <div class="select-wrapper">
-                              <select id="search_type" name="search_type">
-                                <option selected="" value="">Tipo ricerca</option>
-                                <option value="all">Tutto</option>
-                                <option value="credential_issuer">Credential Issuer</option>
-                                <option value="scope">Tipo credenziale</option>
-                                <option value="attribute">attributo/i contenuti</option>
-                              </select>
-                          </div>
-                      </div>
-                      <div class="input-group">
-                          <input type="text" class="form-control" id="search_element" name="search_element">
-                          <div class="input-group-append">
-                            <button class="btn btn-primary" type="submit" id="search-btn">Cerca</button>
-                          </div>
-                      </div>
-                  </footer>
-                </article>
-               </div>
-         </div>
-    </form>
-    <div id="buttons_containers" class="d-grid gap-2 my-4" {% if init_error_message %}style="display:none;"{% endif %}>
-        <button id="init-btn" class="btn btn-primary"{% if wallet_initialized %} style="display:none;"{% endif %}{% if not wallet_initialized %} disabled{% endif %}>
-            <span class="rounded-icon">
-              <svg class="icon icon-white">
-                  <use href="{{ (url_for('static', filename='svg/sprites.svg') ~ '#it-settings') | safe }}"></use>
-              </svg>
-            </span>
-            <span>Inizializza</span>
-        </button>
-        <a href="/wallet/logout" class="btn btn-outline-danger">
-            <span class="rounded-icon">
-              <svg class="icon icon-danger">
-                  <use href="{{ (url_for('static', filename='svg/sprites.svg') ~ '#it-locked') | safe }}"></use>
-              </svg>
-            </span>
-            <span>Blocca</span>
-        </a>
-        <button id="add-btn" class="btn btn-primary"{% if not wallet_initialized %} style="display:none;"{% endif %}>
-              <span class="rounded-icon">
-                <svg class="icon icon-white">
-                    <use href="{{ (url_for('static', filename='svg/sprites.svg') ~ '#it-plus') | safe }}"></use>
-                </svg>
-              </span>
-              <span>Aggiungi</span>
-        </button>
-        <button id="rp-btn" class="btn btn-secondary"{% if not wallet_initialized %} style="display:none;" {% endif %}>
-          <span class="rounded-icon">
-            <svg class="icon icon-secondary">
-                 <use href="{{ (url_for('static', filename='svg/sprites.svg') ~ '#it-info-circle') | safe }}"></use>
-            </svg>
-          </span>
-          <span>Relying Party</span>
-        </button>
-    </div>
     </main>
+
   </div>
-  <!-- Popup Modal Moderno -->
-  <div id="cred-popup" class="modal">
-    <div class="cred-popup-content">
-      <button id="cred-popup-trash" class="btn btn-outline-danger" onclick="deleteCredential()">🗑️</button>
-      <button id="cred-popup-close" class="btn btn-outline-secondary" onclick="closeCredPopup()">❌</button>
-      <div id="cred-popup-title">&nbsp;</div>
-      <div id="cred-popup-body">Caricamento...</div>
-    </div>
-  </div>
+
+  {% include 'template.html' %}
+<!--  <div id="credential_detail">
+  </div>-->
+
+<!--  <div id="cred-popup" class="modal">-->
+<!--    <div class="cred-popup-content">-->
+<!--      <button id="cred-popup-trash" class="btn btn-outline-danger" onclick="deleteCredential()">🗑️</button>-->
+<!--      <button id="cred-popup-close" class="btn btn-outline-secondary" onclick="closeCredPopup()">❌</button>-->
+<!--      <div id="cred-popup-title">&nbsp;</div>-->
+<!--      <div id="cred-popup-body">Caricamento...</div>-->
+<!--    </div>-->
+<!--  </div>-->
   <script>
     let popupHtml;
     let lastOpenedButtonId = null;
@@ -313,6 +114,9 @@
     const trashPopup = document.getElementById("trash-popup");
     const trashPopupConfirm = document.getElementById("trash-popup-confirm-btn");
     const trashPopupCancel = document.getElementById("trash-popup-cancel-btn");
+
+    // Modale Template
+    const template = document.getElementById("detail_template");
 
     const credPopup = document.getElementById("cred-popup");
     const credPopupTitle = document.getElementById("cred-popup-title");
@@ -384,7 +188,6 @@
 
       handleInitErrorUI();
 
-      // Chiudi popup CRED con ESC
       document.addEventListener("keydown", (e) => {
         if (e.key === "Escape") {
           closeCredPopup()
@@ -420,6 +223,26 @@
 
           trashPopupCancel.hasTrashPopupCancelHandler = true; // previene duplicazione listener
       }
+
+      template.addEventListener('shown.bs.modal', async function (event) {
+        const button = event.relatedTarget;
+        const button_split = button.id.split(":");
+        const input_body = {
+          issuer: button_split.slice(0, -1).join(":"),
+          key: button_split.pop()
+        };
+        try {
+          const response = await executeFetch("/wallet/detail", "POST", input_body);
+          if (!response.ok) {
+            const errorMessage = await getErrorMessage(response);
+            throw new Error(errorMessage);
+          }
+          const html = await response.text();
+          document.getElementById("modal-body-detail").innerHTML = html;
+        } catch (err) {
+          console.error(err);
+        }
+      });
 
       // Confirm trash
       if (trashPopupConfirm && !trashPopupConfirm.hasTrashPopupConfirmHandler) {
@@ -867,55 +690,6 @@
         }
       });
 
-      // --- Bottone mostra credenziale ---
-      document.addEventListener("click", async (e) => {
-        if (e.target.closest(".btn-outline-primary")) {
-          const button = e.target.closest(".btn-outline-primary");
-          lastOpenedButtonId = button.id;
-          console.log("Aperto popup da bottone id:", lastOpenedButtonId);
-
-          // cancello eventuali messaggi
-          result.innerHTML = "";
-
-          // disabilito il pulsante
-          button.disabled = true;
-
-          // mostra popup e carica contenuto...
-          credPopup.classList.add("show");
-          credPopupBody.style.minHeight = "300px";
-          credPopupTitle.innerHTML = `Gestione Credenziale (${tagCredenziale(lastOpenedButtonId)})`;
-          credPopupBody.innerHTML = `
-            <div class="spinner-wrapper">
-              <div class="spinner"></div>
-              <p>Caricamento in corso...</p>
-            </div>
-          `;
-
-          // Ritardo opzionale per mostrare lo spinner
-          await new Promise(resolve => setTimeout(resolve, 300));
-
-          try {
-            const response = await executeFetch("/wallet/template/" + button.id);
-
-            if (!response.ok) {
-              const errorMessage = await getErrorMessage(response);
-              throw new Error(`${errorMessage}`);
-            }
-
-            const html = await response.text();
-            credPopupBody.innerHTML = html;
-          } catch (err) {
-            const message = err?.message || "Errore sconosciuto";
-            credPopupBody.innerHTML = `
-              <div class="flash-container flash-error">
-                <p>Fallito caricamento del template: ${message}</p>
-              </div>`;
-          } finally {
-            // abilita il pulsante
-            button.disabled = false;
-          }
-        }
-      });
     }
 
     // Ricezione eventi

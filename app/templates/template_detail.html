@@ -1,0 +1,38 @@
+<!-- htmlhint doctype-first:false -->
+<ul class="nav nav-tabs nav-tabs-cards" id="card-simple" role="tablist">
+    <li class="nav-item">
+        <a class="nav-link active" id="card-simple1-tab" data-bs-toggle="tab" href="#card-simpletab1" role="tab" aria-controls="card-simpletab1" aria-selected="true">
+            <svg class="icon">
+                <use href="{{ (url_for('static', filename='svg/sprites.svg') ~ '#it-presentation') | safe }}"></use>
+            </svg>
+            Grafico
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" id="card-simple2-tab" data-bs-toggle="tab" href="#card-simpletab2" role="tab" aria-controls="card-simpletab2" aria-selected="false">
+            <svg class="icon">
+                <use href="{{ (url_for('static', filename='svg/sprites.svg') ~ '#it-file-json') | safe }}"></use>
+            </svg>
+            Json
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" id="card-simple3-tab" data-bs-toggle="tab" href="#card-simpletab3" role="tab" aria-controls="card-simpletab3" aria-selected="false">
+            <svg class="icon">
+                <use href="{{ (url_for('static', filename='svg/sprites.svg') ~ '#it-file') | safe }}"></use>
+            </svg>
+            RAW
+        </a>
+    </li>
+</ul>
+<div class="tab-content" id="card-simpleContent">
+    <div class="tab-pane p-4 fade show active" id="card-simpletab1" role="tabpanel" aria-labelledby="card-simple1-tab">
+        {% include 'core/template/tab/presentation.html' %}
+    </div>
+    <div class="tab-pane p-4 fade" id="card-simpletab2" role="tabpanel" aria-labelledby="card-simple2-tab">
+        {% include 'core/template/tab/json.html' %}
+    </div>
+    <div class="tab-pane p-4 fade" id="card-simpletab3" role="tabpanel" aria-labelledby="card-simple3-tab">
+        {% include 'core/template/tab/raw.html' %}
+    </div>
+</div>
