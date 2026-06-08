@@ -18,8 +18,9 @@ from app.utils.utils import (
     unescape_json,
     unix_ts_to_str_datetime,
 )
-from ..utils.type_utils import get_type_from_key
 from settings import CONTENT_PDF_BASE_64_PREFIX, ISO_18013_5_NAME, JWT_PREFIX, MSO_MDOC_PREFIX, SD_JWT_PREFIX
+
+from ..utils.type_utils import get_type_from_key
 
 logger = logging.getLogger(__name__)
 wallet_routes = Blueprint("wallet_routes", __name__, url_prefix="/wallet")
@@ -303,19 +304,22 @@ def search():
     ), status_code
 
 
-@wallet_routes.route("/detail", methods=["POST"] , strict_slashes=False)
+@wallet_routes.route("/detail", methods=["POST"], strict_slashes=False)
 def credentialTypeTemplate():
 
-    logger.debug(f"Entering method: credentialTypeTemplate.")
+    logger.debug("Entering method: credentialTypeTemplate.")
     body = request.get_json()
     issuer = body["issuer"]
     key = body["key"]
     _clear_session()  # todo can remove it?
-    #if not (result := app_state.credential_store.find_by_prefix_with_key(credential_type)):
+    # if not (result := app_state.credential_store.find_by_prefix_with_key(credential_type)):
 
     if not (response := app_state.credential_store._get_credential_into_store(issuer, key)):
         logger.error(f"CredentialTypeTemplate: issuer or key not found in credentialStore for key: {key}")
-        return "Nessuna credenziale di tipo richiesto trovata nel wallet", 400 # i18n? @Todo Talking with Giuseppe for i18n implementation
+        return (
+            "Nessuna credenziale di tipo richiesto trovata nel wallet",
+            400,
+        )  # i18n? @Todo Talking with Giuseppe for i18n implementation
 
     logger.info(f"credentialTypeTemplate: result: {response}")
 
@@ -324,7 +328,6 @@ def credentialTypeTemplate():
 
     # vct = value.get("vct", "")
     # logger.info("Il vct della credenziale %s è: %s", sanitize_for_logging(key), sanitize_for_logging(vct))
-
 
     # @TODO Talking with Giuseppe for Status list
 
@@ -344,7 +347,6 @@ def credentialTypeTemplate():
     status_descr = "VALIDO"
 
     data_row = response.get("data_row", {})
-    content = claims.get("content")
 
     # @TODO Decprecated
     content_list = []
@@ -373,7 +375,7 @@ def credentialTypeTemplate():
             status=status,
             statusDecr=status_descr,
             contentList=content_list,
-            type= get_type_from_key(key)
+            type=get_type_from_key(key),
         )
     except Exception as e:
         logger.error("%s", sanitize_for_logging(str(e)))

@@ -31,48 +31,57 @@ class CredentialStore:
         return count
 
     def add_credential(self, issuer: str, key, data_row, vct, claims=None, status_assertion=None, status=None):
-        logger.debug(f"Entering method: add_credential_from_issuer. Params [issuer: {issuer}, key: {key}, data_row: {data_row}, vct: {vct}, claims: {claims}, status_assertion: {status_assertion}, status: {status}]")
+        logger.debug(
+            f"Entering method: add_credential_from_issuer. Params [issuer: {issuer}, key: {key}, data_row: {data_row}, vct: {vct}, claims: {claims}, status_assertion: {status_assertion}, status: {status}]"
+        )
         if not self._store.get(issuer):
             # Issuer is not present, i can add the credential directly
             self.__add_credential_into_store(issuer, key, data_row, vct, claims, status_assertion, status)
         else:
             # Issuer is already present, i need to check if the credential is already present or not
-            if not  key in self._store[issuer]:
+            if key not in self._store[issuer]:
                 # Credential is not present, i need to update it
                 self.__update_credential_into_store(issuer, key, data_row, vct, claims, status_assertion, status)
             else:
                 # The credential is already present, @TODO to decide if update it or not, need to talking with Giuseppe
                 logger.debug(f"Credential with key {key} already present for issuer {issuer}! Update not performed.")
 
-
-    def __add_credential_into_store(self, issuer: str, key, data_row, vct, claims=None, status_assertion=None, status=None):
-        logger.debug(f"Entering method: add_credential_into_store. Params [issuer: {issuer}, key: {key}, data_row: {data_row}, vct: {vct}, claims: {claims}, status_assertion: {status_assertion}, status: {status}]")
+    def __add_credential_into_store(
+        self, issuer: str, key, data_row, vct, claims=None, status_assertion=None, status=None
+    ):
+        logger.debug(
+            f"Entering method: add_credential_into_store. Params [issuer: {issuer}, key: {key}, data_row: {data_row}, vct: {vct}, claims: {claims}, status_assertion: {status_assertion}, status: {status}]"
+        )
 
         entry = self.__get_entity_store(data_row, vct, claims, status_assertion, status)
 
         self._store[issuer] = {key: entry}
 
-    def __update_credential_into_store(self, issuer: str, key, data_row, vct, claims=None, status_assertion=None, status=None):
-        logger.debug(f"Entering method: __update_credential_into_store. Params [issuer: {issuer}, key: {key}, data_row: {data_row}, vct: {vct}, claims: {claims}, status_assertion: {status_assertion}, status: {status}]")
+    def __update_credential_into_store(
+        self, issuer: str, key, data_row, vct, claims=None, status_assertion=None, status=None
+    ):
+        logger.debug(
+            f"Entering method: __update_credential_into_store. Params [issuer: {issuer}, key: {key}, data_row: {data_row}, vct: {vct}, claims: {claims}, status_assertion: {status_assertion}, status: {status}]"
+        )
 
         entry = self.__get_entity_store(data_row, vct, claims, status_assertion, status)
 
         self._store[issuer][key] = entry
 
     def _get_credential_into_store(self, issuer: str, key: str) -> Optional[dict]:
-        '''
+        """
         Return the credential entry for the given issuer and key, or None if not found.
-        '''
+        """
         logger.debug(f"Entering method: _get_credential_into_store. Params [issuer: {issuer}, key: {key}]")
         return self._store.get(issuer, {}).get(key)
-
-
 
     def __get_entity_store(self, data_row, vct, claims=None, status_assertion=None, status=None) -> dict:
         """
         Return the credential entry
         """
-        logger.debug(f"Entering method: __get_entity_store. Params [data_row: {data_row}, vct: {vct}, claims: {claims}, status_assertion: {status_assertion}, status: {status}]")
+        logger.debug(
+            f"Entering method: __get_entity_store. Params [data_row: {data_row}, vct: {vct}, claims: {claims}, status_assertion: {status_assertion}, status: {status}]"
+        )
 
         entry = {"data_row": data_row, "vct": vct}
 
@@ -86,7 +95,6 @@ class CredentialStore:
             entry["status"] = status
 
         return entry
-
 
     # @TODO DEPRECATED - to remove after refactor of add_credential method
     def add(self, key, data_row, vct, claims=None, status_assertion=None, status=None) -> None:

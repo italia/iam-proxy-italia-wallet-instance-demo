@@ -13,7 +13,8 @@
   word-break: break-all;
   text-align: left;
 }
-#raw_template {
+
+#raw-template {
   background: #1e1e1e;  /* fondo scuro */
   color: #dcdcdc;       /* colore base */
   padding: 10px;
