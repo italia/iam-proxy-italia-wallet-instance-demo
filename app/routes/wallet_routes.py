@@ -394,7 +394,6 @@ def _create_credential_metadata(credential_key, claims):
     issuing_country = parsed_claims["issuing_country"]
 
     if dt_iat_local_formatted and dt_exp_local_formatted:
-
         metadata = f"Credenziale emessa da {issuing_authority} ({issuing_country}) il {dt_iat_local_formatted}, scade il {dt_exp_local_formatted}."
         logger.info(f"Credential metadata: {metadata}")
     else:
