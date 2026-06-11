@@ -19,7 +19,8 @@
     "user_authentication": [
       "iso_18045_basic"
     ],
-    "certification": "https://registry.example.org"
+    "certification": "https://registry.example.org",
+    "oauth_authorization_server":"https://iam-proxy-italia.example.org/OpenID4VP"
   },
   "wallet_provider": {
     "wallet_link": "https://wallet-solution.example.org",
@@ -57,7 +58,7 @@
         ]
       }
     ],
-    "authority_hints": [],
+    "authority_hints": ["https://trust-anchor.example.org"],
     "metadata_group": {
       "federation_entity": {
         "organization_name": "IAM PROXY ITALIA DEMO",
@@ -114,7 +115,7 @@
         "CIE2": "https://cie-provider.example.org",
         "SPID2": "https://demo.spid.gov.it"
       },
-      "credential_configuration_id": "dc_sd_jwt_PersonIdentificationData",
+      "credential_configuration_id": "dc_sd_jwt_pid",
       "response_mode": "query",
       "response_type": "code",
       "redirect_uri": "http://localhost:8080/wallet/cb"

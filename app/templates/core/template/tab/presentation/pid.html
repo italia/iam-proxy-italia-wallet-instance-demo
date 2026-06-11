@@ -1,0 +1,54 @@
+<!-- htmlhint doctype-first:false -->
+<form>
+  <div class="row">
+    <div class="col-lg-6">
+      <div class="form-group">
+        <label>Nome: {{ claims.given_name }}</label>
+      </div>
+    </div>
+
+    <div class="col-lg-6">
+      <div class="form-group">
+        <label>Cognome: {{ claims.family_name }}</label>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-lg-4">
+      <div class="form-group">
+        <label>Data di nascita: {{ claims.birthdate }}</label>
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="form-group">
+        <label>Luogo di nascita: {{ claims.place_of_birth.locality }}</label>
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="form-group">
+        <label >Nazionalità: {{ claims.nationalities | join(', ') }}</label>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-lg-6">
+      <div class="form-group">
+        <label >Codice fiscale: {{ claims.tax_id_code }}</label>
+      </div>
+    </div>
+  </div>
+
+  {% if metadata %}
+  <div class="row">
+    <div class="col-12">
+      <div class="alert alert-info" role="alert">
+        {{ metadata }}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+</form>

@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <title>Attivazione EU Wallet</title>
+<!--  <link rel="stylesheet" href="{{ url_for('static', filename='wallet.css') }}">-->
+     <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap-italia.min.css') }}" />
+
+
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+  <div class="container">
+    <header>
+<!--      <img src="{{ url_for('static', filename='images/wallet_logo.svg') }}" alt="Digital Wallet" />-->
+<!--      <h1>Sblocca il tuo Digital Wallet</h1>-->
+        <div class="it-header-center-wrapper">
+          <div class="container-xl">
+            <div class="row">
+              <div class="col-12">
+                <div class="it-header-center-content-wrapper">
+                  <div class="it-brand-wrapper">
+                    <a href="#">
+                      <svg class="icon" aria-hidden="true">
+                        <use href="/static/svg/sprites.svg#it-card"></use>
+                      </svg>
+                      <div class="it-brand-text">
+                        <div class="it-brand-title">IT-Wallet</div>
+                        <div class="it-brand-tagline d-none d-md-block">Portafoglio digitale</div>
+                      </div>
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+    </header>
+    <main>
+<!--      <p>Stai per attivare il tuo Digital Wallet conforme allo standard europeo. Imposta un PIN per proteggerne l'accesso.</p>-->
+
+      <div class="alert alert-primary d-flex align-items-center my-4" role="alert">
+        <div>
+            Stai per <strong>attivare</strong> il tuo digital wallet! Imposta un <strong>PIN</strong> sicuro per proteggere l'accesso al tuo portafoglio digitale conforme allo standard europeo.
+        </div>
+      </div>
+      {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+              {% set first_category = messages[0][0] %}
+              {% set first_message = messages[0][1] %}
+
+              {% if first_category == 'success' %}
+                  <div class="alert alert-success d-flex align-items-center" role="alert">
+                      <div>
+                        {{ first_message }}
+                      </div>
+                  </div>
+              {% elif first_category == 'error' %}
+                  <div class="alert alert-danger d-flex align-items-center" role="alert">
+                    <div>
+                      <strong>Error:</strong> {{ first_message }}
+                    </div>
+                  </div>
+              {% endif %}
+          {% endif %}
+      {% endwith %}
+      <form class="activation-form" action="/wallet/activate" method="post">
+
+        <div class="form-group my-4">
+          <label for="pin">PIN</label>
+          <input type="password" data-bs-input class="form-control input-password" id="pin" name="pin" pattern="\d{4,8}"  aria-describedby="infoPassword" required>
+          <button type="button" class="password-icon btn" role="switch" aria-checked="false">
+            <span class="visually-hidden">Mostra/Nascondi Password</span>
+            <svg class="password-icon-visible icon icon-sm" aria-hidden="true"><use href="{{ (url_for('static', filename='svg/sprites.svg') ~ '#it-password-visible') | safe }}"></use></svg>
+            <svg class="password-icon-invisible icon icon-sm d-none" aria-hidden="true"><use href="{{ (url_for('static', filename='svg/sprites.svg') ~ '#it-password-invisible') | safe }}"></use></svg>
+          </button>
+          <p id="infoPassword" class="form-text text-muted d-block small pb-0">Imposta un PIN sicuro (4-8 cifre).</p>
+        </div>
+
+        <div class="form-group">
+          <label for="confirm_pin">Conferma il PIN</label>
+          <input type="password" data-bs-input class="form-control input-password" id="confirm_pin" name="confirm_pin"  aria-describedby="confirmPassword" required>
+          <button type="button" class="password-icon btn" role="switch" aria-checked="false">
+            <span class="visually-hidden">Mostra/Nascondi Password</span>
+            <svg class="password-icon-visible icon icon-sm" aria-hidden="true"><use href="{{ (url_for('static', filename='svg/sprites.svg') ~ '#it-password-visible') | safe }}"></use></svg>
+            <svg class="password-icon-invisible icon icon-sm d-none" aria-hidden="true"><use href="{{ (url_for('static', filename='svg/sprites.svg') ~ '#it-password-invisible') | safe }}"></use></svg>
+          </button>
+        </div>
+
+          <div class="form-check">
+            <input id="terms" name="terms" type="checkbox" required="" data-focus-mouse="false">
+            <label for="terms">Accetto i <a href="/terms">termini di servizio</a> e l'<a href="/privacy">informativa privacy</a>.</label>
+          </div>
+          <div class="d-grid gap-2">
+            <button type="submit" class="btn btn-primary">
+             <span class="rounded-icon">
+                <svg class="icon icon-white">
+                    <use href="{{ (url_for('static', filename='svg/sprites.svg') ~ '#it-key') | safe }}"></use>
+                </svg>
+              </span>
+              <span>Attiva Wallet</span>
+            </button>
+          </div>
+      </form>
+    </main>
+  </div>
+  <script src="{{ url_for('static', filename='js/bootstrap-italia.bundle.min.js') }}"></script>
+</body>
+</html>
