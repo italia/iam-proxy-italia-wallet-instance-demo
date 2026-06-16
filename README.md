@@ -5,7 +5,7 @@ Demo wallet instance for Relying Party and Credential Issuer assessment and deve
 ## Table of Contents
 
 ## 1. Overview
-This is a Web application that acts as a Wallet Instance, in full compliance with the [IT Wallet specifications 1.0.0](https://italia.github.io/eid-wallet-it-docs/releases/v1.0.0/en/).
+This is a Web application that acts as a Wallet Instance, in full compliance with the [IT Wallet specifications 1.4.1](https://italia.github.io/eid-wallet-it-docs/releases/v1.4.1/en/).
 
 The application enables users to:
 
