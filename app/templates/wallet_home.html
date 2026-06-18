@@ -94,5 +94,9 @@
   <script src="{{ url_for('static', filename='js/wallet/credentials.js') }}"></script>
   <script src="{{ url_for('static', filename='js/wallet/lifecycle.js') }}"></script>
   <script src="{{ url_for('static', filename='js/wallet/components.js') }}"></script>
+  <script>
+    const SESSION_ID = "{{ session_id }}";
+    const INIT_ERROR_MESSAGE = "{{ init_error_message|escape }}";
+  </script>
 </body>
 </html>

@@ -9,8 +9,8 @@ let rp_requestUriMethod = "get";
 let rp_state = "";
 
 // --- COSTANTI DI SESSIONE E CONFIGURAZIONI ---
-const SESSION_ID = "{{ session_id }}";
-const INIT_ERROR_MESSAGE = "{{ init_error_message|escape }}";
+//const SESSION_ID = "{{ session_id }}";
+//const INIT_ERROR_MESSAGE = "{{ init_error_message|escape }}";
 
 // --- RIFERIMENTI DOM: ICONE E POPUP GENERALI ---
 const memoryIcon = document.querySelector(".memory-icon");
