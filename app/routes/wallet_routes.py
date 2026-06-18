@@ -390,6 +390,10 @@ def presentation_phase():
     qrcode_data = body["qrcode_data"]
     _clear_session()  # todo can remove it?
     print(f"qrcode_data: {qrcode_data}")
+    return dict(
+        result=200,
+        message="Presentazione avvenuta con successo!"
+    )
 
 def _create_credential_metadata(credential_key, claims):
     logger.info(f"Credential key: {credential_key} claims: {claims}")
