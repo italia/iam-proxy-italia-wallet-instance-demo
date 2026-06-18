@@ -382,6 +382,15 @@ def credentialTypeTemplate():
         return "Nessun template trovato per la credenziale nel wallet", 500
 
 
+@wallet_routes.route("/presentation", methods=["POST"], strict_slashes=False)
+def presentation_phase():
+    logger.debug("Entering method: presentation.")
+    print("Entering method: presentation.")
+    body = request.get_json()
+    qrcode_data = body["qrcode_data"]
+    _clear_session()  # todo can remove it?
+    print(f"qrcode_data: {qrcode_data}")
+
 def _create_credential_metadata(credential_key, claims):
     logger.info(f"Credential key: {credential_key} claims: {claims}")
     parsed_claims = _parse_credential_claims_by_key(credential_key, claims)

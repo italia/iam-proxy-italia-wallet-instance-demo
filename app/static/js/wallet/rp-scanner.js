@@ -85,45 +85,36 @@ function handleQrFileUpload(event) {
   reader.onload = function(e) {
     const img = new Image();
     img.onload = function() {
-      // Crea un canvas virtuale (in memoria) per estrarre i pixel dell'immagine
       const virtualCanvas = document.createElement("canvas");
       const ctx = virtualCanvas.getContext("2d");
-
       virtualCanvas.width = img.width;
       virtualCanvas.height = img.height;
-
-      // Disegna l'immagine caricata sul canvas virtuale
       ctx.drawImage(img, 0, 0, img.width, img.height);
-
-      // Estrae i dati dei pixel
       const imageData = ctx.getImageData(0, 0, img.width, img.height);
-
-      // Tenta la decodifica con jsQR
       const code = jsQR(imageData.data, imageData.width, imageData.height, {
         inversionAttempts: "dontInvert",
       });
 
       if (code) {
         console.log("QR Code rilevato da file:", code.data);
-
-        // Inserisce il valore nella textarea
-        if (textArea) textArea.value = code.data;
-
-        // Attiva il pulsante di conferma
-        if (confirmBtn) confirmBtn.disabled = false;
-
-        // Chiude la modale
-        const qrModalElement = document.getElementById('qr-scanner-modal');
-        const qrModal = bootstrap.Modal.getInstance(qrModalElement);
-        if (qrModal) qrModal.hide();
-
-        // Spegne lo scanner se la fotocamera era attiva
-        stopQrScanner();
+        const input_body = {
+          qrcode_data: code.data
+        };
+        try {
+          const response = await executeFetch("/wallet/presentation", "POST", input_body);
+          if (!response.ok)
+            throw new Error(await getErrorMessage(response));
+          const qrModalElement = document.getElementById('qr-scanner-modal');
+          const qrModal = bootstrap.Modal.getInstance(qrModalElement);
+          if (qrModal) qrModal.hide();
+          stopQrScanner();
+        } catch (err) {
+          console.error(err);
+        }
       } else {
         alert("Impossibile trovare un QR Code valido in questa immagine. Riprova con un'immagine più nitida.");
       }
 
-      // Reset dell'input file per permettere di ricaricare lo stesso file in caso di errore
       event.target.value = "";
     };
     img.src = e.target.result;
