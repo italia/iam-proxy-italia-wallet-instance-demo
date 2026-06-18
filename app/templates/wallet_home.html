@@ -23,9 +23,6 @@
     <div class="icon-bar">
       <img src="{{ url_for('static', filename='images/memory.svg') }}" alt="Memoria" class="memory-icon" {% if not session.get('pin_authenticated') %}style="display:none;"{% endif %}/>
       <img src="{{ url_for('static', filename='images/trash-delete-icon.svg') }}" alt="Cestino" class="trash-icon" {% if not wallet_initialized %}style="display:none;"{% endif %}/>
-      <!-- Popup per importazione QR -->
-      <img src="/static/images/qr-code-icon.svg" alt="Importa QR" id="qr-icon" onclick="apriQrPopup()" />
-      <!-- fine Popup per importazione QR -->
     </div>
     <header>
         <div class="it-header-center-wrapper">
@@ -50,6 +47,11 @@
                             alt="{{ selected_country or 'European Union' }}" />
                       </div>
                     </a>
+                  </div>
+                  <div class="">
+                          <!-- Popup per importazione QR -->
+                        <img src="/static/images/qr-code-icon.svg" alt="Importa QR" id="qr-icon" onclick="apriQrPopup()" />
+                        <!-- fine Popup per importazione QR -->
                   </div>
                 </div>
               </div>

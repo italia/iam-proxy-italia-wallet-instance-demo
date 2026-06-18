@@ -1,24 +1,27 @@
-<div class="modal fade" tabindex="-1" role="dialog" id="qr-scanner-modal" aria-labelledby="qr-modal-title">
-    <div class="modal-dialog modal-dialog-centered" role="document">
-      <div class="modal-content shadow-lg">
-        <div class="modal-header">
-          <h5 class="modal-title h4 text-primary" id="qr-modal-title">Scansiona QR Code</h5>
-          <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Chiudi modale" onclick="stopQrScanner()">
-            <svg class="icon icon-danger"><use href="/static/svg/sprites.svg#it-close"></use></svg>
+<div class="modal fade" id="qr-scanner-modal" tabindex="-1" role="dialog" aria-labelledby="qrModalTitle" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="qrModalTitle">Inquadra o Carica QR Code</h5>
+        <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Chiudi" onclick="stopQrScanner()"></button>
+      </div>
+      <div class="modal-body text-center">
+        <video id="qr-video" style="display: none;"></video>
+        <canvas id="qr-canvas" style="width: 100%; max-width: 400px; height: auto; border: 2px solid #0066cc; border-radius: 4px;"></canvas>
+
+        <p class="mt-3 text-muted">Inquadra il QR Code oppure:</p>
+
+        <div class="mb-2">
+          <input type="file" id="qr-file-input" accept="image/*" style="display: none;" onchange="handleQrFileUpload(event)" />
+          <button type="button" class="btn btn-outline-primary btn-sm" onclick="document.getElementById('qr-file-input').click()">
+            <svg class="icon icon-sm" aria-hidden="true"><use href="/static/svg/sprites.svg#it-upload"></use></svg>
+            Carica un'immagine QR
           </button>
         </div>
-        <div class="modal-body text-center">
-          <p class="mb-3">Inquadra il QR Code generato dal Relying Party.</p>
-
-          <video id="qr-video" autoplay playsinline style="display:none;"></video>
-
-          <div class="position-relative d-inline-block w-100" style="max-width: 350px;">
-            <canvas id="qr-canvas" class="rounded w-100" style="border: 3px solid #0066cc; background-color: #000;"></canvas>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-dismiss="modal" onclick="stopQrScanner()">Annulla</button>
-        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary btn-sm" type="button" data-bs-dismiss="modal" onclick="stopQrScanner()">Annulla</button>
       </div>
     </div>
+  </div>
 </div>
