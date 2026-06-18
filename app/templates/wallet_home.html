@@ -5,7 +5,6 @@
   <title>EU Digital Wallet - Home</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap-italia.min.css') }}" />
   <link rel="stylesheet" href="{{ url_for('static', filename='wallet.css') }}" />
-  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 </head>
 <body>
@@ -88,6 +87,7 @@
   {% include 'core/qrcode/qrcode.html' %}
   <!-- End Include for QRCode -->
 
+  <script src="{{ url_for('static', filename='js/jsQR.min.js') }}"></script>
   <script src="/static/js/wallet-utils.js"></script>
   <script src="{{ url_for('static', filename='js/bootstrap-italia.bundle.min.js') }}"></script>
   <script src="{{ url_for('static', filename='js/wallet/state.js') }}"></script>
