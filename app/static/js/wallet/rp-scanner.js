@@ -73,7 +73,7 @@ function stopQrScanner() {
   console.log("Scanner QR interrotto.");
 }
 
-function handleQrFileUpload(event) {
+async function handleQrFileUpload(event) {
   const file = event.target.files[0];
   if (!file) return;
 
