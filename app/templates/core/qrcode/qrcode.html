@@ -1,0 +1,24 @@
+<div class="modal fade" tabindex="-1" role="dialog" id="qr-scanner-modal" aria-labelledby="qr-modal-title">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+      <div class="modal-content shadow-lg">
+        <div class="modal-header">
+          <h5 class="modal-title h4 text-primary" id="qr-modal-title">Scansiona QR Code</h5>
+          <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Chiudi modale" onclick="stopQrScanner()">
+            <svg class="icon icon-danger"><use href="/static/svg/sprites.svg#it-close"></use></svg>
+          </button>
+        </div>
+        <div class="modal-body text-center">
+          <p class="mb-3">Inquadra il QR Code generato dal Relying Party.</p>
+
+          <video id="qr-video" autoplay playsinline style="display:none;"></video>
+
+          <div class="position-relative d-inline-block w-100" style="max-width: 350px;">
+            <canvas id="qr-canvas" class="rounded w-100" style="border: 3px solid #0066cc; background-color: #000;"></canvas>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-dismiss="modal" onclick="stopQrScanner()">Annulla</button>
+        </div>
+      </div>
+    </div>
+</div>
