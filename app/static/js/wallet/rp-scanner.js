@@ -106,10 +106,6 @@ function handleQrFileUpload(event) {
 }
 
 async function processQrPresentation(qrData) {
-
-  if (textArea) textArea.value = qrData;
-  if (confirmBtn) confirmBtn.disabled = false;
-
   try {
     const response = await executeFetch("/wallet/presentation", "POST", { qrcode_data: qrData });
     if (!response.ok) {
