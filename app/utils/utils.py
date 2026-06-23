@@ -9,7 +9,6 @@ import unicodedata
 from datetime import datetime, timezone
 from typing import Tuple, Union
 from urllib.parse import parse_qs, urlparse
-
 import fitz
 import jmespath
 from cryptography.hazmat.backends import default_backend
@@ -541,3 +540,16 @@ def unescape_json(value):
         return [unescape_json(v) for v in value]
     else:
         return value
+
+
+
+def parse_url_to_dict(input : str) -> dict:
+    logger.info(f"Entering parse_url_string. Params [parse_url_string: {parse_url_string}]")
+
+    parsed_url = urlparse(input)
+
+    query_dict = {key: value[0] for key, value in parse_qs(parsed_url.query).items()}
+
+    logger.info(f"query_dict: {query_dict}")
+
+    return query_dict

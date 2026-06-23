@@ -941,6 +941,7 @@ class ItWalletService:
 
         return {"success": True, "data": {"credential_id": credential_id}}
 
+    # @TODO Update this method to handle the complete flow to login into the wallet and present the credential to the RP
     def loginToVerifier(self, clientId: str, requestUri: str, requestUriMethod: str, state: str):
         """
         Metodo pubblico per effettuare il login ad un Relying Party / Verifier, incluso fetch dell'EC del Relying Party / Verifier.
@@ -950,32 +951,31 @@ class ItWalletService:
              self.session["rp_state"]
              self.session["rp_response_uri"]
         """
-        logger.info(
-            "➡️  Richiesta di login presso il Relying Party / Verifier %s",
-            sanitize_for_logging(clientId),
-        )
+
+
+        logger.info(f"Entering method: loginToVerifier. Params [client_id: {clientId}, request_uri: {requestUri}, requestUriMethod: {requestUriMethod}, state: {state}]")
 
         session_id = self.session.get("session_id")
         if not session_id:
             raise ValueError("Sessione non inizializzata")
 
-        # recupero del response_mode relativo al presentation flow dalla configurazione e sua validazione
-        presentation_response_mode = extract_claim(current_app.config, "metadata.presentation_flow.response_mode")
-
-        presentation_response_mode_supported = [PRESENTATION_RESPONSE_MODE_DIRECT_POST_JWT]
-        if presentation_response_mode not in presentation_response_mode_supported:
-            raise ValueError(
-                f"Il response_mode '{presentation_response_mode}' configurato per la presentazione delle credenziali del wallet non è supportato, i valori ammessi sono: {presentation_response_mode_supported}"
-            )
-
-        # recupero del response_type relativo al presentation flow dalla configurazione e sua validazione
-        presentation_response_type = extract_claim(current_app.config, "metadata.presentation_flow.response_type")
-
-        presentation_response_type_supported = [PRESENTATION_RESPONSE_TYPE_VP_TOKEN]
-        if presentation_response_type not in presentation_response_type_supported:
-            raise ValueError(
-                f"Il response_type '{presentation_response_type}' configurato per l'inizializzazione del wallet non è supportato, i valori ammessi sono: {presentation_response_type_supported}"
-            )
+        # # recupero del response_mode relativo al presentation flow dalla configurazione e sua validazione
+        # presentation_response_mode = extract_claim(current_app.config, "metadata.presentation_flow.response_mode")
+        #
+        # presentation_response_mode_supported = [PRESENTATION_RESPONSE_MODE_DIRECT_POST_JWT]
+        # if presentation_response_mode not in presentation_response_mode_supported:
+        #     raise ValueError(
+        #         f"Il response_mode '{presentation_response_mode}' configurato per la presentazione delle credenziali del wallet non è supportato, i valori ammessi sono: {presentation_response_mode_supported}"
+        #     )
+        #
+        # # recupero del response_type relativo al presentation flow dalla configurazione e sua validazione
+        # presentation_response_type = extract_claim(current_app.config, "metadata.presentation_flow.response_type")
+        #
+        # presentation_response_type_supported = [PRESENTATION_RESPONSE_TYPE_VP_TOKEN]
+        # if presentation_response_type not in presentation_response_type_supported:
+        #     raise ValueError(
+        #         f"Il response_type '{presentation_response_type}' configurato per l'inizializzazione del wallet non è supportato, i valori ammessi sono: {presentation_response_type_supported}"
+        #     )
 
         country = app_state.selected_country
         query_trust_root = f"ms_trust_configuration.{country}.trust_root"
@@ -984,32 +984,17 @@ class ItWalletService:
         if not trust_root_url:
             raise ValueError(f"Nessun Trust root per il paese {country}")
 
-        logger.info(
-            "ℹ️  Trust root individuato per il paese %s: %s",
-            sanitize_for_logging(country),
-            sanitize_for_logging(trust_root_url),
-        )
-
-        # recupero EC del verifier
-        logger.info(
-            "➡️  Entity ID del Relying Party / Verifier: %s",
-            sanitize_for_logging(clientId),
-        )
+        logger.info(f"query_trust_root: {query_trust_root}")
 
         # Richiama il metodo privato per ottenere l'EC, validarlo e recuperne il payload
         external_verifier_ec = self._entity_configuration_management(
             clientId, [METADATA_TYPE_FEDERATION_ENTITY, METADATA_TYPE_CREDENTIAL_VERIFIER], trust_root_url
         )
 
-        logger.info(
-            f"✅ Scaricato e validato l'Entity Configuration dell'entità {clientId} di tipo {METADATA_TYPE_CREDENTIAL_VERIFIER}"
-        )
+        logger.info(f"EC for {clientId} validated successfully with metadata types: {[METADATA_TYPE_FEDERATION_ENTITY, METADATA_TYPE_CREDENTIAL_VERIFIER]}")
 
         # Salvataggio in memoria Flask external_verifier_ec
         app_state.ec_store.add(clientId, external_verifier_ec)
-        logger.info(
-            f"✅ Salvato in memoria il payload dell'Entity Configuration dell'entità {clientId} di tipo {METADATA_TYPE_CREDENTIAL_VERIFIER}"
-        )
 
         # Build authorization query string
         params = {
@@ -1020,20 +1005,13 @@ class ItWalletService:
         }
         query_string = f"?{urlencode(params)}"
 
-        logger.info(
-            "🚀 Invio Request_uri request al Request_uri endpoint %s",
-            sanitize_for_logging(requestUri),
-        )
-        # Effettua una request_uri request
+        logger.info(f"send request: {requestUri}")
+
         request_uri_response = request_request_uri(
             url=requestUri, query_string=query_string, proxies=self.proxies, no_proxy_domains=self.no_proxy_domains
         )
 
-        logger.info(
-            "✅ Ricevuta risposta dal Request_uri endpoint %s",
-            sanitize_for_logging(requestUri),
-        )
-        logger.info("%s", sanitize_for_logging(request_uri_response))
+        logger.info(f"response: {request_uri_response}")
 
         if not is_jwt(request_uri_response):
             raise ValueError("La Request_uri response ricevuta dal Relying Party / Verifier non è un JWT")
@@ -1043,9 +1021,6 @@ class ItWalletService:
         verifier_jwks = extract_claim(external_verifier_ec, query_filter)
         if not verifier_jwks:
             raise ValueError(f"Non trovata in memoria alcuna chiave JWK del Relying Party / Verifier {clientId}")
-
-        logger.debug("🔑 JWKs trovato:")
-        logger.debug("%s", sanitize_for_logging(json.dumps(verifier_jwks, indent=2, ensure_ascii=False)))
 
         try:
             request_uri_response_jwt_payload = decode_and_verify_jwt(request_uri_response, verifier_jwks)

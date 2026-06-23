@@ -17,6 +17,7 @@ from app.utils.utils import (
     sanitize_for_logging,
     unescape_json,
     unix_ts_to_str_datetime,
+    parse_url_to_dict,
 )
 from settings import CONTENT_PDF_BASE_64_PREFIX, ISO_18013_5_NAME, JWT_PREFIX, MSO_MDOC_PREFIX, SD_JWT_PREFIX
 
@@ -390,10 +391,27 @@ def presentation_phase():
     qrcode_data = body["qrcode_data"]
     _clear_session()  # todo can remove it?
     print(f"qrcode_data: {qrcode_data}")
-    return dict(
-        result=200,
-        message="Presentazione avvenuta con successo!"
-    )
+
+    it_wallet_service = ItWalletService(session, external_discovery=True)
+    try:
+        params = parse_url_to_dict(qrcode_data)
+        # @Todo Understand how need requestUriMethod and State ??
+        it_wallet_service.loginToVerifier(params.get("client_id"),params.get("request_uri"),"", "")
+    except Exception as e:
+        logger.error(f"Error, message: {e}")
+        # @Todo insert this into Util
+        return jsonify({
+            "success": False,
+            "error_message": f"Exception :{e}."
+        }), 400
+
+    session_id = request.args.get("session_id", "")
+    print(f"session_id: {session_id}")
+    return jsonify({
+            "success": True,
+            "success_message": "Login success."
+        }), 200
+
 
 def _create_credential_metadata(credential_key, claims):
     logger.info(f"Credential key: {credential_key} claims: {claims}")
