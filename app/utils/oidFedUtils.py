@@ -72,14 +72,27 @@ def _parse_entity_statement_jwt(response: requests.Response) -> str:
         raise RuntimeError(f"Risposta non application/entity-statement+jwt ma {ct}")
     return response.text.strip()
 
+def _parse_entity_statement(response: requests.Response) -> str:
+    """Parse JWT from entity-statement response."""
+    ct = response.headers.get("Content-Type", "")
+    logger.info(f"Entering method: _parse_entity_statement. Content-Type: {ct} response: {response.__dict__}")
+    if "application/json" in ct:
+        try:
+            return response.json()
+        except ValueError:
+            logger.warning("Content-Type is application/json but body is not valid JSON")
+            return response.text.strip()
+    if "application/entity-statement+jwt" in ct:
+        return response.text.strip()
+    return response
 
-def  oid_fed_fetch_openid_configuration(
+
+def oid_fed_fetch_openid_configuration(
     base_url: str,
     max_retries: int = 3,
     retry_delay: float = 1.0,
     proxies: dict = None,
     no_proxy_domains: list[str] = None,
-    headers: dict = None,
 ) -> str:
     """
     Invia una richiesta GET /.well-known/openid-federation con retry in caso di errore di connessione.
@@ -93,10 +106,8 @@ def  oid_fed_fetch_openid_configuration(
         Il JWT rappresentnte l'entity statement.
         In caso di errore, rilancia un'eccezione.
     """
-    logger.info(f"Entering method: oid_fed_fetch_openid_configuration. Params [base_url: {base_url}, max_retries: {max_retries}, retry_delay: {retry_delay}]")
     url = base_url.rstrip("/") + OID_FED_WELL_KNOWN_PATH
-    if headers:
-        headers = {"Accept": "application/entity-statement+jwt"}
+    headers = {"Accept": "application/entity-statement+jwt"}
     # codeql[py/log-injection]
     logger.debug(">>>> Invio GET %s", sanitize_for_logging(url))
     return http_request_with_retry(
@@ -107,5 +118,5 @@ def  oid_fed_fetch_openid_configuration(
         retry_delay=retry_delay,
         proxies=proxies,
         no_proxy_domains=no_proxy_domains,
-        parse_response=_parse_entity_statement_jwt,
+        parse_response=_parse_entity_statement,
     )

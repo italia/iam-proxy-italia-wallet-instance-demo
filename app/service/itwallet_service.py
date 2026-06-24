@@ -986,12 +986,9 @@ class ItWalletService:
 
         logger.info(f"query_trust_root: {query_trust_root}")
 
-        # TEST
-        headers = {"Accept": "application/json"}
-
         # Richiama il metodo privato per ottenere l'EC, validarlo e recuperne il payload
         external_verifier_ec = self._entity_configuration_management(
-            clientId, [METADATA_TYPE_FEDERATION_ENTITY, METADATA_TYPE_CREDENTIAL_VERIFIER], trust_root_url, headers
+            clientId, [METADATA_TYPE_FEDERATION_ENTITY, METADATA_TYPE_CREDENTIAL_VERIFIER], trust_root_url
         )
 
         logger.info(f"EC for {clientId} validated successfully with metadata types: {[METADATA_TYPE_FEDERATION_ENTITY, METADATA_TYPE_CREDENTIAL_VERIFIER]}")
@@ -2046,14 +2043,14 @@ class ItWalletService:
             raise ValueError(f"Exception {redirect_uri}: {error}")
 
     def _entity_configuration_management(
-        self, issuer_url: str, expectedMetadataTypes: list[str], expected_hint=None, headers: dict | None = None
+        self, issuer_url: str, expectedMetadataTypes: list[str], expected_hint=None
     ) -> dict:
         """Fetch and validate EC for issuer_url. Returns EC payload. Raises on failure."""
-        logger.info(f"Entering method: _entity_configuration_management. Params [issuer_url: {issuer_url}, headers: {headers}]")
+        logger.info(f"Entering method: _entity_configuration_management. Params [issuer_url: {issuer_url}]")
 
         # Ottiene l'EC
         ec_jwt = oid_fed_fetch_openid_configuration(
-            base_url=issuer_url, proxies=self.proxies, no_proxy_domains=self.no_proxy_domains, headers=headers
+            base_url=issuer_url, proxies=self.proxies, no_proxy_domains=self.no_proxy_domains
         )
 
         ec_payload = None
@@ -2061,10 +2058,7 @@ class ItWalletService:
         if not ec_jwt:
             raise ValueError(f"Fallito recupero dell'Entity Configuration dell'entità {issuer_url}")
 
-        logger.info(
-            "Ricevuto in risposta dall'entità %s il suo Entity Configuration",
-            sanitize_for_logging(issuer_url),
-        )
+        logger.info(f"Response ec_jwt: {ec_jwt}")
 
         try:
             ec_payload = decode_and_verify_jwt(ec_jwt)
