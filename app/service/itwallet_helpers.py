@@ -206,6 +206,7 @@ def validate_ec(
     ec_payload: dict, expected_issuer_url: str, expected_metadata_types: list, expected_hint: Any = None
 ) -> None:
     """Validate Entity Configuration: iss/sub, authority_hints, metadata types, jwks. Raises ValueError."""
+    logger.info(f"Entering method: validate_ec. Params [ec_payload: {ec_payload}, expected_issuer_url: {expected_issuer_url}, expected_metadata_types: {expected_metadata_types}, expected_hint: {expected_hint}]")
     if not ec_payload:
         raise ValueError("Entity Configuration non specificato")
     _validate_ec_iss_sub(ec_payload, expected_issuer_url)
