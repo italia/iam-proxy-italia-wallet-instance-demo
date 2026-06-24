@@ -544,7 +544,7 @@ def unescape_json(value):
 
 
 def parse_url_to_dict(input : str) -> dict:
-    logger.info(f"Entering parse_url_string. Params [parse_url_string: {parse_url_string}]")
+    logger.info(f"Entering parse_url_string. Params [parse_url_string: {input}]")
 
     parsed_url = urlparse(input)
 

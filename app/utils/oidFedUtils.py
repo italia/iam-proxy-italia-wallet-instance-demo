@@ -73,12 +73,13 @@ def _parse_entity_statement_jwt(response: requests.Response) -> str:
     return response.text.strip()
 
 
-def oid_fed_fetch_openid_configuration(
+def  oid_fed_fetch_openid_configuration(
     base_url: str,
     max_retries: int = 3,
     retry_delay: float = 1.0,
     proxies: dict = None,
     no_proxy_domains: list[str] = None,
+    headers: dict = None,
 ) -> str:
     """
     Invia una richiesta GET /.well-known/openid-federation con retry in caso di errore di connessione.
@@ -92,8 +93,10 @@ def oid_fed_fetch_openid_configuration(
         Il JWT rappresentnte l'entity statement.
         In caso di errore, rilancia un'eccezione.
     """
+    logger.info(f"Entering method: oid_fed_fetch_openid_configuration. Params [base_url: {base_url}, max_retries: {max_retries}, retry_delay: {retry_delay}]")
     url = base_url.rstrip("/") + OID_FED_WELL_KNOWN_PATH
-    headers = {"Accept": "application/entity-statement+jwt"}
+    if headers:
+        headers = {"Accept": "application/entity-statement+jwt"}
     # codeql[py/log-injection]
     logger.debug(">>>> Invio GET %s", sanitize_for_logging(url))
     return http_request_with_retry(
