@@ -174,12 +174,22 @@ def apply_replace_values(entity_id: str, config_prefix: str) -> int:
 
 def _validate_ec_iss_sub(ec_payload: dict, expected: str) -> None:
     """Validate EC iss and sub match expected. Raises ValueError."""
+    logger.debug(f"Entering method: _validate_ec_iss_sub. Params [ec_payload: {ec_payload}, expected: {expected}]")
+    if not ec_payload:
+        raise ValueError("Entity Configuration is empty")
+    # Split the iss to check if it has a scheme (http/https). If it does, we can compare directly. If not, we need to prepend the scheme from the expected value.
+    iss_split = ec_payload.get("iss", "").split(":")
+    if iss_split[0] not in ["http", "https"]:
+        ec_payload["iss"] = f"{iss_split[1]}:{iss_split[2]}"
+        ec_payload["sub"] = f"{iss_split[1]}:{iss_split[2]}"
+
     if ec_payload.get("iss") != expected or ec_payload.get("sub") != expected:
         raise ValueError(f"EC iss/sub non valido: atteso '{expected}'")
 
 
 def _validate_ec_authority_hints(ec_payload: dict, expected_hint: Any) -> None:
     """Validate EC authority_hints contains expected_hint. Raises ValueError."""
+    logger.debug(f"Entering method: _validate_ec_authority_hints. Params [ec_payload: {ec_payload}, expected_hint: {expected_hint}]", ec_payload, expected_hint)
     hints = ec_payload.get("authority_hints", [])
     if not isinstance(hints, list) or not hints or expected_hint not in hints:
         raise ValueError(f"EC 'authority_hints' non valido o mancante hint '{expected_hint}'")
@@ -188,7 +198,7 @@ def _validate_ec_authority_hints(ec_payload: dict, expected_hint: Any) -> None:
 def _validate_ec_metadata_and_jwks(ec_payload: dict, expected_metadata_types: list) -> None:
     """Validate EC has required metadata types and jwks. Raises ValueError."""
     from settings import METADATA_TYPE_FEDERATION_ENTITY
-
+    logger.debug(f"Entering method: _validate_ec_metadata_and_jwks. Params [ec_payload: {ec_payload}, expected_metadata_types: {expected_metadata_types}]")
     actual = ec_payload.get("metadata", {})
     missing = [t for t in expected_metadata_types if t not in actual]
     if missing:

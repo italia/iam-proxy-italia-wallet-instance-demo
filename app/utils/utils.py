@@ -544,12 +544,25 @@ def unescape_json(value):
 
 
 def parse_url_to_dict(input : str) -> dict:
-    logger.info(f"Entering parse_url_string. Params [parse_url_string: {input}]")
-
     parsed_url = urlparse(input)
 
     query_dict = {key: value[0] for key, value in parse_qs(parsed_url.query).items()}
 
-    logger.info(f"query_dict: {query_dict}")
+    if query_dict.get("request_uri"):
+        query_dict = parse_request_uri( query_dict["request_uri"], query_dict)
 
     return query_dict
+
+
+def parse_request_uri(request_uri: str, result: dict[str, str]) -> dict[str, str]:
+    base_uri, _, params = request_uri.partition("&")
+
+    result["request_uri"] = base_uri
+
+    if params:
+        result.update({
+            key: values[0]
+            for key, values in parse_qs(params).items()
+        })
+
+    return result

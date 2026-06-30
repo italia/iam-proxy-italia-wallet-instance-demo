@@ -396,7 +396,7 @@ def presentation_phase():
     try:
         params = parse_url_to_dict(qrcode_data)
         # @Todo Understand how need requestUriMethod and State ??
-        it_wallet_service.loginToVerifier(params.get("client_id"),params.get("request_uri"),"", "")
+        it_wallet_service.loginToVerifier(params.get("client_id"),params.get("request_uri"),params.get("request_uri_method"), params.get("state"))
     except Exception as e:
         logger.error(f"Error, message: {e}")
         # @Todo insert this into Util

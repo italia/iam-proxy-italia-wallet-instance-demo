@@ -127,13 +127,13 @@ def decode_and_verify_jwt(signed_jwt: str, jwks: dict = None):
     - Se la firma fallisce, prova a validare con le altre chiavi usando verify_with_keys.
     """
     try:
-        logger.info(f"Entering method: decode_and_verify_jwt. Params [signed_jwt: {signed_jwt}]")
+        logger.debug(f"Entering method: decode_and_verify_jwt. Params [signed_jwt: {signed_jwt}]")
 
         header, payload, h_b64, p_b64, s_b64 = _decode_jwt_parts(signed_jwt)
 
-        logger.info(f"Header: {json.dumps(header, indent=2)}")
+        logger.debug(f"Header: {json.dumps(header, indent=2)}")
 
-        logger.info(f"Payload: {json.dumps(payload, indent=2)}")
+        logger.debug(f"Payload: {json.dumps(payload, indent=2)}")
 
         signed_jwt = _convert_der_signature_if_needed(signed_jwt, header, h_b64, p_b64, s_b64)
         jwks = _resolve_jwks(jwks, payload)
