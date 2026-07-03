@@ -38,7 +38,8 @@ from pyeudiw.jwt.exceptions import LifetimeException
 from pyeudiw.jwt.jws_helper import JWSHelper
 from pyeudiw.wallet_attestations.issuers.wa_request import WaJswRequestIssuer
 
-from app.models.provider_config import ProviderConfig
+from app import AppConfig
+from app.models.config.credentials_config import CredentialsConfig, Credential
 from app.service import FederationService, IssuerService, ProviderService
 from app.service.authorization.authorization_service import AuthorizationService
 from app.service.itwallet_helpers import (
@@ -96,8 +97,6 @@ from settings import (
     AUTH_RESPONSE_MODE_QUERY,
     AUTH_RESPONSE_TYPE_CODE,
     CONFIG_DIR,
-    ISO_18013_5_NAME,
-    ISO_18013_5_VERSION,
     JWT_PREFIX,
     METADATA_TYPE_AUTHORIZATION_SERVER,
     METADATA_TYPE_CREDENTIAL_ISSUER,
@@ -122,7 +121,6 @@ class ItWalletService:
         """Initialize service with Flask session. Loads proxies from config."""
         self.session = session
         self.proxies, self.no_proxy_domains = get_proxies_from_config()
-        self.provider_config = ProviderConfig(extract_claim(current_app.config, "wallet_provider"))
         self._hw_private_jwk = None
         self._hw_public_jwk = None
         self._hw_key_tag = None
@@ -131,6 +129,9 @@ class ItWalletService:
         self.issuer_service = IssuerService(current_app.config, self.proxies, self.no_proxy_domains)
         self.authorization_service = AuthorizationService(current_app.config, self.proxies, self.no_proxy_domains)
         self.external_discovery = external_discovery
+        self._app_config: AppConfig = current_app.config["SETTINGS"]
+        self._credentials_config: CredentialsConfig = self._app_config.credentials_config
+
 
     def getOnboardedRelyingParties(self):
         """Return list of onboarded Relying Parties (Credential Verifiers) from trust root."""
@@ -377,7 +378,7 @@ class ItWalletService:
         logger.info(f"trust_root_url: {trust_root_url}")
 
     def _load_wallet_provider_ec(self, trust_root_url: str) -> None:
-        provider_public_url = extract_claim(current_app.config, "wallet_provider.public_url")
+        provider_public_url = self._app_config.provider_config.public_url
         wallet_provider_entity_configuration = self.provider_service.wallet_provider_ec(
             self.provider_service.wallet_provider_list(trust_root_url),
             provider_public_url,
@@ -1332,21 +1333,27 @@ class ItWalletService:
         """Decode and validate a single credential (SD-JWT or mDL). Returns (credential, vct, claims) or None."""
         credential = cred.get("credential")
         if not credential:
-            logger.info("⚠️ Contenuto della credenziale %d mancante o non valido.", index)
+            logger.info("Content of credential #%d is missing or invalid.", index)
             return None
+
+        credential_config: Credential = self._app_config.credentials_config.supported_credentials.get(credential_configuration_id)
+
         if credential_id.startswith(SD_JWT_PREFIX):
             claims = decode_and_verify_sd_jwt(sd_jwt_compact=credential, jwks=credential_issuer_jwks)
-            logger.info("✅ Credenziale #%d valida (SD-JWT)", index)
+            logger.info("Valid credential #%d SD-JWT)", index)
             return credential, claims.get("vct", ""), claims
         if credential_id.startswith(MSO_MDOC_PREFIX):
-            expected_doc = ISO_18013_5_NAME + "." + credential_configuration_id.removeprefix(MSO_MDOC_PREFIX + "_")
+            if not credential_config.document_format.specs:
+                raise ValueError("Format specifications not found for credential configuration: {}".format(credential_configuration_id))
+
+            expected_doc = credential_config.document_identifier.value
             result_json = decode_and_verify_issuer_signed(
                 issuer_signed_base64_url=credential,
-                expected_namespaces={ISO_18013_5_NAME, ISO_18013_5_NAME + ".IT"},
-                expected_version=ISO_18013_5_VERSION,
+                expected_namespaces=credential_config.document_format.specs.get("namespaces", []),
+                expected_version=credential_config.document_format.specs.get("version"),
                 expected_doc_type=expected_doc,
             )
-            logger.info("✅ Credenziale #%d valida (mDL)", index)
+            logger.info("Valid credential #%d (mdoc)", index)
             return credential, expected_doc, result_json
         return None
 

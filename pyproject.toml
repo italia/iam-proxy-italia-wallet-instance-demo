@@ -29,7 +29,9 @@ dependencies = [
     "pyzbar==0.1.9",
     "requests==2.33.0",
     "urllib3==2.6.3",
-    "pyeudiw @ git+https://github.com/italia/eudi-wallet-it-python@dev"
+    "pymdoccbor==1.3.0",
+    "pyeudiw @ git+https://github.com/italia/eudi-wallet-it-python@dev",
+    "pyyaml (>=6.0.3,<7.0.0)"
 ]
 
 [tool.ruff]

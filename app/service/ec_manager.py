@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from pyeudiw.jwt.jws_helper import JWSHelper
 
 from app.models.metadata import MetadataFactory
-from app.models.provider_config import ProviderConfig
+from app.models.config.provider_config import ProviderConfig
 
 logger = logging.getLogger(__name__)
 

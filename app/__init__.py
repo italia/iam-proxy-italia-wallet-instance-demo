@@ -1,9 +1,13 @@
-import json
+import sys
+import yaml
 import logging.config
 import os
 
 from flask import Flask, g, has_app_context
+from logging.handlers import RotatingFileHandler
 
+from app.models import AppConfig
+from app.models.config.app_config import LogSetting
 from app.routes.itwallet_routes import wallet_api_bp
 from app.routes.main_routes import main_routes
 from app.routes.wallet_provider import provider_bp
@@ -11,57 +15,126 @@ from app.routes.wallet_routes import wallet_routes
 from app.utils.utils import remove_str_prefix, sanitize_for_logging
 from settings import CONFIG_DIR, CORRELATION_ID_FALLBACK, SECRET_KEY
 
+DEBUG_LOG_FORMAT = "%(asctime)s.%(msecs)03d | %(short_logger_name)-10.15s | %(levelname)-8s | %(correlation_id)s | %(filename)s:%(lineno)d | %(message)s"
+LOG_FORMAT = "%(asctime)s.%(msecs)03d | %(short_logger_name)-10.15s | %(levelname)-8s | %(correlation_id)s | %(message)s"
 
-# Definizione del filtro per correlation_id
-class CorrelationIdFilter(logging.Filter):
-    """Il filtro CorrelationIdFilter prende la correlation_id dalla request corrente di Flask tramite g.correlation_id.
-    g è un oggetto globale di Flask valido solo per la richiesta corrente.
-    Prima che arrivi ogni richiesta, il middleware @app.before_request imposta g.correlation_id con il valore
-    dell'header HTTP X-Correlation-ID. Se la request non ha quell'header, mette "N/A"."""
+class PackageOnlyFilter(logging.Filter):
+    """
+    Logging filter that allows only log records originating from this application package.
+    """
+    def filter(self, record):
+        return record.name.startswith(__name__)
+
+
+class LogFormatFilter(logging.Filter):
+    """
+    Logging filter that enriches each log record with the current request's correlation ID and other.
+
+    The correlation ID is read from Flask's application context via
+    ``g.correlation_id``, set by the ``X-Correlation-ID`` HTTP header.
+    """
 
     def filter(self, record):
-        # Prova a leggere la correlation_id dalla request, altrimenti None
-        if has_app_context():
-            record.correlation_id = getattr(g, "correlation_id", CORRELATION_ID_FALLBACK)
-        else:
-            record.correlation_id = CORRELATION_ID_FALLBACK
+        record.correlation_id = (
+            getattr(g, "correlation_id", CORRELATION_ID_FALLBACK)
+            if has_app_context()
+            else CORRELATION_ID_FALLBACK
+        )
+        record.short_logger_name = record.name.split(".")[0] #extract main module name
         return True
 
 
+def _loader_include(loader, node):
+    nome_file = os.path.join(os.path.dirname(loader.name), loader.construct_scalar(node))
+    with open(nome_file, 'r', encoding='utf-8') as f:
+        return yaml.load(f, Loader=type(loader))
+
+
+def _loader_env_var(loader, node):
+    """
+    Extracts the environment variable from the node's value.
+    :param yaml.Loader loader: the yaml loader
+    :param node: the current node in the yaml
+    :return: value of the environment variable
+    """
+    raw_value = loader.construct_scalar(node)
+    new_value = os.environ.get(raw_value)
+    if new_value is None:
+        msg = "Cannot construct value from {node}: {value}".format(
+            node=node, value=new_value
+        )
+        raise yaml.YAMLError(msg)
+    return new_value
+
+yaml.SafeLoader.add_constructor('!INCLUDE', _loader_include)
+yaml.SafeLoader.add_constructor("!ENV", _loader_env_var)
+
+
+def setup_logging(app):
+    settings = app.config["SETTINGS"].settings.logging
+    _level = getattr(logging, settings.level, logging.INFO)
+
+    logging.captureWarnings(True)
+
+    if _level == logging.DEBUG:
+        fmt = logging.Formatter(DEBUG_LOG_FORMAT, datefmt="%Y-%m-%d %H:%M:%S")
+    else:
+        fmt = logging.Formatter(LOG_FORMAT, datefmt="%Y-%m-%d %H:%M:%S")
+
+    if settings.filename and settings.filepath:
+        _handler = RotatingFileHandler(os.path.join(settings.filepath, settings.filename), maxBytes=10 * 1024 * 1024, backupCount=5, encoding="utf-8")
+    else:
+        _handler = logging.StreamHandler(sys.stdout)
+
+    _handler.setLevel(_level)
+    _handler.setFormatter(fmt)
+    _handler.addFilter(LogFormatFilter())
+
+    #configure ROOT logger
+    root_logger = logging.getLogger()
+    root_logger.setLevel(_level)
+    root_logger.handlers.clear()
+    root_logger.addHandler(_handler)
+
+    app.logger.setLevel(_level) #flask
+
+    if not settings.libs_enabled: #disable lib logger
+        _handler.addFilter(PackageOnlyFilter())
+    else:
+        logging.getLogger("werkzeug") #init a lazy logger otherwise not in loggerDict
+        for logger_name in logging.Logger.manager.loggerDict:
+            if logger_name.startswith(__name__): #skip app module
+                continue
+            logging.getLogger(logger_name).setLevel(settings.libs_level)
+
+
 def load_config(app):
-    """
-    Loads application settings from a JSON configuration file.
 
-    Initializes the logging system using the provided configuration or
-    falls back to a default INFO level. Sanitizes error outputs to
-    prevent log injection.
-    """
-    config_path = os.path.join(os.getcwd(), CONFIG_DIR, "config.json")
+    config_path = os.path.join(os.getcwd(), CONFIG_DIR)
+    if not os.path.exists(config_path):
+        raise ValueError(f"Failed to load configuration: The folder {config_path} does not exist.")
+
     try:
-        with open(config_path) as f:
-            config_data = json.load(f)
+        with open(os.path.join(config_path, "app_config.yaml"), 'r', encoding='utf-8') as f:
+            _config = yaml.load(f, Loader=yaml.SafeLoader)
+            config = AppConfig.model_validate(_config)
+            app.config.update(dict(SETTINGS=config))
+
+            config_data = {
+                nome: getattr(config, nome)
+                for nome, field in config.model_fields.items()
+                if field.annotation is dict
+            }
             app.config.update(config_data)
-
-        if "logging" in config_data:  # Configure logging
-            logging.config.dictConfig(config_data["logging"])
-            logger = logging.getLogger(__name__)
-            logger.info("Logging system initialized from config.json.")
-        else:  # fallback logging base
-            logging.basicConfig(level=logging.INFO)
-            logger = logging.getLogger(__name__)
-            logger.warning("No logging configuration found; using default settings.")
-
     except Exception as e:
-        # Fallback logging if file read or JSON parsing fails
-        logging.basicConfig(level=logging.INFO)
-        logger = logging.getLogger(__name__)
-        logger.error("Failed to load configuration: %s", sanitize_for_logging(str(e)))
+        raise ValueError("Failed to load configuration") from e
 
 
 def create_app():
     app = Flask(__name__)
     app.secret_key = SECRET_KEY
     load_config(app)
+    setup_logging(app)
 
     # Register blueprints
     app.register_blueprint(provider_bp)

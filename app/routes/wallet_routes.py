@@ -3,22 +3,20 @@ import logging
 from datetime import datetime
 
 import bcrypt
-from flask import Blueprint, current_app, flash, jsonify, redirect, render_template, request, session, url_for
+from flask import Blueprint, current_app, flash, redirect, render_template, request, session, url_for
 
 from app.service.itwallet_service import ItWalletService
 from app.service.v1.service import Service
 from app.store import app_state
-from app.utils.itwalletUtils import get_status_description
 from app.utils.utils import (
     extract_claim,
-    extract_text_from_base64_pdf,
     generate_nonce,
     remove_str_prefix,
     sanitize_for_logging,
     unescape_json,
-    unix_ts_to_str_datetime,
 )
-from settings import CONTENT_PDF_BASE_64_PREFIX, ISO_18013_5_NAME, JWT_PREFIX, MSO_MDOC_PREFIX, SD_JWT_PREFIX
+from settings import JWT_PREFIX, MSO_MDOC_PREFIX, SD_JWT_PREFIX, DEFAULT_CORRELATION_ID
+from app.utils.parsers import parser_credential_format_to_internal
 
 from ..utils.type_utils import get_type_from_key
 
@@ -56,6 +54,28 @@ def split_string(value, delimiter):
     if value is None:
         return []
     return str(value).split(delimiter)
+
+@wallet_routes.app_template_filter("format_date")
+def format_date(value, fmt="%d-%m-%Y %H:%M:%S"):
+    """
+    Formats a date value for display.
+    Accepts:
+      - int/float  → Unix timestamp (UTC) → formatted date string
+      - str        → ISO 8601 date or datetime string → formatted date string
+    Returns str(value) if unparseable, empty string if None.
+    """
+    from datetime import timezone
+    if value is None:
+        return ""
+    try:
+        if isinstance(value, (int, float)):
+            return datetime.fromtimestamp(value, tz=timezone.utc).strftime(fmt)
+        if isinstance(value, str):
+            normalized = value.strip().replace("Z", "+00:00")
+            return datetime.fromisoformat(normalized).strftime(fmt)
+    except (ValueError, OSError, OverflowError, TypeError):
+        pass
+    return str(value)
 
 
 @wallet_routes.app_template_filter("format_credenziale")
@@ -347,6 +367,7 @@ def credentialTypeTemplate():
     status_descr = "VALIDO"
 
     data_row = response.get("data_row", {})
+    internal_claims = parser_credential_format_to_internal(current_app.config["SETTINGS"].credentials_config, key.rsplit("_", 1)[0], claims)
 
     # @TODO Decprecated
     content_list = []
@@ -359,8 +380,6 @@ def credentialTypeTemplate():
     #         for i, pagina in enumerate(content_list, start=1):
     #             logger.debug("Pagina %d:\n%s\n%s", i, sanitize_for_logging(pagina), "-" * 40)
 
-    metadata = _create_credential_metadata(key, claims)
-
     # template_name = _get_template_name_for_credential_key(key)
     # if not template_name:
     #     logger.error("Nessun template configurato per la credenziale con chiave %s", sanitize_for_logging(key))
@@ -370,8 +389,9 @@ def credentialTypeTemplate():
         return render_template(
             "template_detail.html",
             data_row=data_row,
+            internal_claims=internal_claims,
             claims=claims,
-            metadata=metadata,
+            metadata=internal_claims.get("metadata"),
             status=status,
             statusDecr=status_descr,
             contentList=content_list,
@@ -394,67 +414,6 @@ def presentation_phase():
         result=200,
         message="Presentazione avvenuta con successo!"
     )
-
-def _create_credential_metadata(credential_key, claims):
-    logger.info(f"Credential key: {credential_key} claims: {claims}")
-    parsed_claims = _parse_credential_claims_by_key(credential_key, claims)
-
-    logger.info(f"Credential key: {credential_key} claims: {parsed_claims}")
-
-    dt_iat_local_formatted = parsed_claims["dt_iat_local_formatted"]
-    dt_exp_local_formatted = parsed_claims["dt_exp_local_formatted"]
-    issuing_authority = parsed_claims["issuing_authority"]
-    issuing_country = parsed_claims["issuing_country"]
-
-    if dt_iat_local_formatted and dt_exp_local_formatted:
-        metadata = f"Credenziale emessa da {issuing_authority} ({issuing_country}) il {dt_iat_local_formatted}, scade il {dt_exp_local_formatted}."
-        logger.info(f"Credential metadata: {metadata}")
-    else:
-        logger.error(
-            "Non è stato possibile leggere l'intervallo di validità della credenziale %s",
-            sanitize_for_logging(credential_key),
-        )
-        metadata = f"Credenziale emessa da {issuing_authority} ({issuing_country})"
-    return metadata
-
-
-def _parse_credential_claims_by_key(credential_key, claims):
-    issuing_country = ""
-    issuing_authority = ""
-    dt_iat_local_formatted, dt_exp_local_formatted = None, None
-
-    if credential_key.startswith(MSO_MDOC_PREFIX):
-        name_space = claims.get("nameSpaces", {}).get(ISO_18013_5_NAME, {})
-        issuing_country = name_space.get("issuing_country")
-        issuing_authority = name_space.get("issuing_authority")
-
-        validity_info = claims.get("mso", {}).get("validityInfo", {})
-        iat = validity_info.get("validFrom")  # ISO 8601 formatted string with UTC timezone
-        exp = validity_info.get("validUntil")  # ISO 8601 formatted string with UTC timezone
-
-        dt_iat_local_formatted = unix_ts_to_str_datetime(
-            int(datetime.fromisoformat(iat).timestamp()), fmt="%d-%m-%Y %H:%M:%S"
-        )
-        dt_exp_local_formatted = unix_ts_to_str_datetime(
-            int(datetime.fromisoformat(exp).timestamp()), fmt="%d-%m-%Y %H:%M:%S"
-        )
-
-    elif credential_key.startswith(SD_JWT_PREFIX):
-        logger.info("credential_key.startswith(SD_JWT_PREFIX):")
-        issuing_country = claims.get("issuing_country")
-        issuing_authority = claims.get("issuing_authority")
-        iat = claims.get("iat")  # Unix timestamp in UTC
-        exp = claims.get("exp")  # Unix timestamp in UTC
-        dt_iat_local_formatted = unix_ts_to_str_datetime(iat, fmt="%d-%m-%Y %H:%M:%S")
-        dt_exp_local_formatted = unix_ts_to_str_datetime(exp, fmt="%d-%m-%Y %H:%M:%S")
-
-    return dict(
-        issuing_country=issuing_country,
-        issuing_authority=issuing_authority,
-        dt_iat_local_formatted=dt_iat_local_formatted,
-        dt_exp_local_formatted=dt_exp_local_formatted,
-    )
-
 
 def _get_template_name_for_credential_key(key: str) -> str | None:
     """
