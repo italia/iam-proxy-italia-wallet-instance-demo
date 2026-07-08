@@ -413,7 +413,6 @@ def authorization_phase():
     logger.debug("Entering method: authorization.")
     body = request.get_json()
     credentials_presenting = body["credentialsPresenting"]
-    _clear_session()  # todo can remove it?
     it_wallet_service = ItWalletService(session, external_discovery=True)
     try:
         result = it_wallet_service.complete_loginToVerifier(credentials_presenting)
