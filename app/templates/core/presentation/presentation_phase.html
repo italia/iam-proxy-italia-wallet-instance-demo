@@ -2,18 +2,18 @@
   <div class="modal-dialog modal-dialog-centered" role="document">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title" id="presentationModalTitle">Conferma presentazione</h5>
-        <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Chiudi" onclick="stopQrScanner()"></button>
+        <h5 class="modal-title w-100 text-center" id="presentationModalTitle">Conferma presentazione</h5>
+        <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Chiudi" onclick="chiudiPresentationPopup()"></button>
       </div>
       <div class="modal-body text-center">
         <p class="mt-3 text-muted">Verranno condivisi i seguenti dati:</p>
         <div class ="mb-2">
-          <ul id="presentation-claims-list" class="list-group list-group-flush text-start">Example</ul>
+          <ul id="presentation-claims-list" class="list-group list-group-flush text-start"></ul>
         </div>
       </div>
-      <div class="modal-footer">
+      <div class="modal-footer justify-content-center">
         <button class="btn btn-primary btn-sm" type="button" data-bs-dismiss="modal" onclick="stopQrScanner()">Conferma</button>
-        <button class="btn btn-secondary btn-sm" type="button" data-bs-dismiss="modal" onclick="stopQrScanner()">Annulla</button>
+        <button class="btn btn-secondary btn-sm" type="button" data-bs-dismiss="modal" onclick="chiudiPresentationPopup()">Annulla</button>
       </div>
     </div>
   </div>

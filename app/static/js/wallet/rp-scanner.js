@@ -1,4 +1,3 @@
-import { apriPresentationPopup } from "./presentation.js";
 
 if (rpBtn && !rpBtn.hasAddHandler) {
   rpBtn.addEventListener("click", async (e) => {
@@ -30,7 +29,6 @@ function chiudiQrPopup() {
     }
     stopQrScanner();
 }
-
 
 async function startQrScanner() {
   const video = document.getElementById("qr-video");
@@ -126,59 +124,9 @@ async function processQrPresentation(qrData) {
 
     response_json = await response.json();
 
-//    @TODO UPDATE MODAL
-    let frase = "";
-
-    credentialsPresenting = response_json.data;
-
-      if (Array.isArray(credentialsPresenting)) {
-        if (credentialsPresenting.length === 0) {
-          frase = `<p>Per la login con il Relying Party selezionato, non sarà condiviso alcun dato.</p>`;
-        } else {
-          // Costruiamo i <li> con credenziali e claims
-          const descrizioni = credentialsPresenting.map(cred => {
-            const nome = `<b>${cred.id}</b> in ${cred.format}`;
-
-            const claimsPaths = (cred.claims || [])
-              .map(c => c.path?.join("."))
-              .filter(Boolean);
-
-            // Se ci sono claims, creo una sottolista <ul> con <li> singoli
-            const claimsList = claimsPaths.length > 0
-              ? `<ul>` + claimsPaths.map(path => `<li>${path}</li>`).join("") + `</ul>`
-              : "";
-
-            return `<li>${nome}${claimsList}</li>`;
-          });
-
-          frase = `
-            <p>Per la login con il Relying Party selezionato, saranno condivisi i seguenti dati:</p>
-            <ul style="margin-top: 0px">${descrizioni.join("")}</ul>
-            <p>Premendo Continua autorizzi la trasmissione delle informazioni.</p>
-          `;
-        }
-
-//        credPopupBody.innerHTML = `
-//          <div class="custom-confirm-wrapper">
-//            <div class="confirm-text">${frase}</div>
-//            <div class="button-wrapper">
-//              <button id="continuePresentCredential" class="popup-btn confirm" onclick="loginContinueCredPopup()">Continua</button>
-//              <button id="cancelPresentCredential" class="popup-btn cancel" onclick="closeCredPopup()">Annulla</button>
-//            </div>
-//          </div>`;
-      } else {
-        console.error("credentials non è un array!", credentialsPresenting);
-        credPopupBody.innerHTML = `
-          <div class="flash-container flash-error">
-            <p>Credentials non è un array!</p>
-          </div>`;
-      }
-
-//    @TODO UPDATE MODAL
-
     chiudiQrPopup();
 
-    apriPresentationPopup();
+    apriPresentationPopup(response_json);
 
   } catch (err) {
     console.error("Errore durante la presentazione del wallet:", err);
