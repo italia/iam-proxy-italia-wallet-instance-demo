@@ -1005,8 +1005,9 @@ class ItWalletService:
         }
         query_string = f"?{urlencode(params)}"
 
-        logger.info(f"send request: {requestUri}")
 
+        # @TODO Implements the POST logic: https://italia.github.io/eid-wallet-it-docs/versione-corrente/en/pid-eaa-presentation.html Steps 6-9 (Authorization Request)!!!
+        # @TODO Add strategy pattern for
         request_uri_response = request_request_uri(
             url=requestUri, query_string=query_string, proxies=self.proxies, no_proxy_domains=self.no_proxy_domains
         )
@@ -1016,7 +1017,6 @@ class ItWalletService:
         if not is_jwt(request_uri_response):
             raise ValueError("La Request_uri response ricevuta dal Relying Party / Verifier non è un JWT")
 
-        # Recupero JWK da usare per validare il jwt
         query_filter = f"metadata.{METADATA_TYPE_CREDENTIAL_VERIFIER}.jwks"
         verifier_jwks = extract_claim(external_verifier_ec, query_filter)
         if not verifier_jwks:
@@ -1024,30 +1024,19 @@ class ItWalletService:
 
         try:
             request_uri_response_jwt_payload = decode_and_verify_jwt(request_uri_response, verifier_jwks)
-            credentialsRequested, rp_state, rp_nonce, rp_response_uri = parse_rp_authorization_request(
+            credentials_requested, rp_state, rp_nonce, rp_response_uri = parse_rp_authorization_request(
                 request_uri_response_jwt_payload, clientId
             )
-
-            logger.info(
-                f"✅ Validato con successo il JWT contenuto nel Request_uri response del Relying Party / Verifier {clientId}"
-            )
-            logger.info(
-                f"ℹ️  Questo JWT rappresenta la richiesta di autorizzazione che il Relying Party / Verifier {clientId} ha fatto al wallet per accedere a specifiche credenziali del wallet prima di consentirgli di effettuare il login richiesto"
-            )
-            logger.info("📄 Request_uri response JWT payload:")
-            logger.info("%s", sanitize_for_logging(request_uri_response_jwt_payload))
+            logger.info(f"credential_requested: {credentials_requested}")
         except ValueError as ve:
-            raise ValueError(
-                f"Fallita validazione del JWT contenuto nella Request_uri response del Relying Party / Verifier {clientId}: {ve}"
-            )
+            raise ValueError(f"Exception during JWT validation: {str(ve)}")
 
-        # Memorizzazione dati in sessione
         self.session["rp_client_id"] = clientId
         self.session["rp_state"] = rp_state
         self.session["rp_nonce"] = rp_nonce
         self.session["rp_response_uri"] = rp_response_uri
 
-        return {"success": True, "data": credentialsRequested}
+        return credentials_requested
 
     def complete_loginToVerifier(self, credentials_presenting: list[dict]):
         """
