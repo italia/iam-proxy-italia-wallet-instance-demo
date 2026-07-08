@@ -386,7 +386,6 @@ def credentialTypeTemplate():
 @wallet_routes.route("/presentation", methods=["POST"], strict_slashes=False)
 def presentation_phase():
     logger.debug("Entering method: presentation.")
-    print("Entering method: presentation.")
     body = request.get_json()
     qrcode_data = body["qrcode_data"]
     _clear_session()  # todo can remove it?
@@ -395,7 +394,6 @@ def presentation_phase():
     it_wallet_service = ItWalletService(session, external_discovery=True)
     try:
         params = parse_url_to_dict(qrcode_data)
-        # @Todo Understand how need requestUriMethod and State ??
         credentials = it_wallet_service.loginToVerifier(params.get("client_id"),params.get("request_uri"),params.get("request_uri_method"), params.get("state"))
     except Exception as e:
         logger.error(f"Error, message: {e}")
@@ -404,15 +402,30 @@ def presentation_phase():
             "success": False,
             "error_message": f"Exception :{e}."
         }), 400
-
-    session_id = request.args.get("session_id", "")
-
     return jsonify({
             "success": True,
             "success_message": "Login success.",
             "data": credentials
         }), 200
 
+@wallet_routes.route("/authorization", methods=["POST"], strict_slashes=False)
+def authorization_phase():
+    logger.debug("Entering method: authorization.")
+    body = request.get_json()
+    credentials_presenting = body["credentialsPresenting"]
+    _clear_session()  # todo can remove it?
+    it_wallet_service = ItWalletService(session, external_discovery=True)
+    try:
+        result = it_wallet_service.complete_loginToVerifier(credentials_presenting)
+        status_code = 200 if result["success"] else 500
+        return jsonify(result), status_code
+    except Exception as e:
+        logger.error(f"Error, message: {e}")
+        # @Todo insert this into Util
+        return jsonify({
+            "success": False,
+            "error_message": f"Exception :{e}."
+        }), 400
 
 def _create_credential_metadata(credential_key, claims):
     logger.info(f"Credential key: {credential_key} claims: {claims}")

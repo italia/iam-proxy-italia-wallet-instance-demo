@@ -1,5 +1,7 @@
+
+
 function apriPresentationPopup(response_json) {
-    const credentialsPresenting = response_json.data;
+    credentialsPresenting = response_json.data;
     const descrizioni = credentialsPresenting.map(cred => {
       const name = `<b>${cred.id}</b> in ${cred.format}`;
       const claimsPaths = (cred.claims || [])
@@ -24,10 +26,27 @@ function apriPresentationPopup(response_json) {
     presentationModal.show();
 }
 
-function chiudiPresentationPopup() {
+function closePresentationPopup() {
     const modalElement = document.getElementById('presentation-modal');
     if (modalElement) {
       const modal = bootstrap.Modal.getInstance(modalElement);
       if (modal) modal.hide();
     }
+}
+
+async function authorizationProcess() {
+  try {
+    const response = await executeFetch("/wallet/authorization", "POST", { credentialsPresenting: credentialsPresenting });
+    if (!response.ok) {
+      throw new Error(await getErrorMessage(response));
+    }
+
+    response_json = await response.json();
+
+    closePresentationPopup();
+
+  } catch (err) {
+    console.error("Errore durante la presentazione del wallet:", err);
+    alert("Errore nell'invio dei dati al backend: " + err.message);
+  }
 }

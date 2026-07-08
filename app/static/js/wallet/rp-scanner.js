@@ -13,7 +13,7 @@ let qrStream = null;
 let qrAnimationId = null;
 let isQrScanning = false;
 
-function apriQrPopup() {
+function openQrPopup() {
   const qrModalElement = document.getElementById('qr-scanner-modal');
   if (!qrModalElement) return;
   const qrModal = new bootstrap.Modal(qrModalElement);
@@ -21,7 +21,7 @@ function apriQrPopup() {
   startQrScanner();
 }
 
-function chiudiQrPopup() {
+function closeQrPopup() {
     const qrModalElement = document.getElementById('qr-scanner-modal');
     if (qrModalElement) {
       const qrModal = bootstrap.Modal.getInstance(qrModalElement);
@@ -124,7 +124,7 @@ async function processQrPresentation(qrData) {
 
     response_json = await response.json();
 
-    chiudiQrPopup();
+    closeQrPopup();
 
     apriPresentationPopup(response_json);
 
