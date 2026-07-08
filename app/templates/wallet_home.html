@@ -86,6 +86,9 @@
   <!-- Include for QRCode -->
   {% include 'core/qrcode/qrcode.html' %}
   <!-- End Include for QRCode -->
+  <!-- Include for presentation phase -->
+  {% include 'core/presentation/presentation_phase.html' %}
+  <!-- End Include for presentation phase -->
 
   <script src="{{ url_for('static', filename='js/jsQR.min.js') }}"></script>
   <script src="/static/js/wallet-utils.js"></script>
@@ -96,6 +99,7 @@
   <script src="{{ url_for('static', filename='js/wallet/credentials.js') }}"></script>
   <script src="{{ url_for('static', filename='js/wallet/lifecycle.js') }}"></script>
   <script src="{{ url_for('static', filename='js/wallet/components.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/wallet/presentation.js') }}"></script>
   <script>
     const SESSION_ID = "{{ session_id }}";
     const INIT_ERROR_MESSAGE = "{{ init_error_message|escape }}";

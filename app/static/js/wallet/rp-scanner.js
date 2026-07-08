@@ -1,3 +1,5 @@
+import { apriPresentationPopup } from "./presentation.js";
+
 if (rpBtn && !rpBtn.hasAddHandler) {
   rpBtn.addEventListener("click", async (e) => {
     e.preventDefault();
@@ -19,6 +21,16 @@ function apriQrPopup() {
   qrModal.show();
   startQrScanner();
 }
+
+function chiudiQrPopup() {
+    const qrModalElement = document.getElementById('qr-scanner-modal');
+    if (qrModalElement) {
+      const qrModal = bootstrap.Modal.getInstance(qrModalElement);
+      if (qrModal) qrModal.hide();
+    }
+    stopQrScanner();
+}
+
 
 async function startQrScanner() {
   const video = document.getElementById("qr-video");
@@ -146,14 +158,14 @@ async function processQrPresentation(qrData) {
           `;
         }
 
-        credPopupBody.innerHTML = `
-          <div class="custom-confirm-wrapper">
-            <div class="confirm-text">${frase}</div>
-            <div class="button-wrapper">
-              <button id="continuePresentCredential" class="popup-btn confirm" onclick="loginContinueCredPopup()">Continua</button>
-              <button id="cancelPresentCredential" class="popup-btn cancel" onclick="closeCredPopup()">Annulla</button>
-            </div>
-          </div>`;
+//        credPopupBody.innerHTML = `
+//          <div class="custom-confirm-wrapper">
+//            <div class="confirm-text">${frase}</div>
+//            <div class="button-wrapper">
+//              <button id="continuePresentCredential" class="popup-btn confirm" onclick="loginContinueCredPopup()">Continua</button>
+//              <button id="cancelPresentCredential" class="popup-btn cancel" onclick="closeCredPopup()">Annulla</button>
+//            </div>
+//          </div>`;
       } else {
         console.error("credentials non è un array!", credentialsPresenting);
         credPopupBody.innerHTML = `
@@ -164,18 +176,9 @@ async function processQrPresentation(qrData) {
 
 //    @TODO UPDATE MODAL
 
-    const qrModalElement = document.getElementById('qr-scanner-modal');
-    if (qrModalElement) {
-      const qrModal = bootstrap.Modal.getInstance(qrModalElement);
-      if (qrModal) qrModal.hide();
-    }
-    stopQrScanner();
+    chiudiQrPopup();
 
-    const presentationModalComponent = document.getElementById('presentation-modal');
-    if (presentationModal) {
-      const presentationModal = bootstrap.Modal.getInstance(presentationModalComponent);
-      if (presentationModal) presentationModal.show();
-    }
+    apriPresentationPopup();
 
   } catch (err) {
     console.error("Errore durante la presentazione del wallet:", err);
