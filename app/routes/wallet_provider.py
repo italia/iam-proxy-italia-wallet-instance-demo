@@ -10,15 +10,15 @@ from pyeudiw.jwt.jws_helper import JWSHelper
 from pyeudiw.wallet_attestations.issuers.wia import WiaJswIssuer
 from pyeudiw.wallet_attestations.issuers.wua import WuaJswIssuer
 
-from app.models.provider_config import ProviderConfig
 from app.service.ec_manager import ECBaseManager
 from app.utils.utils import ec_public_key_from_pem_file, pub_ec_key_obj_to_jwk
+from app.models.config.provider_config import ProviderConfig
 
 logger = logging.getLogger(__name__)
 
 provider_bp = Blueprint("provider_bp", __name__, url_prefix="/provider")
 provider_config: ProviderConfig = None
-instance_conf = None
+instance_conf: dict = None
 
 NONCE_TTL = 300
 
@@ -28,7 +28,7 @@ valid_nonces = {}
 @provider_bp.record_once
 def on_load(state):
     global provider_config
-    provider_config = ProviderConfig(state.app.config.get("wallet_provider"))
+    provider_config = state.app.config["SETTINGS"].provider_config
     global instance_conf
     instance_conf = state.app.config.get("wallet_instance")
 

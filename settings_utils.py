@@ -48,8 +48,6 @@ DEFAULTS = {
     "jwt_prefix": "jwt",
     "sd_jwt_prefix": "dc_sd_jwt",
     "mso_mdoc_prefix": "mso_mdoc",
-    "iso_18013_5_version": "1.0",
-    "iso_18013_5_name": "org.iso.18013.5.1",
     "hash_algorithm": "SHA-256",
 }
 
