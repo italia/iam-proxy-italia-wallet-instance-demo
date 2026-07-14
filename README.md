@@ -43,61 +43,21 @@ This project is meant **only for testing and learning purposes** and SHOULD NOT 
 
 ## 4. Application configuration
 
-The project requires a configuration file named **config.json**, located in the folder **/config** inside the root directory.
-This file defines several parameters needed for the application to run correctly.
-
-Before starting the project, make sure to create or update the *config.json* file with the appropriate values.
-An example configuration is provided in the [config.json.example](config.json.example) file.
-
-### Configuration Parameters
-
-| Name | Type | Description |
-|------|------|--------------|
-| `ms_trust_configuration` | JSON Object | Root section defining trust configurations for EU countries. |
-| `ms_trust_configuration.<ISO_country_code>` | JSON Object | Trust configuration of a specific EU country (e.g. `IT`). |
-| `ms_trust_configuration.<ISO_country_code>.trust_root` | String | Federation Entity ID of the Trust Anchor. |
-| `ms_trust_configuration.<ISO_country_code>.trust_framework` | String | Trust framework name (e.g. `oid-fed`). |
-| `metadata` | JSON Object | Metadata configuration used by the applicattion, including network, flow, and wallet parameters. |
-| `metadata.use_proxy` | Boolean | Enables or disables the use of an HTTP/HTTPS proxy. |
-| `metadata.http_proxy` | String | HTTP proxy address (host:port). |
-| `metadata.https_proxy` | String | HTTPS proxy address (host:port). |
-| `metadata.no_proxy` | String | Comma-separated list of hosts that should bypass the proxy. |
-| `metadata.spec_version` | String | Version of the Wallet specification supported by the implementation (e.g. `v1.0.0`). |
-| `metadata.initialize_flow` | JSON Object | Defines the configuration of the Initialization flow (PID Issuance flow) implemented by the application. |
-| `metadata.initialize_flow.idphints` | JSON Object | Section that defines the Identity Providers (IdPs) to be used for each supported identification methods: *CIE Level 3*, *CIE Level 2*, *SPID Level 2*.|
-| `metadata.initialize_flow.idphints.CIE3` | String | URL of the Identity Provider for CIE Level 3. |
-| `metadata.initialize_flow.idphints.CIE2` | String | URL of the Identity Provider for CIE Level 2. |
-| `metadata.initialize_flow.idphints.SPID2` | String | URL of the Identity Provider SPID Level 2. |
-| `metadata.initialize_flow.credential_configuration_id` | String | Credential configuration identifier used during initialization (e.g. `dc_sd_jwt_PersonIdentificationData`). |
-| `metadata.initialize_flow.response_mode` | String | Authorization response mode (e.g. `query`). |
-| `metadata.initialize_flow.response_type` | String | Authorization response type (e.g. `code`). |
-| `metadata.initialize_flow.redirect_uri` | String | Redirect URI where the authorization response is sent. |
-| `metadata.credential_flow` | JSON Object | Defines the configuration of the Credential Issuance flow (EAA Issuance flow) implemented by the application. |
-| `metadata.credential_flow.response_mode` | String | Authorization response mode (e.g. `query`, `form_post.jwt`). |
-| `metadata.credential_flow.response_type` | String | Authorization Response type (e.g. `code`). |
-| `metadata.credential_flow.redirect_uri` | String | Redirect URI where the authorization response is sent. |
-| `metadata.credential_flow.credential_configurations_supported` | JSON Array | List of supported credential configuration identifiers. |
-| `metadata.presentation_flow` | JSON Object | Defines the configuration of the Presentation Remote flow implemented by the application. |
-| `metadata.presentation_flow.response_mode` | String | Authorization response mode (e.g. `direct_post.jwt`). |
-| `metadata.presentation_flow.response_type` | String | Authorization response type (e.g. `vp_token`). |
-| `metadata.presentation_flow.status_assertion_supported` | Boolean | Indicates if status assertion is supported in Presentation Remote flow. |
-| `metadata.wallet_provider` | JSON Object | Defines the configuration of the wallet provider associated with the application.|
-| `metadata.wallet_provider.id` | String | Federation Entity ID of the wallet provider. |
-| `metadata.wallet_provider.key` | JSON Object | Cryptographic key of the wallet provider (an EC private key in JWK format) |
-| `logging` | JSON Object | Defines the configuration of the logging system used by application. |
+The application is configured via YAML files located in the `config/` directory.
+For the full reference — file structure, all keys, environment variables, and how to extend credentials — see [docs/CONFIGURATION.md](docs/CONFIGURATION.md).
 
 
 <br/>
 
-## 4. How to build and run application
+## 5. How to build and run application
 
-### 4.1. Standalone Mode
+### 5.1. Standalone Mode
 
-#### 4.1.1. Prerequisites
+#### 5.1.1. Prerequisites
 
 * Python 3.12+
 
-#### 4.1.2. Instructions
+#### 5.1.2. Instructions
 
 🗂️ Step 0 — Move to the project root directory
 
@@ -129,7 +89,7 @@ python app.py
 
 4️⃣ Open your browser at: https://localhost:8080/
 
-#### 4.1.3. Local checks (before pushing / PR)
+#### 5.1.3. Local checks (before pushing / PR)
 
 Run quality and security checks locally before opening a PR:
 
@@ -138,13 +98,13 @@ make install-check-deps   # one-time: install ruff, radon, bandit
 make check               # run ruff (lint+format), radon (complexity), bandit (security)
 ```
 
-### 4.2. Container Mode
+### 5.2. Container Mode
 
-#### 4.2.1. Prerequisites
+#### 5.2.1. Prerequisites
 
 * Docker or other container platform
 
-#### 4.2.2. Instructions
+#### 5.2.2. Instructions
 🗂️ Step 0 — Move to the project root directory
 
 Before running any command, make sure you are located in the root directory of the project, where the <code>Dockerfile</code> and <code>docker-compose.yml</code> files are placed.
@@ -176,7 +136,7 @@ CONTAINER ID   IMAGE             COMMAND           CREATED        STATUS        
 
 4️⃣ Open your browser at: https://localhost:8080/
 
-#### 4.2.3. Export image from one PC to another
+#### 5.2.3. Export image from one PC to another
 
 1️⃣ Check image inside the PC 1
 ```
@@ -208,7 +168,7 @@ my-wallet:1.0.0     latest    abc123def456   250MB
 
 <br/>
 
-## 5. How to use the application
+## 6. How to use the application
 
 1️⃣ Launch the application
 
@@ -217,7 +177,7 @@ my-wallet:1.0.0     latest    abc123def456   250MB
 3️⃣ You will be presented with a welcome screen where you will be asked to create a PIN for future logins.
 
 
-### 5.1 Use Case: PID Issuance flow (Wallet initiated)
+### 6.1 Use Case: PID Issuance flow (Wallet initiated)
 
 1. In the Wallet home page that appears, select your EU State, choose an identification method (one of *CIE Level 3*, *CIE Level 2*, *SPID Level 2*) and tap "Inizializza" button.
 2. The Wallet Instance discovers the trusted PID Provider using the Federation Services of the Trust Annchor, establishing the trust to the PID Provider according to the Trust Model and obtaining its metadata that discloses the formats of the PID, the algorithms supported, and any other parameter required for interoperability needs.
@@ -229,7 +189,7 @@ my-wallet:1.0.0     latest    abc123def456   250MB
 8. Upon receiving the PID, the Wallet Instance verifies its authenticity and integrity by checking the digital signature. Only after successful verification is the PID securely stored within the Wallet
 9. You will be redirected back to the Wallet home page, which displays the PID card. The flow is now complete.
 
-### 5.2 Use Case: EAA Issuance flow (Wallet initiated)
+### 6.2 Use Case: EAA Issuance flow (Wallet initiated)
 
 1. The Wallet Instance obtains the list of the trusted Credential Providers using the Federation Services of the Trust Anchor, then inspects the metadata looking for the Digital Credential capabilities of each Provider.
 2. On the Wallet home page, tap "Aggiungi" button, select a Digital Credential type from the popup that appears, and then tap "Conferma" button.
@@ -241,7 +201,7 @@ my-wallet:1.0.0     latest    abc123def456   250MB
 8.  Upon receiving the Digital Credential, the Wallet Instance verifies its authenticity and integrity by checking the digital signature. Only after successful verification is the Credential securely stored within the Wallet
 9.  You will be redirected back to the Wallet home page, which displays the Digital Credential card. The flow is now complete.
 
-### 5.3 Use Case: Presentation Remote flow
+### 6.3 Use Case: Presentation Remote flow
 
 1. On the Wallet home page, tap 'Relying Party' button and wait for the Wallet Instance to obtain the list of trusted Relying Parties using the Trust Anchor's Federation Services.
 2. Select a Relying Party from the popup that appears.
@@ -250,7 +210,7 @@ my-wallet:1.0.0     latest    abc123def456   250MB
 
 <br/>
 
-## 6. Disclaimer
+## 7. Disclaimer
 
 The released software is an initial development release version: 
 -  The initial development release is an early endeavor reflecting the efforts of a short time-boxed period, and by no means can it be considered the final product.  
