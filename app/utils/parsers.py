@@ -2,26 +2,30 @@ from app.models.config.credentials_config import Credential, CredentialsConfig
 
 
 def get_mdoc_claim(config, credential):
-    element_id  = config.get("element_identifier")
+    element_id = config.get("element_identifier")
     elm_keys = []
     if config.get("subgroup"):
         elm_keys.extend(config.get("subgroup").split("."))
     elm_keys.append(element_id)
     if config.get("namespace"):
-        data = credential.get('nameSpaces', {}).get(config.get("namespace"), {})
+        data = credential.get("nameSpaces", {}).get(config.get("namespace"), {})
     else:
         data = credential.get("mso", {})
     return __get_nested_value(data, elm_keys)
 
+
 def get_sdjwt_claim(config, credential):
-    element_id  = config.get("element_identifier")
+    element_id = config.get("element_identifier")
     elm_keys = []
     if config.get("subgroup"):
         elm_keys.extend(config.get("subgroup").split("."))
     elm_keys.append(element_id)
     return __get_nested_value(credential, elm_keys)
 
-def parser_credential_format_to_internal(credential_config: CredentialsConfig, credential_type_id: str, credential: dict) -> dict:
+
+def parser_credential_format_to_internal(
+    credential_config: CredentialsConfig, credential_type_id: str, credential: dict
+) -> dict:
     cred_conf: Credential = credential_config.supported_credentials.get(credential_type_id)
     internal_mapping = credential_config.internal_attributes_mappings.get(cred_conf.internal_mapping_ref)
 
@@ -53,6 +57,7 @@ def __get_parser_func(fmt_id: str):
         "sd-jwt-vc": get_sdjwt_claim,
     }
     return parser_funcs.get(fmt_id)
+
 
 def __get_nested_value(data: dict, keys: list):
     if not keys:

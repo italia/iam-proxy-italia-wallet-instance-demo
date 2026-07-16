@@ -5,11 +5,9 @@ from pydantic import BaseModel, PrivateAttr, computed_field, model_validator
 
 
 class ProviderConfig(BaseModel):
-
-    #TODO: refactoring: remove model_config and computed_field -> create plain BaseModel + validations to be implemented
-    model_config = {"extra": "allow"} #temporary workaround
+    # TODO: refactoring: remove model_config and computed_field -> create plain BaseModel + validations to be implemented
+    model_config = {"extra": "allow"}  # temporary workaround
     _config: Dict[str, Any] = PrivateAttr()
-
 
     def __init__(self, **kwargs):
         if not kwargs:
@@ -17,14 +15,12 @@ class ProviderConfig(BaseModel):
         super().__init__(**kwargs)
         self._config = kwargs
 
-
     @model_validator(mode="before")
     @classmethod
     def check_config_present(cls, data: Any) -> Any:
         if data is None:
             raise Exception("Invalid provider config")
         return data
-
 
     @computed_field
     @property

@@ -56,6 +56,7 @@ def split_string(value, delimiter):
         return []
     return str(value).split(delimiter)
 
+
 @wallet_routes.app_template_filter("format_date")
 def format_date(value, fmt="%d-%m-%Y %H:%M:%S"):
     """
@@ -66,6 +67,7 @@ def format_date(value, fmt="%d-%m-%Y %H:%M:%S"):
     Returns str(value) if unparseable, empty string if None.
     """
     from datetime import timezone
+
     if value is None:
         return ""
     try:
@@ -368,7 +370,9 @@ def credentialTypeTemplate():
     status_descr = "VALIDO"
 
     data_row = response.get("data_row", {})
-    internal_claims = parser_credential_format_to_internal(current_app.config[APP_SETTINGS_KEY].credentials_config, key.rsplit("_", 1)[0], claims)
+    internal_claims = parser_credential_format_to_internal(
+        current_app.config[APP_SETTINGS_KEY].credentials_config, key.rsplit("_", 1)[0], claims
+    )
 
     # @TODO Decprecated
     content_list = []
@@ -414,19 +418,15 @@ def presentation_phase():
     it_wallet_service = ItWalletService(session, external_discovery=True)
     try:
         params = parse_url_to_dict(qrcode_data)
-        credentials = it_wallet_service.loginToVerifier(params.get("client_id"),params.get("request_uri"),params.get("request_uri_method"), params.get("state"))
+        credentials = it_wallet_service.loginToVerifier(
+            params.get("client_id"), params.get("request_uri"), params.get("request_uri_method"), params.get("state")
+        )
     except Exception as e:
         logger.error(f"Error, message: {e}")
         # @Todo insert this into Util
-        return jsonify({
-            "success": False,
-            "error_message": f"Exception :{e}."
-        }), 400
-    return jsonify({
-            "success": True,
-            "success_message": "Login success.",
-            "data": credentials
-        }), 200
+        return jsonify({"success": False, "error_message": f"Exception :{e}."}), 400
+    return jsonify({"success": True, "success_message": "Login success.", "data": credentials}), 200
+
 
 @wallet_routes.route("/authorization", methods=["POST"], strict_slashes=False)
 def authorization_phase():
@@ -441,10 +441,8 @@ def authorization_phase():
     except Exception as e:
         logger.error(f"Error, message: {e}")
         # @Todo insert this into Util
-        return jsonify({
-            "success": False,
-            "error_message": f"Exception :{e}."
-        }), 400
+        return jsonify({"success": False, "error_message": f"Exception :{e}."}), 400
+
 
 def _get_template_name_for_credential_key(key: str) -> str | None:
     """

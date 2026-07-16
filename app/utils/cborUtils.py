@@ -25,8 +25,9 @@ from app.utils.utils import base64url_decode, base64url_encode, sanitize_for_log
 logger = logging.getLogger(__name__)
 
 
-def decode_and_verify_issuer_signed(issuer_signed_base64_url: str, expected_namespaces: list,
-                                    expected_version: str, expected_doc_type: str) -> dict | None:
+def decode_and_verify_issuer_signed(
+    issuer_signed_base64_url: str, expected_namespaces: list, expected_version: str, expected_doc_type: str
+) -> dict | None:
     """
     Decode and verify a base64url-encoded IssuerSigned CBOR mdoc credential (ISO 18013-5).
 
@@ -55,8 +56,9 @@ def decode_and_verify_issuer_signed(issuer_signed_base64_url: str, expected_name
         if mdoc.documents_invalid:
             doc: MobileDocument = mdoc.documents_invalid[0]
             if doc.hash_verification and not doc.hash_verification["valid"]:
-                logger.error("Namespace hash validation failed. Mismatched entries: %s",
-                             doc.hash_verification.get("failed", []))
+                logger.error(
+                    "Namespace hash validation failed. Mismatched entries: %s", doc.hash_verification.get("failed", [])
+                )
                 return None
         logger.error("IssuerSigned verification failed.")
         return None
@@ -145,7 +147,7 @@ def _mso_to_json(mso: dict) -> dict:
         "version": mso.get("version"),
         "digestAlgorithm": mso.get("digestAlgorithm"),
         "deviceKeyInfo": _decode_cose_key(device_key_info.get("deviceKey")),
-        "validityInfo": mso.get("validityInfo")
+        "validityInfo": mso.get("validityInfo"),
     }
     return _make_json_serializable(_dict)
 
@@ -195,7 +197,9 @@ def _decode_cose_key(device_key: dict) -> dict:
         raise ValueError("Cannot build JWK: missing or invalid COSE key fields")
 
 
-T = TypeVar('T')
+T = TypeVar("T")
+
+
 def _make_json_serializable(obj: T) -> T:
     """Recursively convert a decoded CBOR object into a JSON-serializable Python object."""
     if isinstance(obj, dict):

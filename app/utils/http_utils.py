@@ -122,7 +122,9 @@ def http_request_with_retry(
     If parse_response is provided, call it with the response and return its result.
     Otherwise return the raw response (caller must handle).
     """
-    logger.info(f"Entering method: http_request_with_retry. Params [method: {method}, url: {url}, max_retries: {max_retries}, retry_delay: {retry_delay}]")
+    logger.info(
+        f"Entering method: http_request_with_retry. Params [method: {method}, url: {url}, max_retries: {max_retries}, retry_delay: {retry_delay}]"
+    )
     use_proxy = _should_use_proxy(url, proxies, no_proxy_domains)
     req_kwargs: dict = {"headers": headers or {}, "verify": False, "allow_redirects": allow_redirects}
     if data is not None:

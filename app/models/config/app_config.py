@@ -5,7 +5,8 @@ from pydantic import BaseModel
 from app.models.config.credentials_config import CredentialsConfig
 from app.models.config.provider_config import ProviderConfig
 
-#TODO: validations to be implemented
+# TODO: validations to be implemented
+
 
 class LogSetting(BaseModel):
     filepath: Optional[str] = None
@@ -13,6 +14,7 @@ class LogSetting(BaseModel):
     level: Literal["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG"]
     libs_enabled: bool
     libs_level: Optional[Literal["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG"]] = "INFO"
+
 
 class AppSettings(BaseModel):
     secret_key: str
@@ -22,6 +24,7 @@ class AppSettings(BaseModel):
     debug_mode: bool
     favicon_subpath: str
     static_folder: str
+
 
 class AppConfig(BaseModel):
     provider_config: ProviderConfig

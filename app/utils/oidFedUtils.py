@@ -72,6 +72,7 @@ def _parse_entity_statement_jwt(response: requests.Response) -> str:
         raise RuntimeError(f"Risposta non application/entity-statement+jwt ma {ct}")
     return response.text.strip()
 
+
 def _parse_entity_statement(response: requests.Response) -> str:
     """Parse JWT from entity-statement response."""
     ct = response.headers.get("Content-Type", "")

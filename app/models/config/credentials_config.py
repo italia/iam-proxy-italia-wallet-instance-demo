@@ -3,10 +3,11 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 
-#TODO: validations to be implemented
+# TODO: validations to be implemented
 class DocumentIdentifier(BaseModel):
     type: str
     value: str
+
 
 class DocumentFormat(BaseModel):
     id: str
@@ -19,6 +20,7 @@ class Credential(BaseModel):
     internal_mapping_ref: str
     document_identifier: DocumentIdentifier
     document_format: DocumentFormat
+
 
 class CredentialsConfig(BaseModel):
     supported_credentials: dict[str, Credential]

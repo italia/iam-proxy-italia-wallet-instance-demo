@@ -52,9 +52,32 @@ METADATA_TYPE_WALLET_PROVIDER: str = "wallet_solution"
 
 # EU member state ISO-3166-1 alpha-2 codes
 EU_COUNTRIES: set[str] = {
-    "AT", "BE", "BG", "CZ", "CY", "DK", "DE", "EE", "ES", "FR",
-    "FI", "GR", "HU", "IE", "IT", "LV", "LT", "LU", "MT", "NL",
-    "PL", "PT", "RO", "SK", "SI", "SE",
+    "AT",
+    "BE",
+    "BG",
+    "CZ",
+    "CY",
+    "DK",
+    "DE",
+    "EE",
+    "ES",
+    "FR",
+    "FI",
+    "GR",
+    "HU",
+    "IE",
+    "IT",
+    "LV",
+    "LT",
+    "LU",
+    "MT",
+    "NL",
+    "PL",
+    "PT",
+    "RO",
+    "SK",
+    "SI",
+    "SE",
 }
 
 # Valid IdP hint identifiers
@@ -70,4 +93,3 @@ CONTENT_PDF_BASE_64_PREFIX: str = "data:application/pdf;base64,"
 JWT_PREFIX: str = "jwt"
 SD_JWT_PREFIX: str = "dc_sd_jwt"
 MSO_MDOC_PREFIX: str = "mso_mdoc"
-

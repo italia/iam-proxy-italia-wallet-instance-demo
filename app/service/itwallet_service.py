@@ -132,7 +132,6 @@ class ItWalletService:
         self._app_config: AppConfig = current_app.config[APP_SETTINGS_KEY]
         self._credentials_config: CredentialsConfig = self._app_config.credentials_config
 
-
     def getOnboardedRelyingParties(self):
         """Return list of onboarded Relying Parties (Credential Verifiers) from trust root."""
         logger.info("➡️  Richiesta elenco Relying Parties onboardati")
@@ -952,10 +951,6 @@ class ItWalletService:
              self.session["rp_state"]
              self.session["rp_response_uri"]
         """
-
-
-        logger.info(f"Entering method: loginToVerifier. Params [client_id: {clientId}, request_uri: {requestUri}, requestUriMethod: {requestUriMethod}, state: {state}]")
-
         session_id = self.session.get("session_id")
         if not session_id:
             raise ValueError("Sessione non inizializzata")
@@ -992,7 +987,9 @@ class ItWalletService:
             clientId, [METADATA_TYPE_FEDERATION_ENTITY, METADATA_TYPE_CREDENTIAL_VERIFIER], trust_root_url
         )
 
-        logger.info(f"EC for {clientId} validated successfully with metadata types: {[METADATA_TYPE_FEDERATION_ENTITY, METADATA_TYPE_CREDENTIAL_VERIFIER]}")
+        logger.info(
+            f"EC for {clientId} validated successfully with metadata types: {[METADATA_TYPE_FEDERATION_ENTITY, METADATA_TYPE_CREDENTIAL_VERIFIER]}"
+        )
 
         # Salvataggio in memoria Flask external_verifier_ec
         app_state.ec_store.add(clientId, external_verifier_ec)
@@ -1005,7 +1002,6 @@ class ItWalletService:
             "state": state,
         }
         query_string = f"?{urlencode(params)}"
-
 
         # @TODO Implements the POST logic: https://italia.github.io/eid-wallet-it-docs/versione-corrente/en/pid-eaa-presentation.html Steps 6-9 (Authorization Request)!!!
         # @TODO Add strategy pattern for
@@ -1300,7 +1296,9 @@ class ItWalletService:
             logger.info("Content of credential #%d is missing or invalid.", index)
             return None
 
-        credential_config: Credential = self._app_config.credentials_config.supported_credentials.get(credential_configuration_id)
+        credential_config: Credential = self._app_config.credentials_config.supported_credentials.get(
+            credential_configuration_id
+        )
 
         if credential_id.startswith(SD_JWT_PREFIX):
             claims = decode_and_verify_sd_jwt(sd_jwt_compact=credential, jwks=credential_issuer_jwks)
@@ -1308,7 +1306,11 @@ class ItWalletService:
             return credential, claims.get("vct", ""), claims
         if credential_id.startswith(MSO_MDOC_PREFIX):
             if not credential_config.document_format.specs:
-                raise ValueError("Format specifications not found for credential configuration: {}".format(credential_configuration_id))
+                raise ValueError(
+                    "Format specifications not found for credential configuration: {}".format(
+                        credential_configuration_id
+                    )
+                )
 
             expected_doc = credential_config.document_identifier.value
             result_json = decode_and_verify_issuer_signed(

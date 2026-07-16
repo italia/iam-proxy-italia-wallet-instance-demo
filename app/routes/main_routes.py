@@ -7,6 +7,7 @@ from app.store import app_state
 
 main_routes = Blueprint("main_routes", __name__)
 
+
 @main_routes.app_errorhandler(404)
 def page_not_found(e):
     return render_template("404.html"), 404
