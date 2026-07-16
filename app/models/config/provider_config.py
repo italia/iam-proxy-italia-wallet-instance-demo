@@ -1,6 +1,7 @@
+from typing import Any, Dict
+
 from cryptojwt.jwk.jwk import key_from_jwk_dict
-from typing import Dict, Any
-from pydantic import PrivateAttr, computed_field, model_validator, BaseModel
+from pydantic import BaseModel, PrivateAttr, computed_field, model_validator
 
 
 class ProviderConfig(BaseModel):

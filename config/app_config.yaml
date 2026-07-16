@@ -2,26 +2,19 @@
 provider_config: !INCLUDE wallet_provider.yaml
 credentials_config: !INCLUDE credentials_config.yaml
 
-settings:
+app:
+  host: !ENV FLASK_RUN_HOST
+  port: !ENV FLASK_RUN_PORT
+  debug_mode: false
+  favicon_subpath: images/wallet_logo.svg
+  static_folder: static
+  secret_key: !ENV SECRET_KEY
   logging:
     filepath: #optional
     filename: #optional
     level: DEBUG
     libs_enabled: true
     libs_level: INFO #optional [default=INFO]
-
-app:
-  default_host: !ENV FLASK_RUN_HOST
-  default_port: !ENV FLASK_RUN_PORT
-  secret_key: s3cr3t
-  oid_fed_list_path: /list
-  oid_fed_well_known_path: /.well-known/openid-federation
-  chrome_devtools_path: /.well-known/appspecific/com.chrome.devtools.json
-  favicon_subpath: images/wallet_logo.svg
-  favicon_mimetype: image/svg+xml
-  static_folder: static
-  correlation_id_fallback: N/A
-  default_correlation_id: default-id
 
 wallet_instance:
   key_storage:

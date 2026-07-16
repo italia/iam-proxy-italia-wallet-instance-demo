@@ -13,14 +13,14 @@ References:
 import base64
 import logging
 import pprint
+from datetime import date, datetime, timezone
+from decimal import Decimal
+from typing import TypeVar
+
 import cbor2
+from pymdoccbor.mdoc.verifier import MdocCbor, MobileDocument
 
 from app.utils.utils import base64url_decode, base64url_encode, sanitize_for_logging
-from pymdoccbor.mdoc.verifier import MdocCbor, MobileDocument
-from datetime import date, datetime, timezone
-from typing import TypeVar
-from decimal import Decimal
-from settings import HASH_ALGORITHM
 
 logger = logging.getLogger(__name__)
 
@@ -81,6 +81,7 @@ def decode_and_verify_issuer_signed(issuer_signed_base64_url: str, expected_name
 
 def _validate_mso_core(mso: dict, expected_version: str, expected_doc_type: str) -> None:
     """Validate MSO core fields: docType, version, valueDigests, digestAlgorithm."""
+    HASH_ALGORITHM = "SHA-256"
     doc_type = mso.get("docType")
     if not doc_type or doc_type != expected_doc_type:
         raise ValueError(f"docType: expected '{expected_doc_type}', got '{doc_type}'")

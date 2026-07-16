@@ -1,4 +1,4 @@
-from app.models.config.credentials_config import CredentialsConfig, Credential
+from app.models.config.credentials_config import Credential, CredentialsConfig
 
 
 def get_mdoc_claim(config, credential):

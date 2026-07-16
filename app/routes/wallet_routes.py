@@ -3,22 +3,21 @@ import logging
 from datetime import datetime
 
 import bcrypt
-from flask import Blueprint, current_app, flash, redirect, render_template, request, session, url_for
+from flask import Blueprint, current_app, flash, jsonify, redirect, render_template, request, session, url_for
 
+from app.constants import APP_SETTINGS_KEY, JWT_PREFIX, MSO_MDOC_PREFIX, SD_JWT_PREFIX
 from app.service.itwallet_service import ItWalletService
 from app.service.v1.service import Service
 from app.store import app_state
+from app.utils.parsers import parser_credential_format_to_internal
 from app.utils.utils import (
     extract_claim,
     generate_nonce,
+    parse_url_to_dict,
     remove_str_prefix,
     sanitize_for_logging,
     unescape_json,
-    unix_ts_to_str_datetime,
-    parse_url_to_dict,
 )
-from settings import JWT_PREFIX, MSO_MDOC_PREFIX, SD_JWT_PREFIX, DEFAULT_CORRELATION_ID
-from app.utils.parsers import parser_credential_format_to_internal
 
 from ..utils.type_utils import get_type_from_key
 
@@ -369,7 +368,7 @@ def credentialTypeTemplate():
     status_descr = "VALIDO"
 
     data_row = response.get("data_row", {})
-    internal_claims = parser_credential_format_to_internal(current_app.config["SETTINGS"].credentials_config, key.rsplit("_", 1)[0], claims)
+    internal_claims = parser_credential_format_to_internal(current_app.config[APP_SETTINGS_KEY].credentials_config, key.rsplit("_", 1)[0], claims)
 
     # @TODO Decprecated
     content_list = []

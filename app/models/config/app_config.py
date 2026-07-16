@@ -14,16 +14,19 @@ class LogSetting(BaseModel):
     libs_enabled: bool
     libs_level: Optional[Literal["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG"]] = "INFO"
 
-class Settings(BaseModel):
+class AppSettings(BaseModel):
+    secret_key: str
     logging: LogSetting
+    host: str
+    port: int
+    debug_mode: bool
+    favicon_subpath: str
+    static_folder: str
 
 class AppConfig(BaseModel):
     provider_config: ProviderConfig
     credentials_config: CredentialsConfig
-    settings: Settings
-
-    # TODO: remove workaround when will be dismiss old config.json management
-    app: dict
+    app: AppSettings
     wallet_instance: dict
     ms_trust_configuration: dict
     metadata: dict

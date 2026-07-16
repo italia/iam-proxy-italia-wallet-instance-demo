@@ -10,9 +10,9 @@ from typing import Any
 
 from flask import current_app
 
+from app.constants import METADATA_TYPE_CREDENTIAL_ISSUER
 from app.store import app_state
 from app.utils.utils import extract_claim, sanitize_for_logging
-from settings import METADATA_TYPE_CREDENTIAL_ISSUER  # ?_?
 
 logger = logging.getLogger(__name__)
 
@@ -95,7 +95,7 @@ def get_trust_root_and_eaa_provider_ec(
 def validate_credential_and_presentation_flow() -> None:
     """Validate credential_flow and presentation_flow response_mode/response_type from config."""
     logger.info("Entering method: validate_credential_and_presentation_flow. ")
-    from settings import (
+    from app.constants import (
         AUTH_RESPONSE_MODE_FORM_POST_JWT,
         AUTH_RESPONSE_MODE_QUERY,
         AUTH_RESPONSE_TYPE_CODE,
@@ -197,7 +197,7 @@ def _validate_ec_authority_hints(ec_payload: dict, expected_hint: Any) -> None:
 
 def _validate_ec_metadata_and_jwks(ec_payload: dict, expected_metadata_types: list) -> None:
     """Validate EC has required metadata types and jwks. Raises ValueError."""
-    from settings import METADATA_TYPE_FEDERATION_ENTITY
+    from app.constants import METADATA_TYPE_FEDERATION_ENTITY
     logger.debug(f"Entering method: _validate_ec_metadata_and_jwks. Params [ec_payload: {ec_payload}, expected_metadata_types: {expected_metadata_types}]")
     actual = ec_payload.get("metadata", {})
     missing = [t for t in expected_metadata_types if t not in actual]

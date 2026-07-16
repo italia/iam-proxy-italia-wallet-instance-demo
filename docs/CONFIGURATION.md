@@ -1,4 +1,4 @@
-# Configuration Guide — YAML Files
+# Configuration Guide
 
 This document describes the YAML configuration files used by the application and how to manage them.
 
@@ -6,12 +6,14 @@ This document describes the YAML configuration files used by the application and
 
 ## 1. Structure
 
-The single source of truth for the application configuration is **`config/app_config.yaml`**. All sections that drive runtime behavior live there, either directly or via `!INCLUDE` directives that pull in separate files.
+All deployment-specific and runtime configuration lives in the **`config/` YAML files**.
+
+The single source of truth for runtime configuration is **`config/app_config.yaml`**. All sections that drive runtime behavior live there, either directly or via `!INCLUDE` directives that pull in separate files.
 
 The `!INCLUDE` mechanism is used intentionally to separate two logically independent concerns:
 
 ```
-app_config.yaml~~~~
+app_config.yaml
 │
 │   (runtime settings: Flask, logging, wallet instance, trust, metadata flows)
 │
@@ -45,8 +47,10 @@ All `!ENV` references across the YAML files. These must be set before the applic
 
 | Variable | File | Description |
 |---|---|---|
+| `CONFIG_DIR` | _(bootstrap)_ | Directory containing the YAML config files (default: `config`) |
 | `FLASK_RUN_HOST` | `app_config.yaml` | Host the Flask server binds to (e.g. `0.0.0.0`) |
 | `FLASK_RUN_PORT` | `app_config.yaml` | Port the Flask server listens on (e.g. `8080`) |
+| `SECRET_KEY` | `app_config.yaml` | Flask session secret — **required in any non-local environment** |
 | `TRUST_ANCHOR_URL` | `app_config.yaml`, `wallet_provider.yaml` | Federation Entity ID of the Trust Anchor |
 | `WALLET_PROVIDER_URL` | `wallet_provider.yaml` | Public base URL of the Wallet Provider |
 | `OPENID_CIE_PROVIDER_URL` | `app_config.yaml` | URL of the CIE Level 2 Identity Provider |
@@ -64,7 +68,20 @@ provider_config:    !INCLUDE wallet_provider.yaml
 credentials_config: !INCLUDE credentials_config.yaml
 ```
 
-### `settings.logging`
+### `app`
+
+Flask and application-level settings.
+
+| Key | Value | Description |
+|---|---|---|
+| `host` | `!ENV FLASK_RUN_HOST` | Bind address |
+| `port` | `!ENV FLASK_RUN_PORT` | Bind port |
+| `debug_mode` | `false` | Enable Flask debug mode — **keep `false` in any non-local environment** |
+| `favicon_subpath` | `images/wallet_logo.svg` | Subpath (relative to `static/`) for the favicon |
+| `static_folder` | `static` | Flask static files folder name |
+| `secret_key` | `!ENV SECRET_KEY` | Flask session secret — **must be set via env in any non-local environment** |
+
+### `app.logging`
 
 Controls application-level log output.
 
@@ -75,20 +92,6 @@ Controls application-level log output.
 | `level` | `DEBUG` | Log level for the `app` logger |
 | `libs_enabled` | `true` | Whether to enable logging from third-party libraries |
 | `libs_level` | `INFO` | Log level for third-party libraries |
-
-### `app`
-
-Flask and application-level settings.
-
-| Key | Value | Description |
-|---|---|---|
-| `default_host` | `!ENV FLASK_RUN_HOST` | Bind address |
-| `default_port` | `!ENV FLASK_RUN_PORT` | Bind port |
-| `secret_key` | `s3cr3t` | Flask session secret — **change in any non-local environment** |
-| `oid_fed_list_path` | `/list` | Federation entity listing endpoint path |
-| `oid_fed_well_known_path` | `/.well-known/openid-federation` | OpenID Federation well-known endpoint |
-| `correlation_id_fallback` | `N/A` | Value used when no correlation ID is found in the request |
-| `default_correlation_id` | `default-id` | Default correlation ID injected into log records |
 
 ### `wallet_instance`
 
@@ -144,8 +147,8 @@ Defines the configuration of the Initialization flow (PID Issuance flow) impleme
 | `idphints.CIE2` | String | URL of the Identity Provider for CIE Level 2 (`!ENV OPENID_CIE_PROVIDER_URL`) |
 | `idphints.SPID2` | String | URL of the Identity Provider for SPID Level 2 |
 | `credential_configuration_id` | String | Credential configuration identifier used during initialization (e.g. `mso_mdoc_pid`) |
-| `response_mode` | String | Authorization response mode — must be `query` |
-| `response_type` | String | Authorization response type — must be `code` |
+| `response_mode` | String | ⚠ Spec-fixed: only `query` is accepted. Validated at startup against `AUTH_RESPONSE_MODE_QUERY` in `constants.py`. |
+| `response_type` | String | ⚠ Spec-fixed: only `code` is accepted. Validated at startup against `AUTH_RESPONSE_TYPE_CODE` in `constants.py`. |
 | `redirect_uri` | String | Redirect URI where the authorization response is sent (`!ENV WALLET_INITIALIZE_REDIRECT_URI`) |
 
 #### `credential_flow` — EAA Issuance
@@ -154,8 +157,8 @@ Defines the configuration of the Credential Issuance flow (EAA Issuance flow) im
 
 | Key | Type | Description |
 |---|---|---|
-| `response_mode` | String | Authorization response mode — must be `form_post.jwt` |
-| `response_type` | String | Authorization response type — must be `code` |
+| `response_mode` | String | Authorization response mode — `query` or `form_post.jwt`. Validated at startup; current value is `form_post.jwt`. |
+| `response_type` | String | ⚠ Spec-fixed: only `code` is accepted. Validated at startup against `AUTH_RESPONSE_TYPE_CODE` in `constants.py`. |
 | `redirect_uri` | String | Redirect URI where the authorization response is sent (`!ENV WALLET_CREDENTIAL_REDIRECT_URI`) |
 | `credential_configurations_supported` | Array | List of supported credential configuration identifiers the wallet can request |
 | `_response_mode` | String | _(unused — internal note field, do not remove)_ |
@@ -166,8 +169,8 @@ Defines the configuration of the Presentation Remote flow implemented by the app
 
 | Key | Type | Description |
 |---|---|---|
-| `response_mode` | String | Authorization response mode — must be `direct_post.jwt` |
-| `response_type` | String | Authorization response type — must be `vp_token` |
+| `response_mode` | String | ⚠ Spec-fixed: only `direct_post.jwt` is accepted. Validated at startup against `PRESENTATION_RESPONSE_MODE_DIRECT_POST_JWT` in `constants.py`. |
+| `response_type` | String | ⚠ Spec-fixed: only `vp_token` is accepted. Validated at startup against `PRESENTATION_RESPONSE_TYPE_VP_TOKEN` in `constants.py`. |
 | `status_assertion_supported` | Boolean | Indicates if status assertion is supported in the Presentation Remote flow |
 
 ---

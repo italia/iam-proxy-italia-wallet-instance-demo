@@ -1,19 +1,19 @@
-import sys
-import yaml
+import logging
 import logging.config
 import os
-
-from flask import Flask, g, has_app_context
+import sys
 from logging.handlers import RotatingFileHandler
 
+import yaml
+from flask import Flask, g, has_app_context
+
+from app.constants import APP_SETTINGS_KEY, CONFIG_DIR, CORRELATION_ID_FALLBACK
 from app.models import AppConfig
-from app.models.config.app_config import LogSetting
 from app.routes.itwallet_routes import wallet_api_bp
 from app.routes.main_routes import main_routes
 from app.routes.wallet_provider import provider_bp
 from app.routes.wallet_routes import wallet_routes
 from app.utils.utils import remove_str_prefix, sanitize_for_logging
-from settings import CONFIG_DIR, CORRELATION_ID_FALLBACK, SECRET_KEY
 
 DEBUG_LOG_FORMAT = "%(asctime)s.%(msecs)03d | %(short_logger_name)-10.15s | %(levelname)-8s | %(correlation_id)s | %(filename)s:%(lineno)d | %(message)s"
 LOG_FORMAT = "%(asctime)s.%(msecs)03d | %(short_logger_name)-10.15s | %(levelname)-8s | %(correlation_id)s | %(message)s"
@@ -71,7 +71,7 @@ yaml.SafeLoader.add_constructor("!ENV", _loader_env_var)
 
 
 def setup_logging(app):
-    settings = app.config["SETTINGS"].settings.logging
+    settings = app.config[APP_SETTINGS_KEY].app.logging
     _level = getattr(logging, settings.level, logging.INFO)
 
     logging.captureWarnings(True)
@@ -116,7 +116,7 @@ def load_config(app):
 
     try:
         with open(os.path.join(config_path, "app_config.yaml"), 'r', encoding='utf-8') as f:
-            _config = yaml.load(f, Loader=yaml.SafeLoader)
+            _config = yaml.safe_load(f)
             config = AppConfig.model_validate(_config)
             app.config.update(dict(SETTINGS=config))
 
@@ -131,9 +131,10 @@ def load_config(app):
 
 
 def create_app():
+    #setup app
     app = Flask(__name__)
-    app.secret_key = SECRET_KEY
     load_config(app)
+    app.secret_key = app.config[APP_SETTINGS_KEY].app.secret_key
     setup_logging(app)
 
     # Register blueprints

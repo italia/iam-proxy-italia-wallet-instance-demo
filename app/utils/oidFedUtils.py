@@ -3,9 +3,9 @@ import logging
 
 import requests
 
+from app.constants import OID_FED_LIST_PATH, OID_FED_WELL_KNOWN_PATH
 from app.utils.http_utils import http_request_with_retry
 from app.utils.utils import sanitize_for_logging
-from settings import OID_FED_LIST_PATH, OID_FED_WELL_KNOWN_PATH
 
 logger = logging.getLogger(__name__)
 

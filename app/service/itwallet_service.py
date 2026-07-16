@@ -39,7 +39,8 @@ from pyeudiw.jwt.jws_helper import JWSHelper
 from pyeudiw.wallet_attestations.issuers.wa_request import WaJswRequestIssuer
 
 from app import AppConfig
-from app.models.config.credentials_config import CredentialsConfig, Credential
+from app.constants import *
+from app.models.config.credentials_config import Credential, CredentialsConfig
 from app.service import FederationService, IssuerService, ProviderService
 from app.service.authorization.authorization_service import AuthorizationService
 from app.service.itwallet_helpers import (
@@ -92,24 +93,6 @@ from app.utils.utils import (
     pub_ec_key_obj_to_jwk,
     sanitize_for_logging,
 )
-from settings import (
-    AUTH_RESPONSE_MODE_FORM_POST_JWT,
-    AUTH_RESPONSE_MODE_QUERY,
-    AUTH_RESPONSE_TYPE_CODE,
-    CONFIG_DIR,
-    JWT_PREFIX,
-    METADATA_TYPE_AUTHORIZATION_SERVER,
-    METADATA_TYPE_CREDENTIAL_ISSUER,
-    METADATA_TYPE_CREDENTIAL_VERIFIER,
-    METADATA_TYPE_FEDERATION_ENTITY,
-    METADATA_TYPE_WALLET_PROVIDER,
-    MSO_MDOC_PREFIX,
-    PRESENTATION_RESPONSE_MODE_DIRECT_POST_JWT,
-    PRESENTATION_RESPONSE_TYPE_VP_TOKEN,
-    SD_JWT_PREFIX,
-    WALLET_ATTESTATION_NAME,
-    WALLET_UNIT_ATTESTATION_NAME,
-)
 
 logger = logging.getLogger(__name__)
 
@@ -129,7 +112,7 @@ class ItWalletService:
         self.issuer_service = IssuerService(current_app.config, self.proxies, self.no_proxy_domains)
         self.authorization_service = AuthorizationService(current_app.config, self.proxies, self.no_proxy_domains)
         self.external_discovery = external_discovery
-        self._app_config: AppConfig = current_app.config["SETTINGS"]
+        self._app_config: AppConfig = current_app.config[APP_SETTINGS_KEY]
         self._credentials_config: CredentialsConfig = self._app_config.credentials_config
 
 

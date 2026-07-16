@@ -9,6 +9,7 @@ import unicodedata
 from datetime import datetime, timezone
 from typing import Tuple, Union
 from urllib.parse import parse_qs, urlparse
+
 import fitz
 import jmespath
 from cryptography.hazmat.backends import default_backend
@@ -31,7 +32,7 @@ from cryptography.hazmat.primitives.serialization import (
 )
 from jwcrypto import jwk
 
-from settings import CONTENT_PDF_BASE_64_PREFIX
+from app.constants import CONTENT_PDF_BASE_64_PREFIX
 
 logger = logging.getLogger(__name__)
 

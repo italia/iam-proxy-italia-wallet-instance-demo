@@ -43,7 +43,8 @@ This project is meant **only for testing and learning purposes** and SHOULD NOT 
 
 ## 4. Application configuration
 
-The application is configured via YAML files located in the `config/` directory.
+All deployment-specific and runtime configuration lives in the **`config/` YAML files** (host, port, keys, trust anchors, credential types, etc.).
+
 For the full reference — file structure, all keys, environment variables, and how to extend credentials — see [docs/CONFIGURATION.md](docs/CONFIGURATION.md).
 
 
@@ -61,7 +62,7 @@ For the full reference — file structure, all keys, environment variables, and 
 
 🗂️ Step 0 — Move to the project root directory
 
-Before running any command, make sure you are located in the root directory of the project, where the <code>pyproject.toml</code> and <code>app.py</code> files are placed.
+Before running any command, make sure you are located in the root directory of the project, where the <code>pyproject.toml</code> and <code>run.py</code> files are placed.
 
 ```
 cd path/to/your/project
@@ -84,7 +85,7 @@ pip install .
 3️⃣ Build and run 
 
 ```
-python app.py
+python run.py
 ```
 
 4️⃣ Open your browser at: https://localhost:8080/
