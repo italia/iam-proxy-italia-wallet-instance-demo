@@ -39,7 +39,24 @@ from pyeudiw.jwt.jws_helper import JWSHelper
 from pyeudiw.wallet_attestations.issuers.wa_request import WaJswRequestIssuer
 
 from app import AppConfig
-from app.constants import *
+from app.constants import (
+    APP_SETTINGS_KEY,
+    AUTH_RESPONSE_MODE_FORM_POST_JWT,
+    AUTH_RESPONSE_MODE_QUERY,
+    AUTH_RESPONSE_TYPE_CODE,
+    CONFIG_DIR,
+    JWT_PREFIX,
+    METADATA_TYPE_AUTHORIZATION_SERVER,
+    METADATA_TYPE_CREDENTIAL_ISSUER,
+    METADATA_TYPE_CREDENTIAL_VERIFIER,
+    METADATA_TYPE_FEDERATION_ENTITY,
+    METADATA_TYPE_WALLET_PROVIDER,
+    MSO_MDOC_PREFIX,
+    PRESENTATION_RESPONSE_MODE_DIRECT_POST_JWT,
+    SD_JWT_PREFIX,
+    WALLET_ATTESTATION_NAME,
+    WALLET_UNIT_ATTESTATION_NAME,
+)
 from app.models.config.credentials_config import Credential, CredentialsConfig
 from app.service import FederationService, IssuerService, ProviderService
 from app.service.authorization.authorization_service import AuthorizationService
