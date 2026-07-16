@@ -49,7 +49,7 @@ class LogFormatFilter(logging.Filter):
 def _loader_include(loader, node):
     nome_file = os.path.join(os.path.dirname(loader.name), loader.construct_scalar(node))
     with open(nome_file, "r", encoding="utf-8") as f:
-        return yaml.load(f, Loader=type(loader))
+        return yaml.safe_load(f)
 
 
 def _loader_env_var(loader, node):
