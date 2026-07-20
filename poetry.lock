@@ -1796,7 +1796,8 @@ develop = false
 [package.dependencies]
 aiohttp = ">=3.11.11,<4.0.0"
 cryptography = ">=48.0.1,<50.0.0"
-cryptojwt = ">=1.9,<1.12"
+#cryptojwt = ">=1.9,<1.12"
+cryptojwt = ">=1.11,<2.0.0"
 pydantic = ">=2.10.6,<3.0.0"
 pymdoccbor = ">=0.9.0,<2.2.0"
 pyqrcode = ">=1.2,<1.3"
