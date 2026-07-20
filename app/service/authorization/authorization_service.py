@@ -1,10 +1,10 @@
 import logging
 from urllib.parse import urlencode
 
+from app.constants import METADATA_TYPE_AUTHORIZATION_SERVER
 from app.store import AppState
 from app.utils.jwtUtils import decode_and_verify_jwt
 from app.utils.oidFedUtils import _parse_entity_statement_jwt, _parse_oid_fed_list
-from settings import METADATA_TYPE_AUTHORIZATION_SERVER
 
 from ..base.base_service import BaseService
 

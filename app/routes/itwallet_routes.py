@@ -4,6 +4,11 @@ from urllib.parse import urlparse
 
 from flask import Blueprint, current_app, g, jsonify, request, session
 
+from app.constants import (
+    DEFAULT_CORRELATION_ID,
+    EU_COUNTRIES,
+    IDP_VALID,
+)
 from app.service.itwallet_service import ItWalletService
 from app.store import app_state
 from app.utils.utils import (
@@ -11,11 +16,6 @@ from app.utils.utils import (
     extract_claim,
     guess_credential_configuration_icon,
     sanitize_for_logging,
-)
-from settings import (
-    DEFAULT_CORRELATION_ID,
-    EU_COUNTRIES,
-    IDP_VALID,
 )
 
 logger = logging.getLogger(__name__)

@@ -3,33 +3,13 @@
   <div class="row">
     <div class="col-lg-6">
       <div class="form-group">
-        <label>Nome: {{ claims.given_name }}</label>
+        <label>Nome: {{ internal_claims.given_name }}</label>
       </div>
     </div>
 
     <div class="col-lg-6">
       <div class="form-group">
-        <label>Cognome: {{ claims.family_name }}</label>
-      </div>
-    </div>
-  </div>
-
-  <div class="row">
-    <div class="col-lg-4">
-      <div class="form-group">
-        <label>Data di nascita: {{ claims.birthdate }}</label>
-      </div>
-    </div>
-
-    <div class="col-lg-4">
-      <div class="form-group">
-        <label>Luogo di nascita: {{ claims.place_of_birth.locality }}</label>
-      </div>
-    </div>
-
-    <div class="col-lg-4">
-      <div class="form-group">
-        <label >Nazionalità: {{ claims.nationalities | join(', ') }}</label>
+        <label>Cognome: {{ internal_claims.family_name }}</label>
       </div>
     </div>
   </div>
@@ -37,7 +17,56 @@
   <div class="row">
     <div class="col-lg-6">
       <div class="form-group">
-        <label >Codice fiscale: {{ claims.tax_id_code }}</label>
+        <label>Data di nascita: {{ internal_claims.birthdate }}</label>
+      </div>
+    </div>
+
+    <div class="col-lg-6">
+      <div class="form-group">
+        <label>Luogo di nascita: {{ internal_claims.place_of_birth.locality }}</label>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-lg-6">
+      <div class="form-group">
+        <label >Nazionalità: {{ internal_claims.nationalities | join(', ') }}</label>
+      </div>
+    </div>
+
+    <div class="col-lg-6">
+      <div class="form-group">
+        <label >Codice fiscale: {{ internal_claims.tax_id_code }}</label>
+      </div>
+    </div>
+  </div>
+  <hr>
+
+  <div class="row">
+    <div class="col-lg-6">
+      <div class="form-group">
+        <label>Paese emittente: {{ internal_claims.issuing_country }}</label>
+      </div>
+    </div>
+
+    <div class="col-lg-6">
+      <div class="form-group">
+        <label>Autorità emittente: {{ internal_claims.issuing_authority }}</label>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-lg-6">
+      <div class="form-group">
+        <label>Data di emissione: {{ internal_claims.issuance_date | format_date }}</label>
+      </div>
+    </div>
+
+    <div class="col-lg-6">
+      <div class="form-group">
+        <label>Data di scadenza: {{ internal_claims.date_of_expiry | format_date }}</label>
       </div>
     </div>
   </div>
@@ -46,7 +75,16 @@
   <div class="row">
     <div class="col-12">
       <div class="alert alert-info" role="alert">
+     <strong>Dettagli aggiuntivi</strong><br>
+      {% if metadata is mapping %}
+        <div class="d-flex flex-wrap gap-2 small">
+          {% for key, value in metadata.items() %}
+          <span><span class="fw-semibold">{{ key }}:</span> <span class="text-muted">{{ value }}</span></span>
+          {% endfor %}
+        </div>
+      {% else %}
         {{ metadata }}
+      {% endif %}
       </div>
     </div>
   </div>

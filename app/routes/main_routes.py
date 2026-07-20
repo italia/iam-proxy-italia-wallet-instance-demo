@@ -2,8 +2,8 @@ import os
 
 from flask import Blueprint, current_app, redirect, render_template, send_from_directory, session, url_for
 
+from app.constants import APP_SETTINGS_KEY, CHROME_DEVTOOLS_PATH, FAVICON_MIMETYPE
 from app.store import app_state
-from settings import CHROME_DEVTOOLS_PATH, FAVICON_MIMETYPE, FAVICON_SUBPATH, STATIC_FOLDER
 
 main_routes = Blueprint("main_routes", __name__)
 
@@ -20,9 +20,10 @@ def internal_error(e):
 
 @main_routes.route("/favicon.ico")
 def favicon():
+    app_config = current_app.config[APP_SETTINGS_KEY].app
     return send_from_directory(
-        os.path.join(current_app.root_path, STATIC_FOLDER),
-        FAVICON_SUBPATH,
+        os.path.join(current_app.root_path, app_config.static_folder),
+        app_config.favicon_subpath,
         mimetype=FAVICON_MIMETYPE,
     )
 

@@ -1,3 +1,4 @@
+
 if (rpBtn && !rpBtn.hasAddHandler) {
   rpBtn.addEventListener("click", async (e) => {
     e.preventDefault();
@@ -12,12 +13,21 @@ let qrStream = null;
 let qrAnimationId = null;
 let isQrScanning = false;
 
-function apriQrPopup() {
+function openQrPopup() {
   const qrModalElement = document.getElementById('qr-scanner-modal');
   if (!qrModalElement) return;
   const qrModal = new bootstrap.Modal(qrModalElement);
   qrModal.show();
   startQrScanner();
+}
+
+function closeQrPopup() {
+    const qrModalElement = document.getElementById('qr-scanner-modal');
+    if (qrModalElement) {
+      const qrModal = bootstrap.Modal.getInstance(qrModalElement);
+      if (qrModal) qrModal.hide();
+    }
+    stopQrScanner();
 }
 
 async function startQrScanner() {
@@ -111,12 +121,12 @@ async function processQrPresentation(qrData) {
     if (!response.ok) {
       throw new Error(await getErrorMessage(response));
     }
-    const qrModalElement = document.getElementById('qr-scanner-modal');
-    if (qrModalElement) {
-      const qrModal = bootstrap.Modal.getInstance(qrModalElement);
-      if (qrModal) qrModal.hide();
-    }
-    stopQrScanner();
+
+    response_json = await response.json();
+
+    closeQrPopup();
+
+    apriPresentationPopup(response_json);
 
   } catch (err) {
     console.error("Errore durante la presentazione del wallet:", err);
