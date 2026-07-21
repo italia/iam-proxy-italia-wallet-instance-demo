@@ -32,7 +32,7 @@ from cryptography.hazmat.primitives.serialization import (
 )
 from jwcrypto import jwk
 
-from settings import CONTENT_PDF_BASE_64_PREFIX
+from app.constants import CONTENT_PDF_BASE_64_PREFIX
 
 logger = logging.getLogger(__name__)
 
@@ -541,3 +541,25 @@ def unescape_json(value):
         return [unescape_json(v) for v in value]
     else:
         return value
+
+
+def parse_url_to_dict(input: str) -> dict:
+    parsed_url = urlparse(input)
+
+    query_dict = {key: value[0] for key, value in parse_qs(parsed_url.query).items()}
+
+    if query_dict.get("request_uri"):
+        query_dict = parse_request_uri(query_dict["request_uri"], query_dict)
+
+    return query_dict
+
+
+def parse_request_uri(request_uri: str, result: dict[str, str]) -> dict[str, str]:
+    base_uri, _, params = request_uri.partition("&")
+
+    result["request_uri"] = base_uri
+
+    if params:
+        result.update({key: values[0] for key, values in parse_qs(params).items()})
+
+    return result

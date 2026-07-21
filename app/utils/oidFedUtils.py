@@ -3,9 +3,9 @@ import logging
 
 import requests
 
+from app.constants import OID_FED_LIST_PATH, OID_FED_WELL_KNOWN_PATH
 from app.utils.http_utils import http_request_with_retry
 from app.utils.utils import sanitize_for_logging
-from settings import OID_FED_LIST_PATH, OID_FED_WELL_KNOWN_PATH
 
 logger = logging.getLogger(__name__)
 
@@ -73,6 +73,21 @@ def _parse_entity_statement_jwt(response: requests.Response) -> str:
     return response.text.strip()
 
 
+def _parse_entity_statement(response: requests.Response) -> str:
+    """Parse JWT from entity-statement response."""
+    ct = response.headers.get("Content-Type", "")
+    logger.info(f"Entering method: _parse_entity_statement. Content-Type: {ct} response: {response.__dict__}")
+    if "application/json" in ct:
+        try:
+            return response.json()
+        except ValueError:
+            logger.warning("Content-Type is application/json but body is not valid JSON")
+            return response.text.strip()
+    if "application/entity-statement+jwt" in ct:
+        return response.text.strip()
+    return response
+
+
 def oid_fed_fetch_openid_configuration(
     base_url: str,
     max_retries: int = 3,
@@ -104,5 +119,5 @@ def oid_fed_fetch_openid_configuration(
         retry_delay=retry_delay,
         proxies=proxies,
         no_proxy_domains=no_proxy_domains,
-        parse_response=_parse_entity_statement_jwt,
+        parse_response=_parse_entity_statement,
     )

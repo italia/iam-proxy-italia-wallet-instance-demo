@@ -12,13 +12,13 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePrivateKey, EllipticCurvePublicKey
 from jwcrypto import jwe, jwk
 
-from app.utils.http_utils import _parse_json_response, http_request_with_retry
-from app.utils.utils import base64url_encode, sanitize_for_logging
-from settings import (
+from app.constants import (
     CREDENTIAL_INVALID,
     CREDENTIAL_SUSPENDED,
     CREDENTIAL_VALID,
 )
+from app.utils.http_utils import _parse_json_response, http_request_with_retry
+from app.utils.utils import base64url_encode, sanitize_for_logging
 
 logger = logging.getLogger(__name__)
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)

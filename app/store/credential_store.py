@@ -200,9 +200,10 @@ class CredentialStore:
         Valore è il dizionario {"data_row": ..., "vct": ..., "claims": ..., "status_assertion": ..., "status": ... } o None.
         """
         prefix_lower = prefix.lower()
-        for k, v in self._store.items():
-            if isinstance(k, str) and k.lower().startswith(prefix_lower):
-                return (k, v)
+        for issuer, value in self._store.items():
+            for k, v in value.items():
+                if isinstance(k, str) and k.lower().startswith(prefix_lower):
+                    return (k, v)
         return None
 
     def find_by_vct(self, vct: str) -> Optional[Tuple[str, dict]]:

@@ -1,0 +1,27 @@
+<div class="modal fade" id="qr-scanner-modal" tabindex="-1" role="dialog" aria-labelledby="qrModalTitle" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title w-100 text-center" id="qrModalTitle">Inquadra o carica il QR Code</h5>
+        <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Chiudi" onclick="stopQrScanner()"></button>
+      </div>
+      <div class="modal-body text-center">
+        <video id="qr-video" style="display: none;"></video>
+        <canvas id="qr-canvas" style="width: 100%; max-width: 400px; height: auto; border: 2px solid #0066cc; border-radius: 4px;"></canvas>
+
+        <p class="mt-3 text-muted">Inquadra il QR Code oppure:</p>
+
+        <div class="mb-2">
+          <input type="file" id="qr-file-input" accept="image/*" style="display: none;" onchange="handleQrFileUpload(event)" />
+          <button type="button" class="btn btn-outline-primary btn-sm" onclick="document.getElementById('qr-file-input').click()">
+            <svg class="icon icon-sm" aria-hidden="true"><use href="/static/svg/sprites.svg#it-upload"></use></svg>
+            Carica un'immagine QR
+          </button>
+        </div>
+      </div>
+      <div class="modal-footer justify-content-center">
+        <button class="btn btn-secondary btn-sm" type="button" data-bs-dismiss="modal" onclick="stopQrScanner()">Annulla</button>
+      </div>
+    </div>
+  </div>
+</div>

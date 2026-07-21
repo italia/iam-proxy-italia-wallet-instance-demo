@@ -1,8 +1,8 @@
 import logging
 
+from app.constants import METADATA_TYPE_FEDERATION_ENTITY
 from app.store import AppState
 from app.utils.http_utils import http_request_with_retry
-from settings import METADATA_TYPE_FEDERATION_ENTITY
 
 logger = logging.getLogger(__name__)
 
