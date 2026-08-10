@@ -34,6 +34,8 @@ from bs4 import BeautifulSoup
 from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePrivateKey, EllipticCurvePublicKey
 from flask import current_app
 from jwcrypto.common import base64url_decode
+
+from app.models.config.app_config import AppSettings
 from pyeudiw.jwt.exceptions import LifetimeException
 from pyeudiw.jwt.jws_helper import JWSHelper
 from pyeudiw.wallet_attestations.issuers.wa_request import WaJswRequestIssuer
@@ -120,7 +122,9 @@ class ItWalletService:
     def __init__(self, session, external_discovery: bool = False):
         """Initialize service with Flask session. Loads proxies from config."""
         self.session = session
-        self.proxies, self.no_proxy_domains = get_proxies_from_config()
+        self._app_config: AppConfig = current_app.config[APP_SETTINGS_KEY] #todo move to params
+        self._app_settings: AppSettings = self._app_config.app
+        self.proxies, self.no_proxy_domains = get_proxies_from_config(self._app_settings.http_params.get("proxy"))
         self._hw_private_jwk = None
         self._hw_public_jwk = None
         self._hw_key_tag = None
@@ -129,7 +133,6 @@ class ItWalletService:
         self.issuer_service = IssuerService(current_app.config, self.proxies, self.no_proxy_domains)
         self.authorization_service = AuthorizationService(current_app.config, self.proxies, self.no_proxy_domains)
         self.external_discovery = external_discovery
-        self._app_config: AppConfig = current_app.config[APP_SETTINGS_KEY]
         self._credentials_config: CredentialsConfig = self._app_config.credentials_config
 
     def _find_pid_provider_and_process_issuers(self, entity_ids: list, cred_config_id: str, trust_root_url: str):

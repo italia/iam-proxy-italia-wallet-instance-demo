@@ -3,6 +3,15 @@ from pydantic import BaseModel, Field, HttpUrl
 
 #todo add validations
 
+class RequestUriErrorResponse(BaseModel):
+    """
+    Request URI Endpoint Response
+    Reference: https://italia.github.io/eid-wallet-it-docs/releases/1.4.5/en/remote-flow.html#request-uri-endpoint-errors
+    """
+    error: Literal["invalid_request", "server_error", "temporarily_unavailable"]
+    error_description: str
+
+
 class ClientMetadata(BaseModel):
     vp_formats_supported: dict[str, Any] = Field(description="Supported Verifiable Presentation formats")
     encrypted_response_enc_values_supported: Optional[List[str]] = Field(None, description="Supported JWE enc algorithms for encrypted Authorization Responses")
@@ -13,7 +22,7 @@ class ClientMetadata(BaseModel):
 
 class RequestObjectJwtHeader(BaseModel):
     """
-    IT-Wallet Request Object header claims (Remote Flow).
+    IT-Wallet Request Object header claims (Remote Flow - Request Uri Response).
     Reference: https://italia.github.io/eid-wallet-it-docs/releases/1.4.5/en/remote-flow.html#request-object
     """
     alg: str
@@ -25,7 +34,7 @@ class RequestObjectJwtHeader(BaseModel):
 
 class RequestObjectJwtPayload(BaseModel):
     """
-    IT-Wallet Request Object claims (Remote Flow).
+    IT-Wallet Request Object claims (Remote Flow - Request Uri Response).
     Reference: https://italia.github.io/eid-wallet-it-docs/releases/1.4.5/en/remote-flow.html#request-object
     """
 
