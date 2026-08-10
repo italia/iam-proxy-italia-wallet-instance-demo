@@ -9,6 +9,13 @@ app:
   favicon_subpath: images/wallet_logo.svg
   static_folder: static
   secret_key: !ENV SECRET_KEY
+  http_params:
+    proxy:
+      use_proxy: false
+      http_proxy: proxy.example.com:8080
+      https_proxy: proxy.example.com:8080
+      no_proxy: localhost,127.0.0.1
+
   logging:
     filepath: #optional
     filename: #optional
@@ -30,10 +37,6 @@ ms_trust_configuration:
     trust_framework: oid-fed
 
 metadata:
-  use_proxy: false
-  http_proxy: proxy.example.com:8080
-  https_proxy: proxy.example.com:8080
-  no_proxy: localhost,127.0.0.1
   initialize_flow:
     idphints:
       CIE3: ""
