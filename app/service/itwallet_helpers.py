@@ -17,17 +17,17 @@ from app.utils.utils import extract_claim, sanitize_for_logging
 logger = logging.getLogger(__name__)
 
 
-def get_proxies_from_config() -> tuple[dict | None, list[str]]:
+def get_proxies_from_config(proxy_conf: dict) -> tuple[dict | None, list[str]]:
     """Extract proxy config. Returns (proxies, no_proxy_domains)."""
-    use_proxy = extract_claim(current_app.config, "metadata.use_proxy")
+    use_proxy = proxy_conf.get("use_proxy")
     if not use_proxy:
         logger.info("🚨  Proxy disabilitati")
         return None, []
     proxies = {
-        "http": extract_claim(current_app.config, "metadata.http_proxy"),
-        "https": extract_claim(current_app.config, "metadata.https_proxy"),
+        "http": proxy_conf.get("http_proxy"),
+        "https": proxy_conf.get("https_proxy"),
     }
-    no_proxy_raw = extract_claim(current_app.config, "metadata.no_proxy") or ""
+    no_proxy_raw = proxy_conf.get("no_proxy") or ""
     no_proxy_domains = [d.strip() for d in no_proxy_raw.split(",") if d.strip()]
     logger.info("🚨  Configuring proxy...")
     # codeql[py/log-injection]
