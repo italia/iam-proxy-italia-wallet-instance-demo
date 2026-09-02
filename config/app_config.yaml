@@ -42,7 +42,7 @@ metadata:
       CIE3: ""
       CIE2: !ENV OPENID_CIE_PROVIDER_URL
       SPID2: https://demo.spid.gov.it
-    credential_configuration_id: mso_mdoc_pid
+    credential_configuration_id: dc_sd_jwt_pid
     response_mode: query
     response_type: code
     redirect_uri: !ENV WALLET_INITIALIZE_REDIRECT_URI
