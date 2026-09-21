@@ -1,4 +1,4 @@
-TYPE_PID = "pid"
+TYPE_PID = "eid"
 TYPE_DEGREE = "degree"
 TYPE_ENROLLMENT = "enrollment"
 

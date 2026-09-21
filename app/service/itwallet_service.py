@@ -273,7 +273,7 @@ class ItWalletService:
             code_challenge_method=pkce["code_challenge_method"],
             response_type=initialize_flow_response_type,
             redirect_uri=initialize_flow_redirect_uri,
-            scope="pid",
+            scope="eid",
             authorization_details=authorization_details,
         )
         if not request_object_jwt:
