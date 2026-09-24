@@ -34,8 +34,6 @@ from bs4 import BeautifulSoup
 from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePrivateKey, EllipticCurvePublicKey
 from flask import current_app
 from jwcrypto.common import base64url_decode
-
-from app.models.config.app_config import AppSettings
 from pyeudiw.jwt.exceptions import LifetimeException
 from pyeudiw.jwt.jws_helper import JWSHelper
 from pyeudiw.wallet_attestations.issuers.wa_request import WaJswRequestIssuer
@@ -59,6 +57,7 @@ from app.constants import (
     WALLET_ATTESTATION_NAME,
     WALLET_UNIT_ATTESTATION_NAME,
 )
+from app.models.config.app_config import AppSettings
 from app.models.config.credentials_config import Credential, CredentialsConfig
 from app.service import FederationService, IssuerService, ProviderService
 from app.service.authorization.authorization_service import AuthorizationService
