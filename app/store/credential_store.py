@@ -191,7 +191,8 @@ class CredentialStore:
                 return v
         return None
 
-    # @TODO DEPRECATED - to remove after refactor of find_by_prefix method
+    # @TODO We need to add issuer input params
+    # Add this business logic
     def find_by_prefix_with_key(self, prefix: str) -> Optional[Tuple[str, dict]]:
         """
         Restituisce la prima credenziale trovata la cui chiave inizia con il prefisso dato (case insensitive),

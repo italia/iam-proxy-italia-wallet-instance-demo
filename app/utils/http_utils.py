@@ -51,30 +51,6 @@ def _parse_json_response(response: requests.Response, url: str) -> dict:
     except ValueError as ve:
         raise ValueError(f"Risposta ricevuta da {url} non valida: {ve}") from ve
 
-
-def _do_request(
-    method: str,
-    url: str,
-    *,
-    headers: dict | None = None,
-    data: dict | None = None,
-    json_body: dict | None = None,
-    use_proxy: bool = False,
-    proxies: dict | None = None,
-) -> requests.Response:
-    """Execute HTTP request with optional proxy."""
-    kwargs = {"url": url, "headers": headers or {}, "verify": False}
-    if data is not None:
-        kwargs["data"] = data
-    if json_body is not None:
-        kwargs["json"] = json_body
-    if use_proxy and proxies:
-        kwargs["proxies"] = proxies
-    if method.upper() == "GET":
-        return requests.get(**kwargs)
-    return requests.post(**kwargs)
-
-
 def _execute_request(method: str, url: str, req_kwargs: dict) -> requests.Response:
     """Execute single HTTP request."""
     if method.upper() == "GET":
@@ -122,9 +98,6 @@ def http_request_with_retry(
     If parse_response is provided, call it with the response and return its result.
     Otherwise return the raw response (caller must handle).
     """
-    logger.info(
-        f"Entering method: http_request_with_retry. Params [method: {method}, url: {url}, max_retries: {max_retries}, retry_delay: {retry_delay}]"
-    )
     use_proxy = _should_use_proxy(url, proxies, no_proxy_domains)
     req_kwargs: dict = {"headers": headers or {}, "verify": False, "allow_redirects": allow_redirects}
     if data is not None:

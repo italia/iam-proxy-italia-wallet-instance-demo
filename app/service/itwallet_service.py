@@ -57,6 +57,7 @@ from app.constants import (
     WALLET_ATTESTATION_NAME,
     WALLET_UNIT_ATTESTATION_NAME,
 )
+from app.models.config.app_config import AppSettings
 from app.models.config.credentials_config import Credential, CredentialsConfig
 from app.service import FederationService, IssuerService, ProviderService
 from app.service.authorization.authorization_service import AuthorizationService
@@ -120,7 +121,9 @@ class ItWalletService:
     def __init__(self, session, external_discovery: bool = False):
         """Initialize service with Flask session. Loads proxies from config."""
         self.session = session
-        self.proxies, self.no_proxy_domains = get_proxies_from_config()
+        self._app_config: AppConfig = current_app.config[APP_SETTINGS_KEY] #todo move to params
+        self._app_settings: AppSettings = self._app_config.app
+        self.proxies, self.no_proxy_domains = get_proxies_from_config(self._app_settings.http_params.get("proxy"))
         self._hw_private_jwk = None
         self._hw_public_jwk = None
         self._hw_key_tag = None
@@ -129,41 +132,7 @@ class ItWalletService:
         self.issuer_service = IssuerService(current_app.config, self.proxies, self.no_proxy_domains)
         self.authorization_service = AuthorizationService(current_app.config, self.proxies, self.no_proxy_domains)
         self.external_discovery = external_discovery
-        self._app_config: AppConfig = current_app.config[APP_SETTINGS_KEY]
         self._credentials_config: CredentialsConfig = self._app_config.credentials_config
-
-    def getOnboardedRelyingParties(self):
-        """Return list of onboarded Relying Parties (Credential Verifiers) from trust root."""
-        logger.info("➡️  Richiesta elenco Relying Parties onboardati")
-
-        # recupero selected_country dalla memoria
-        country = app_state.selected_country
-
-        # recupero trust_root_url dalla configurazione
-        query_trust_root = f"ms_trust_configuration.{country}.trust_root"
-        trust_root_url = extract_claim(current_app.config, query_trust_root)
-
-        if not trust_root_url:
-            raise ValueError(f"Nessun Trust root per il paese {country}")
-
-        # codeql[py/log-injection]
-        logger.info(
-            "ℹ️  Trust root individuato per il paese %s: %s",
-            sanitize_for_logging(country),
-            sanitize_for_logging(trust_root_url),
-        )
-
-        params = {"entity_type": METADATA_TYPE_CREDENTIAL_VERIFIER}
-        list_query_string = f"?{urlencode(params)}"
-
-        oid_fed_list_reponse = oid_fed_list(
-            base_url=trust_root_url,
-            query_string=list_query_string,
-            proxies=self.proxies,
-            no_proxy_domains=self.no_proxy_domains,
-        )
-
-        return {"success": True, "data": oid_fed_list_reponse}
 
     def _find_pid_provider_and_process_issuers(self, entity_ids: list, cred_config_id: str, trust_root_url: str):
         """Process credential issuers from oid_fed_list, apply overrides, return PID provider EC."""
@@ -303,7 +272,7 @@ class ItWalletService:
             code_challenge_method=pkce["code_challenge_method"],
             response_type=initialize_flow_response_type,
             redirect_uri=initialize_flow_redirect_uri,
-            scope="pid",
+            scope="eid",
             authorization_details=authorization_details,
         )
         if not request_object_jwt:
@@ -1050,13 +1019,6 @@ class ItWalletService:
         if not rp_client_id:
             raise ValueError("Non trovato l'URL del Relying Party / Verifier nella sessione")
 
-        logger.info(
-            f"➡️  Richiesta di completamento dell'operazione di login presso il Relying Party / Verifier {rp_client_id} effettuata dal wallet"
-        )
-
-        # codeql[py/log-injection]
-        logger.info("➡️  %s", sanitize_for_logging(credentials_presenting))
-
         # recupero EC del Relying Party / Verifier dalla memoria usando come chiave di ricerca l'id del Relying Party / Verifier
         rp_ec = app_state.ec_store.get(rp_client_id)
         if not rp_ec:
@@ -1082,11 +1044,12 @@ class ItWalletService:
         if not rp_jwks:
             raise ValueError(f"Non trovata in memoria alcuna chiave JWK Relying Party / Verifier {rp_client_id}")
 
-        logger.debug("🔑 JWKs trovato:")
-        logger.debug("%s", sanitize_for_logging(json.dumps(rp_jwks, indent=2, ensure_ascii=False)))
+        logger.debug(f"rp_jwks: {rp_jwks}")
 
         # recupero del response_mode relativo al credentialflow dalla configurazione
         credential_flow_response_mode = extract_claim(current_app.config, "metadata.credential_flow.response_mode")
+
+        logger.debug(f"credential_flow_response_mode: {credential_flow_response_mode}")
 
         authorizationResponse = self._presentation_management(
             enc=True,
@@ -1094,6 +1057,7 @@ class ItWalletService:
             rp_state=rp_state,
             rp_nonce=rp_nonce,
             rp_response_uri=rp_response_uri,
+            rp_client_id = rp_client_id,
             rp_jwks=rp_jwks,
             response_mode=credential_flow_response_mode,
         )
@@ -1252,13 +1216,13 @@ class ItWalletService:
             logger.error(f"credential_configuration_id not found: {credential_configuration_id}")
             raise ValueError(f"credential_configuration_id not found: {credential_configuration_id}")
 
-        logger.info(f"{credential_configuration_id} len: {len(matching_identifiers)}")
+        logger.debug(f"{credential_configuration_id} len: {len(matching_identifiers)}")
 
         return dpop_bound_access_token, matching_identifiers
 
     def _get_or_create_wallet_attestations(self, provider_url: str, provider_jwks: list[dict]) -> tuple[str, str]:
         """Get wallet attestation JWT from store, or create if missing/expired. Returns JWT string."""
-        logger.info(f"Entering method: _get_or_create_wallet_attestation. Params [provider_url: {provider_url}]")
+        logger.debug(f"Entering method: _get_or_create_wallet_attestation. Params [provider_url: {provider_url}]")
 
         wa_id = JWT_PREFIX + "_" + WALLET_ATTESTATION_NAME
         w_unit_att_is = JWT_PREFIX + "_" + WALLET_UNIT_ATTESTATION_NAME
@@ -1334,9 +1298,6 @@ class ItWalletService:
         issuer_url: str,
     ) -> list:
         """Fetch credentials for given credential_id via nonce+proof+request. Returns list of credential dicts."""
-        logger.info(
-            f"Entering method: _fetch_credentials_for_id. Params [credential_id: {credential_id}, nonce_url: {nonce_url}, credential_url: {credential_url}]"
-        )
 
         nonce_resp = request_nonce(url=nonce_url, proxies=self.proxies, no_proxy_domains=self.no_proxy_domains)
 
@@ -1382,10 +1343,6 @@ class ItWalletService:
         dpop_bound_access_token: str,
     ) -> str:
         """Request credentials via nonce+proof, decode/validate, store in credential_store. Returns credential_id."""
-        logger.info(
-            f"Entering method: _credential_issuing_management_v1_3. Params [credential_issuer_url: {credential_issuer_url}, credential_issuer_nonce_url: {credential_issuer_nonce_url}]"
-        )
-
         wallet_private_key, wallet_public_key = self._retrieve_instance_hw_keys(CONFIG_DIR)
 
         if not wallet_private_key or not wallet_public_key:
@@ -1439,71 +1396,6 @@ class ItWalletService:
         #     credential_issuer_jwks,
         #     last_valid_credential,
         # )
-        return credential_id
-
-    def _credential_issuing_management(
-        self,
-        credential_issuer_nonce_url: str,
-        credential_issuer_credential_url: str,
-        credential_issuer_status_assertion_url: str,
-        credential_issuer_jwks: dict,
-        credential_configuration_id: str,
-        credential_identifiers: list,
-        dpop_bound_access_token: str,
-    ) -> str:
-        """Request credentials via nonce+proof, decode/validate, store in credential_store. Returns credential_id."""
-        logger.info(
-            f"Entering method: _credential_issuing_management. Params [credential_issuer_nonce_url: {credential_issuer_nonce_url}]"
-        )
-
-        wallet_private_key, wallet_public_key = self._retrieve_instance_hw_keys(CONFIG_DIR)
-
-        if not wallet_private_key or not wallet_public_key:
-            raise ValueError("Generation Key Exception: wallet_private_key or wallet_public_key empty")
-
-        if not (
-            provider_ec := app_state.ec_store.all_values(f"metadata.{METADATA_TYPE_WALLET_PROVIDER}")
-        ):  # find 1st wallet_provider
-            raise ValueError("The provider wallet is not present in the wallet")
-
-        pub_core_jwks = extract_claim(provider_ec[0], f"metadata.{METADATA_TYPE_WALLET_PROVIDER}.jwks.keys")
-
-        _, key_attestation = self._get_or_create_wallet_attestations(provider_ec[0]["iss"], pub_core_jwks)
-
-        issued = self._collect_last_valid_issued_credential(
-            credential_identifiers,
-            credential_issuer_nonce_url,
-            credential_issuer_credential_url,
-            wallet_private_key,
-            dpop_bound_access_token,
-            key_attestation,
-            credential_configuration_id,
-            credential_issuer_jwks,
-            None,
-        )
-        if not issued:
-            logger.info("❌ Nessuna credenziale valida ricevuta")
-            raise ValueError("Nessuna credenziale valida ricevuta")
-
-        credential_id, last_valid_credential, last_valid_credential_vct, last_valid_credential_claims = issued
-
-        app_state.wallet_initialized = True
-
-        app_state.credential_store.add_credential(
-            credential_id, last_valid_credential, last_valid_credential_vct, last_valid_credential_claims
-        )
-
-        # app_state.credential_store.add(
-        #     credential_id, last_valid_credential, last_valid_credential_vct, last_valid_credential_claims
-        # )
-
-        logger.info("✅ Salvata in memoria credenziale %s", sanitize_for_logging(credential_id))
-        self._maybe_fetch_status_assertion(
-            credential_id,
-            credential_issuer_status_assertion_url,
-            credential_issuer_jwks,
-            last_valid_credential,
-        )
         return credential_id
 
     def _collect_last_valid_issued_credential(
@@ -1645,12 +1537,13 @@ class ItWalletService:
         self,
         item: dict,
         vp_token_claims: dict,
-        rp_response_uri: str,
+        rp_client_id: str,
         rp_nonce: str,
         wallet_private_key_jwk_dict: dict,
         presentation_status_assertion_supported: bool,
     ) -> None:
         """Find credential for item, build SD-JWT presentation, add to vp_token_claims if found."""
+        logger.debug(f"Entering method: _add_credential_presentation_to_vp. Params [item: {item}, vp_token_claims: {vp_token_claims}]")
         result = self._find_credential_by_dcql_item(item)
         if not result:
             return
@@ -1669,7 +1562,7 @@ class ItWalletService:
         presentation = present_sd_jwt(
             vct=vct,
             sd_jwt_compact=value.get("data_row"),
-            aud=rp_response_uri,
+            aud=rp_client_id,
             nonce=rp_nonce,
             claims_to_reveal=claim_paths_nested,
             holder_private_jwk_dict=wallet_private_key_jwk_dict,
@@ -1683,8 +1576,6 @@ class ItWalletService:
         self, enc: bool, vp_token_claims: dict, rp_state: str, rp_jwks: dict, wallet_private_key
     ) -> str:
         """Build JWE or JWS for response_uri request. Raises ValueError on failure."""
-        logger.info("Entering method: _build_response_uri_request. Params []")
-
         if enc:
             enc_key_jwk = extract_key_for_enc(rp_jwks)
             if not enc_key_jwk:
@@ -1708,6 +1599,7 @@ class ItWalletService:
         rp_state: str,
         rp_nonce: str,
         rp_response_uri: str,
+        rp_client_id: str,
         rp_jwks: dict,
         response_mode: str,
     ) -> dict:
@@ -1726,22 +1618,15 @@ class ItWalletService:
         wallet_private_key_jwk = priv_ec_key_obj_to_jwk(wallet_private_key)
         wallet_private_key_jwk_dict = wallet_private_key_jwk.export(as_dict=True)
 
-        # Calcola client_id (thumbprint)
         wallet_client_id = get_thumbprint_from_private_key(wallet_private_key)
-        # codeql[py/log-injection]
-        logger.debug(
-            "ℹ️  Calcolato client id del wallet come thumbprint della sua chiave pvt: %s",
-            sanitize_for_logging(wallet_client_id),
-        )
-
+        logger.debug(f"wallet_client_id: {wallet_client_id}")
         self.session["wallet_client_id"] = wallet_client_id
-
         vp_token_claims = {}
         for item in credentials_presenting:
             self._add_credential_presentation_to_vp(
                 item,
                 vp_token_claims,
-                rp_response_uri,
+                rp_client_id,
                 rp_nonce,
                 wallet_private_key_jwk_dict,
                 presentation_status_assertion_supported,
@@ -1818,7 +1703,7 @@ class ItWalletService:
         response_mode: str,
     ) -> dict:
         """Build vp_token from credentials_presenting, send response_uri request, return auth response."""
-        logger.info(
+        logger.debug(
             f"Entering method: _presentation_management_v133. Params [enc: {enc}, credentials_presenting: {credentials_presenting}, rp_state: {rp_state}]"
         )
 
@@ -1836,7 +1721,7 @@ class ItWalletService:
         wallet_private_key_jwk_dict = wallet_private_key_jwk.export(as_dict=True)
 
         wallet_client_id = get_thumbprint_from_private_key(wallet_private_key)
-        logger.info(f"wallet_client_id: {wallet_client_id}")
+        logger.debug(f"wallet_client_id: {wallet_client_id}")
 
         self.session["wallet_client_id"] = wallet_client_id
 
@@ -1910,7 +1795,7 @@ class ItWalletService:
     def __parse_presentation_callback_v133(
         self, callback_response: str, response_mode: str, redirect_uri: str, rp_jwks: dict
     ) -> dict:
-        logger.info(
+        logger.debug(
             f"Entering method: _parse_presentation_callback_v133. Params [callback_response: {callback_response}, response_mode: {response_mode}]"
         )
 
@@ -1923,7 +1808,7 @@ class ItWalletService:
 
     # V1.3.3
     def __parse_form_post_jwt_response(self, callback_response: str, redirect_uri: str, rp_jwks: dict) -> dict:
-        logger.info(
+        logger.debug(
             f"Entering method: _parse_form_post_jwt_response. Params [callback_response: {callback_response}, redirect_uri: {redirect_uri}]"
         )
 
@@ -1943,7 +1828,7 @@ class ItWalletService:
 
     # V1.3.3
     def __parse_direct_post_jwt_response(self, callback_response: str, redirect_uri: str, rp_jwks: dict) -> dict:
-        logger.info(
+        logger.debug(
             f"Entering method: __parse_direct_post_jwt_response. Params [callback_response: {callback_response}]"
         )
 
@@ -1955,7 +1840,7 @@ class ItWalletService:
         return self.__validate_authentication_response(response_str, rp_jwks, redirect_uri)
 
     def __parse_query_string_response(self, callback_response: str, redirect_uri: str) -> dict:
-        logger.info(
+        logger.debug(
             f"Entering method: __parse_query_string_response. Params [callback_response: {callback_response}, redirect_uri: {redirect_uri}]"
         )
 
@@ -1969,7 +1854,7 @@ class ItWalletService:
 
     def __validate_authentication_response(self, jwt_response: str, rp_jwks: dict, redirect_uri: str) -> dict:
 
-        logger.info(
+        logger.debug(
             f"Entering method: _validate_authentication_response. Params [jwt_response: {jwt_response}, rp_jwks: {rp_jwks}]"
         )
 
@@ -1988,7 +1873,7 @@ class ItWalletService:
         return auth_response_payload
 
     def __validate_auth_response_claims(self, payload: dict, redirect_uri: str) -> None:
-        logger.info(
+        logger.debug(
             f"Entering method: _validate_auth_response_claims. Params [payload: {payload}, redirect_uri: {redirect_uri}]"
         )
 
@@ -2032,7 +1917,7 @@ class ItWalletService:
             raise ValueError(f"Exception: {rp_state} != {state}")
 
     def __check_auth_response_errors(self, payload: dict, redirect_uri: str) -> None:
-        logger.info(
+        logger.debug(
             f"Entering method: __check_auth_response_errors. Params: [payload: {payload}, redirect_uri: {redirect_uri}]"
         )
 
@@ -2044,7 +1929,7 @@ class ItWalletService:
         self, issuer_url: str, expectedMetadataTypes: list[str], expected_hint=None
     ) -> dict:
         """Fetch and validate EC for issuer_url. Returns EC payload. Raises on failure."""
-        logger.info(f"Entering method: _entity_configuration_management. Params [issuer_url: {issuer_url}]")
+        logger.debug(f"Entering method: _entity_configuration_management. Params [issuer_url: {issuer_url}]")
 
         # Ottiene l'EC
         ec_jwt = oid_fed_fetch_openid_configuration(
@@ -2106,6 +1991,7 @@ class ItWalletService:
 
     def _find_credential_by_dcql_item(self, item: dict) -> dict | None:
         """Find credential matching DCQL item (by format+id or vct). Returns (key, value) or None."""
+        logger.debug(f"Entering method: _find_credential_by_dcql_item. Params [item: {item}]")
         if not item["id"]:
             logger.info("❌ Il DCQL non presenta il claim 'id'")
             return None
@@ -2113,19 +1999,10 @@ class ItWalletService:
         if not item["format"]:
             logger.info("❌ Il DCQL non presenta il claim 'format'")
             return None
-
-        logger.info(
-            "ℹ️  Il DCQL presenta i claims 'id': %s e 'format': %s",
-            sanitize_for_logging(item.get("id", "")),
-            sanitize_for_logging(item.get("format", "")),
-        )
-
         # Costruisci l'ID
         raw_id = item["format"] + "_" + item["id"]
         credential_presenting_id = re.sub(r"[+\-\s]", "_", raw_id)
-        logger.info(
-            f"ℹ️  Uso claims 'format' e 'id' del DCQL per generare la chiave '{credential_presenting_id}' con cui cercare nel wallet la credenziale da presentare"
-        )
+        logger.debug(f"credential_presenting_id: {credential_presenting_id}")
 
         result = app_state.credential_store.find_by_prefix_with_key(credential_presenting_id)
         if not result:

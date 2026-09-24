@@ -202,31 +202,31 @@ def viewObjectTypeInMemory():
         logger.error("❌ %s", sanitize_for_logging(str(e)))
         return jsonify({"success": False, "data": {"error": str(e)}}), 500
 
-
-@wallet_api_bp.route("/onboardedRelyingParties", methods=["GET"])
-def onboardedRelyingParties():
-    """Endpoint to fetch the list of onboarded Relying Parties."""
-    try:
-        service = ItWalletService(session)
-        result = service.getOnboardedRelyingParties()
-
-        if not result.get("success"):
-            return jsonify(result), 500
-
-        logger.info("Onboarded Relying Parties:")
-        data = []
-        for rp in list(result["data"]):
-            logger.info(" - %s", sanitize_for_logging(rp))
-            data.append({"id": rp, "label": rp, "icon": "🏛️"})
-
-        return jsonify({"success": True, "data": data}), 200
-
-    except ValueError as ve:
-        logger.error("❌ %s", sanitize_for_logging(str(ve)))
-        return jsonify({"success": False, "data": {"error": str(ve)}}), 400
-    except Exception as e:
-        logger.error("❌ %s", sanitize_for_logging(str(e)))
-        return jsonify({"success": False, "data": {"error": str(e)}}), 500
+#
+# @wallet_api_bp.route("/onboardedRelyingParties", methods=["GET"])
+# def onboardedRelyingParties():
+#     """Endpoint to fetch the list of onboarded Relying Parties."""
+#     try:
+#         service = ItWalletService(session)
+#         result = service.getOnboardedRelyingParties()
+#
+#         if not result.get("success"):
+#             return jsonify(result), 500
+#
+#         logger.info("Onboarded Relying Parties:")
+#         data = []
+#         for rp in list(result["data"]):
+#             logger.info(" - %s", sanitize_for_logging(rp))
+#             data.append({"id": rp, "label": rp, "icon": "🏛️"})
+#
+#         return jsonify({"success": True, "data": data}), 200
+#
+#     except ValueError as ve:
+#         logger.error("❌ %s", sanitize_for_logging(str(ve)))
+#         return jsonify({"success": False, "data": {"error": str(ve)}}), 400
+#     except Exception as e:
+#         logger.error("❌ %s", sanitize_for_logging(str(e)))
+#         return jsonify({"success": False, "data": {"error": str(e)}}), 500
 
 
 @wallet_api_bp.route("/deleteCredential", methods=["POST"])
