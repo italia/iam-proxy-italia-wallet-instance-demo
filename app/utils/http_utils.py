@@ -51,6 +51,7 @@ def _parse_json_response(response: requests.Response, url: str) -> dict:
     except ValueError as ve:
         raise ValueError(f"Risposta ricevuta da {url} non valida: {ve}") from ve
 
+
 def _execute_request(method: str, url: str, req_kwargs: dict) -> requests.Response:
     """Execute single HTTP request."""
     if method.upper() == "GET":

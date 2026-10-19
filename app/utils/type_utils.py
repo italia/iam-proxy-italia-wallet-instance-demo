@@ -1,5 +1,5 @@
-TYPE_PID = "pid" # for backward compatibility v1.3.3
-TYPE_EID=  "eid"
+TYPE_PID = "pid"  # for backward compatibility v1.3.3
+TYPE_EID = "eid"
 TYPE_DEGREE = "degree"
 TYPE_ENROLLMENT = "enrollment"
 

@@ -202,6 +202,7 @@ def viewObjectTypeInMemory():
         logger.error("❌ %s", sanitize_for_logging(str(e)))
         return jsonify({"success": False, "data": {"error": str(e)}}), 500
 
+
 #
 # @wallet_api_bp.route("/onboardedRelyingParties", methods=["GET"])
 # def onboardedRelyingParties():

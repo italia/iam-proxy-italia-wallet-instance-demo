@@ -121,7 +121,7 @@ class ItWalletService:
     def __init__(self, session, external_discovery: bool = False):
         """Initialize service with Flask session. Loads proxies from config."""
         self.session = session
-        self._app_config: AppConfig = current_app.config[APP_SETTINGS_KEY] #todo move to params
+        self._app_config: AppConfig = current_app.config[APP_SETTINGS_KEY]  # todo move to params
         self._app_settings: AppSettings = self._app_config.app
         self.proxies, self.no_proxy_domains = get_proxies_from_config(self._app_settings.http_params.get("proxy"))
         self._hw_private_jwk = None
@@ -1057,7 +1057,7 @@ class ItWalletService:
             rp_state=rp_state,
             rp_nonce=rp_nonce,
             rp_response_uri=rp_response_uri,
-            rp_client_id = rp_client_id,
+            rp_client_id=rp_client_id,
             rp_jwks=rp_jwks,
             response_mode=credential_flow_response_mode,
         )
@@ -1543,7 +1543,9 @@ class ItWalletService:
         presentation_status_assertion_supported: bool,
     ) -> None:
         """Find credential for item, build SD-JWT presentation, add to vp_token_claims if found."""
-        logger.debug(f"Entering method: _add_credential_presentation_to_vp. Params [item: {item}, vp_token_claims: {vp_token_claims}]")
+        logger.debug(
+            f"Entering method: _add_credential_presentation_to_vp. Params [item: {item}, vp_token_claims: {vp_token_claims}]"
+        )
         result = self._find_credential_by_dcql_item(item)
         if not result:
             return
@@ -1601,7 +1603,7 @@ class ItWalletService:
         rp_response_uri: str,
         rp_jwks: dict,
         response_mode: str,
-        rp_client_id: str|None = None
+        rp_client_id: str | None = None,
     ) -> dict:
         """Build vp_token from credentials_presenting, send response_uri request, return auth response."""
         logger.debug(
@@ -1632,7 +1634,7 @@ class ItWalletService:
             self._add_credential_presentation_to_vp(
                 item,
                 vp_token_claims,
-                rp_client_id if rp_client_id else rp_response_uri, #todo check
+                rp_client_id if rp_client_id else rp_response_uri,  # todo check
                 rp_nonce,
                 wallet_private_key_jwk_dict,
                 presentation_status_assertion_supported,
@@ -1668,7 +1670,7 @@ class ItWalletService:
             )
 
             logger.info(f"callback_response: {callback_response}")
-            if rp_client_id: #todo: Check if necessary and compare the differences
+            if rp_client_id:  # todo: Check if necessary and compare the differences
                 return self._parse_presentation_callback(callback_response, response_mode, redirect_uri, rp_jwks)
 
             return self.__parse_presentation_callback_v133(callback_response, response_mode, redirect_uri, rp_jwks)

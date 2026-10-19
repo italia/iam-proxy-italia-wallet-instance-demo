@@ -114,7 +114,7 @@ def setup_logging(app):
             logging.getLogger(logger_name).setLevel(settings.libs_level)
 
 
-def load_config(app, config_path: str|None = None):
+def load_config(app, config_path: str | None = None):
     if config_path is None:
         config_path = os.path.join(os.getcwd(), CONFIG_DIR)
     if not os.path.exists(config_path):

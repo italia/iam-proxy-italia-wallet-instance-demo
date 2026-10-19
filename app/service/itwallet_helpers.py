@@ -186,6 +186,7 @@ def _validate_ec_iss_sub(ec_payload: dict, expected: str) -> None:
     if ec_payload.get("iss") != expected or ec_payload.get("sub") != expected:
         raise ValueError(f"EC iss/sub non valido: atteso '{expected}'")
 
+
 def _validate_ec_metadata_and_jwks(ec_payload: dict, expected_metadata_types: list) -> None:
     """Validate EC has required metadata types and jwks. Raises ValueError."""
     actual = ec_payload.get("metadata", {})
