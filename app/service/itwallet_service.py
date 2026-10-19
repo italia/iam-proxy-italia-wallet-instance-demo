@@ -1051,7 +1051,7 @@ class ItWalletService:
 
         logger.debug(f"credential_flow_response_mode: {credential_flow_response_mode}")
 
-        authorizationResponse = self._presentation_management(
+        authorizationResponse = self._presentation_management_v133(
             enc=True,
             credentials_presenting=credentials_presenting,
             rp_state=rp_state,
@@ -1592,106 +1592,6 @@ class ItWalletService:
             raise ValueError("Exception generation Response_uri request JWE/JWS")
         return jwt
 
-    def _presentation_management(
-        self,
-        enc: bool,
-        credentials_presenting: list[dict],
-        rp_state: str,
-        rp_nonce: str,
-        rp_response_uri: str,
-        rp_client_id: str,
-        rp_jwks: dict,
-        response_mode: str,
-    ) -> dict:
-        """Build vp_token from credentials_presenting, send response_uri request, return auth response."""
-        # recupero dello status_assertion_supported relativo al presentation flow dalla configurazione
-        presentation_status_assertion_supported = extract_claim(
-            current_app.config, "metadata.presentation_flow.status_assertion_supported"
-        )
-
-        # Lettura coppia di chiavi pvt e pub del wallet
-        wallet_private_key, wallet_public_key = self._retrieve_instance_hw_keys(CONFIG_DIR)
-        if not wallet_private_key or not wallet_public_key:
-            raise ValueError("Non è stato possibile leggere la coppia di chiavi pvt e pub del wallet")
-
-        # Converti la chiave privata in JWK dict
-        wallet_private_key_jwk = priv_ec_key_obj_to_jwk(wallet_private_key)
-        wallet_private_key_jwk_dict = wallet_private_key_jwk.export(as_dict=True)
-
-        wallet_client_id = get_thumbprint_from_private_key(wallet_private_key)
-        logger.debug(f"wallet_client_id: {wallet_client_id}")
-        self.session["wallet_client_id"] = wallet_client_id
-        vp_token_claims = {}
-        for item in credentials_presenting:
-            self._add_credential_presentation_to_vp(
-                item,
-                vp_token_claims,
-                rp_client_id,
-                rp_nonce,
-                wallet_private_key_jwk_dict,
-                presentation_status_assertion_supported,
-            )
-
-        if len(vp_token_claims) == 0:
-            raise ValueError("vp_token prodotto non presenta alcun claim")
-
-        logger.info("✅ Generato vp_token: %s", sanitize_for_logging(list(vp_token_claims.keys())))
-
-        response_uri_request_jwt = self._build_response_uri_request(
-            enc, vp_token_claims, rp_state, rp_jwks, wallet_private_key
-        )
-
-        # Effettua una response uri request
-        logger.info(
-            "🚀 Invio Response_uri request al Response_uri endpoint %s",
-            sanitize_for_logging(rp_response_uri),
-        )
-        response_uri_response = request_response_uri(
-            url=rp_response_uri,
-            response_uri_request_jwt=response_uri_request_jwt,
-            state=rp_state,
-            proxies=self.proxies,
-            no_proxy_domains=self.no_proxy_domains,
-        )
-
-        logger.info(
-            "✅ Ricevuta risposta dal Response_uri endpoint %s",
-            sanitize_for_logging(rp_response_uri),
-        )
-        logger.info("%s", sanitize_for_logging(response_uri_response))
-
-        redirect_uri = response_uri_response.get("redirect_uri")
-        if redirect_uri:
-            logger.info(
-                f"✅  La Response_uri response ricevuta dal Response_uri endpoint {rp_response_uri} del Relying Party / Verifier contiene un redirect_uri pari a: {redirect_uri}"
-            )
-
-            # Effettua la richiesta alla callback
-            logger.info(
-                "🚀 Invio un messaggio di richiesta al redirect_uri %s",
-                sanitize_for_logging(redirect_uri),
-            )
-            callback_response = request_presentation_callback(
-                url=redirect_uri, proxies=self.proxies, no_proxy_domains=self.no_proxy_domains
-            )
-
-            logger.info(
-                "✅ Ricevuta dal redirect_uri %s la seguente risposta:",
-                sanitize_for_logging(redirect_uri),
-            )
-            logger.info("%s", sanitize_for_logging(callback_response))
-
-            return self._parse_presentation_callback(callback_response, response_mode, redirect_uri, rp_jwks)
-        else:
-            logger.warning(
-                f"⚠️  Nessun 'redirect_uri' definito nella Response_uri response ricevuta dal Response_uri endpoint {rp_response_uri} del Relying Party / Verifier"
-            )
-            logger.info("✅ La fase di presentazione si è conclusa positivamente")
-
-            logger.info("📄 Il risultato è il seguente JSON:")
-            logger.info("%s", sanitize_for_logging(json.dumps(response_uri_response, indent=2)))
-            return response_uri_response
-
     def _presentation_management_v133(
         self,
         enc: bool,
@@ -1701,6 +1601,7 @@ class ItWalletService:
         rp_response_uri: str,
         rp_jwks: dict,
         response_mode: str,
+        rp_client_id: str|None = None
     ) -> dict:
         """Build vp_token from credentials_presenting, send response_uri request, return auth response."""
         logger.debug(
@@ -1731,7 +1632,7 @@ class ItWalletService:
             self._add_credential_presentation_to_vp(
                 item,
                 vp_token_claims,
-                rp_response_uri,
+                rp_client_id if rp_client_id else rp_response_uri, #todo check
                 rp_nonce,
                 wallet_private_key_jwk_dict,
                 presentation_status_assertion_supported,
@@ -1751,7 +1652,6 @@ class ItWalletService:
         response_uri_response = request_response_uri(
             url=rp_response_uri,
             response_uri_request_jwt=response_uri_request_jwt,
-            state=rp_state,
             proxies=self.proxies,
             no_proxy_domains=self.no_proxy_domains,
         )
@@ -1768,6 +1668,8 @@ class ItWalletService:
             )
 
             logger.info(f"callback_response: {callback_response}")
+            if rp_client_id: #todo: Check if necessary and compare the differences
+                return self._parse_presentation_callback(callback_response, response_mode, redirect_uri, rp_jwks)
 
             return self.__parse_presentation_callback_v133(callback_response, response_mode, redirect_uri, rp_jwks)
         else:
