@@ -13,7 +13,10 @@ install-check-deps:
 
 # Install Node tools (htmlhint, stylelint) - requires npm
 install-node-deps:
-	npm install
+	npm ci
+
+node_modules/.bin/htmlhint node_modules/.bin/stylelint &: package.json package-lock.json
+	npm ci
 
 # Run all checks (quality + security + frontend)
 check: ruff radon bandit pip-audit html css
@@ -45,15 +48,16 @@ pip-audit:
 	@echo "#  Whitelisted per pymdoccbor documentation — risk is accepted.             #"
 	@echo "##############################################################################"
 	@echo ""
-	PIP_NO_CACHE_DIR=1 pip-audit . --ignore-vuln CVE-2024-23342
+	@PY=$$(python3 -c 'import tomllib' >/dev/null 2>&1 && echo python3 || echo python3.12); \
+	"$$PY" scripts/poetry_lock_requirements.py | PIP_NO_CACHE_DIR=1 pip-audit --no-deps --disable-pip -r /dev/stdin --ignore-vuln CVE-2024-23342
 
-html:
+html: node_modules/.bin/htmlhint
 	@echo "--- HTML (HTMLHint) ---"
-	npx htmlhint "app/templates/**/*.html" "app/static/**/*.html"
+	./node_modules/.bin/htmlhint "app/templates/**/*.html" "app/static/**/*.html"
 
-css:
+css: node_modules/.bin/stylelint
 	@echo "--- CSS (stylelint) ---"
-	npx stylelint 'app/static/**/*.css' --max-warnings 0
+	./node_modules/.bin/stylelint 'app/static/**/*.css' --max-warnings 0
 
 # CodeQL: requires CodeQL CLI in PATH (download from github.com/github/codeql-action/releases)
 codeql:
