@@ -31,7 +31,7 @@ def parser_credential_format_to_internal(
 
     fmt_id = cred_conf.document_format.id
     _parser_func = __get_parser_func(fmt_id)
-    if _parser_func is None:
+    if _parser_func is None or not internal_mapping:
         raise ValueError(f"Unsupported credential format: {fmt_id}")
 
     internal_credential = {}

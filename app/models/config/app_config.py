@@ -24,6 +24,7 @@ class AppSettings(BaseModel):
     debug_mode: bool
     favicon_subpath: str
     static_folder: str
+    http_params: dict
 
 
 class AppConfig(BaseModel):

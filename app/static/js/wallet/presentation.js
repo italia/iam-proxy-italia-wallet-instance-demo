@@ -35,6 +35,7 @@ function closePresentationPopup() {
 }
 
 async function authorizationProcess() {
+  var result = false;
   try {
     const response = await executeFetch("/wallet/authorization", "POST", { credentialsPresenting: credentialsPresenting });
     if (!response.ok) {
@@ -42,11 +43,23 @@ async function authorizationProcess() {
     }
 
     response_json = await response.json();
-
-    closePresentationPopup();
+    result = response_json?.success === true;
 
   } catch (err) {
     console.error("Errore durante la presentazione del wallet:", err);
-    alert("Errore nell'invio dei dati al backend: " + err.message);
   }
+  finally{
+    closePresentationPopup();
+    showPresentationResult(result);
+  }
+}
+
+function showPresentationResult(success) {
+  const modalElement = document.getElementById('presentation-result-modal');
+  const messageElement = document.getElementById('presentation-result-message');
+  if (!modalElement || !messageElement) return;
+
+  messageElement.textContent = success ? "Login completato con successo." : "Login fallito.";
+  messageElement.className = `mt-3 mb-0 ${success ? "text-success" : "text-danger"}`;
+  bootstrap.Modal.getOrCreateInstance(modalElement).show();
 }

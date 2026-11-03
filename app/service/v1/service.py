@@ -1,6 +1,5 @@
 import logging
 
-from app.service.itwallet_helpers import get_proxies_from_config
 from app.store import AppState
 
 from .. import PresentationService
@@ -13,7 +12,6 @@ class Service(ItWalletService):
     def __init__(self, app_state: AppState):
         logger.debug(f"Entering method: init. Params [app_state: {app_state}]")
         super().__init__(app_state)
-        self.proxies, self.no_proxy_domains = get_proxies_from_config()
         self.presentation_service = PresentationService(app_state, self.proxies, self.no_proxy_domains)
 
     def search(self, search_type: str, search_element: str) -> dict:

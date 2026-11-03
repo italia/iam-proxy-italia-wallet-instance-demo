@@ -344,7 +344,6 @@ def request_request_uri(
 def request_response_uri(
     url: str,
     response_uri_request_jwt: str,
-    state: str,
     max_retries: int = 3,
     retry_delay: float = 1.0,
     proxies: dict = None,
@@ -365,7 +364,7 @@ def request_response_uri(
         Dizionario JSON della risposta, o eccezione in caso di errore.
     """
     headers = {"Content-Type": "application/x-www-form-urlencoded", "Accept": "application/json; charset=utf-8"}
-    data = {"response": response_uri_request_jwt, "state": state}
+    data = {"response": response_uri_request_jwt}
     # codeql[py/log-injection]
     logger.info(">>>> Invio POST a %s", sanitize_for_logging(url))
     # codeql[py/log-injection]
