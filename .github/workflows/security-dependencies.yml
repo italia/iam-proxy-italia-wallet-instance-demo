@@ -1,5 +1,5 @@
-# Security audit on dependencies: known vulnerabilities in Python packages
-# https://pip.pypa.io/en/stable/user_guide/#using-pip-audit
+# Security audit on dependencies: known vulnerabilities in Python and npm packages.
+# Python: pip-audit against poetry.lock. npm: npm audit against package-lock.json.
 # Runs only when dependency files are touched (+ weekly schedule)
 name: Security audit (dependencies)
 
@@ -13,6 +13,8 @@ on:
       - "setup.cfg"
       - "requirements*.txt"
       - "constraints*.txt"
+      - "package.json"
+      - "package-lock.json"
       - ".github/workflows/security-dependencies.yml"
   pull_request:
     branches: ["**"]
@@ -23,6 +25,8 @@ on:
       - "setup.cfg"
       - "requirements*.txt"
       - "constraints*.txt"
+      - "package.json"
+      - "package-lock.json"
       - ".github/workflows/security-dependencies.yml"
   schedule:
     - cron: '0 0 * * 1'
@@ -62,6 +66,23 @@ jobs:
 
       - name: Run pip-audit
         run: make pip-audit
+
+  npm-audit:
+    needs: skip_check
+    if: needs.skip_check.outputs.should_skip != 'true'
+    name: npm audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run npm audit
+        run: make npm-audit
 
   # Optional: OSSF Scorecard for supply-chain security (repo-level)
   # Scorecard only supports the default branch (e.g. main)

@@ -1,7 +1,7 @@
 # Local checks for code quality and security (run before pushing / PR)
-# Aligns with CI: ruff, radon, xenon, bandit, pip-audit, htmlhint, stylelint, codeql
+# Aligns with CI: ruff, radon, xenon, bandit, pip-audit, npm audit, htmlhint, stylelint, codeql
 
-.PHONY: check install-check-deps ruff radon bandit pip-audit html css codeql install-node-deps security quality all
+.PHONY: check install-check-deps ruff radon bandit pip-audit npm-audit html css codeql install-node-deps security quality all
 
 # CodeQL database and results paths
 CODEQL_DB := .codeql-db
@@ -19,7 +19,7 @@ node_modules/.bin/htmlhint node_modules/.bin/stylelint &: package.json package-l
 	npm ci
 
 # Run all checks (quality + security + frontend)
-check: ruff radon bandit pip-audit html css
+check: ruff radon bandit pip-audit npm-audit html css
 	@echo "✅ All local checks passed"
 
 # Individual check targets
@@ -50,6 +50,10 @@ pip-audit:
 	@echo ""
 	@PY=$$(python3 -c 'import tomllib' >/dev/null 2>&1 && echo python3 || echo python3.12); \
 	"$$PY" scripts/poetry_lock_requirements.py | PIP_NO_CACHE_DIR=1 pip-audit --no-deps --disable-pip -r /dev/stdin --ignore-vuln CVE-2024-23342
+
+npm-audit:
+	@echo "--- npm audit (package-lock.json) ---"
+	npm audit --package-lock-only
 
 html: node_modules/.bin/htmlhint
 	@echo "--- HTML (HTMLHint) ---"
