@@ -5,9 +5,9 @@
 {% endblock %}
 {% block content %}
   <div class="it-wallet-title-row">
-    <div class="it-wallet-title-slot it-wallet-title-slot--start"></div>
+    <div class="it-wallet-title-slot it-wallet-title-slot-start"></div>
     <h1 class="it-wallet-title-heading mb-0" id="page-title">{{ _('Emissione') }}</h1>
-    <div class="it-wallet-title-slot it-wallet-title-slot--end">
+    <div class="it-wallet-title-slot it-wallet-title-slot-end">
       <div class="it-wallet-title-actions">
         <button type="button" class="it-wallet-icon-btn trash-icon" aria-label="{{ _('Reimposta demo') }}"{% if not wallet_initialized %} hidden{% endif %}>
           <svg class="icon" aria-hidden="true"><use href="{{ url_for('static', filename='svg/sprites.svg') }}#it-delete"></use></svg>

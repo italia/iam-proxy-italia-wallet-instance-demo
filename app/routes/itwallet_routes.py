@@ -199,44 +199,70 @@ def _format_label(value: str) -> str:
     return _FORMAT_LABELS.get(value, value)
 
 
-def _attestations_from_ec(ec_payload: dict) -> list[dict]:
+def _as_dict(value):
+    return value if isinstance(value, dict) else {}
+
+
+def _as_list(value):
+    return value if isinstance(value, list) else []
+
+
+def _chosen_display(config: dict) -> dict:
+    metadata = _as_dict(config.get("credential_metadata"))
+    metadata_display = _italian_display(_as_list(metadata.get("display")))
+    top_display = _italian_display(_as_list(config.get("display")))
+    return metadata_display or top_display
+
+
+def _attestation_name(chosen: dict, config_id: str) -> str:
+    return chosen.get("name") or chosen.get("description") or config_id
+
+
+def _attestation_record(config_id, config: dict) -> dict:
+    chosen = _chosen_display(config)
+    name = _attestation_name(chosen, config_id)
+    description = chosen.get("description") or ""
+    if description == name:
+        description = ""
+    credential_format = config.get("format") or ""
+    return {
+        "id": config_id,
+        "name": name,
+        "description": description,
+        "claims": _claim_labels(config),
+        "format": credential_format,
+        "format_label": _format_label(credential_format),
+        "obtained": bool(app_state.credential_store.find_by_prefix_with_key(str(config_id))),
+    }
+
+
+def _mark_ambiguous(attestations: list[dict]) -> None:
+    grouped: dict[tuple[str, str], list[dict]] = {}
+    for item in attestations:
+        grouped.setdefault((item["name"], item["format_label"]), []).append(item)
+    for group in grouped.values():
+        if len(group) < 2:
+            continue
+        for item in group:
+            item["disambiguator"] = item["id"]
+
+
+def _supported_configurations(ec_payload: dict):
     supported = (
         ec_payload.get("metadata", {})
         .get(METADATA_TYPE_CREDENTIAL_ISSUER, {})
         .get("credential_configurations_supported")
         or {}
     )
-    if not isinstance(supported, dict):
-        return []
+    return supported if isinstance(supported, dict) else {}
+
+
+def _attestations_from_ec(ec_payload: dict) -> list[dict]:
     attestations = []
-    for config_id, config in supported.items():
-        if not isinstance(config, dict):
-            continue
-        metadata_display = _italian_display((config.get("credential_metadata") or {}).get("display") or [])
-        top_display = _italian_display(config.get("display") or [])
-        chosen = metadata_display or top_display
-        name = chosen.get("name") or chosen.get("description") or config_id
-        description = chosen.get("description") or ""
-        if description == name:
-            description = ""
-        attestations.append(
-            {
-                "id": config_id,
-                "name": name,
-                "description": description,
-                "claims": _claim_labels(config),
-                "format": config.get("format") or "",
-                "format_label": _format_label(config.get("format") or ""),
-                "obtained": bool(app_state.credential_store.find_by_prefix_with_key(str(config_id))),
-            }
-        )
-    grouped: dict[tuple[str, str], list[dict]] = {}
-    for item in attestations:
-        grouped.setdefault((item["name"], item["format_label"]), []).append(item)
-    for group in grouped.values():
-        if len(group) > 1:
-            for item in group:
-                item["disambiguator"] = item["id"]
+    for config_id, config in _supported_configurations(ec_payload).items():
+        if isinstance(config, dict):
+            attestations.append(_attestation_record(config_id, config))
+    _mark_ambiguous(attestations)
     return attestations
 
 
@@ -302,9 +328,7 @@ def issuer_catalog():
     issuer_url = (body.get("issuerUrl") or "").strip()
     parsed = urlparse(issuer_url)
     if parsed.scheme not in ("http", "https") or not parsed.netloc:
-        return jsonify(
-            {"success": False, "field": "issuerUrl", "message": _("Inserisci un URL http o https.")}
-        ), 400
+        return jsonify({"success": False, "field": "issuerUrl", "message": _("Inserisci un URL http o https.")}), 400
 
     peer = peer_role.set("credential_issuer")
     try:

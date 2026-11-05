@@ -318,18 +318,27 @@ def _sd_jwt_cleartext(token: str) -> dict | None:
     return view
 
 
-def _jsonable(value):
-    if isinstance(value, cbor2.CBORTag):
-        if value.tag == 24 and isinstance(value.value, (bytes, bytearray)):
-            try:
-                return _jsonable(cbor2.loads(value.value))
-            except Exception:
-                return base64.b64encode(value.value).decode("ascii")
+def _jsonable_tag(value):
+    embedded = value.tag == 24 and isinstance(value.value, (bytes, bytearray))
+    if not embedded:
         return {"tag": value.tag, "value": _jsonable(value.value)}
+    try:
+        return _jsonable(cbor2.loads(value.value))
+    except Exception:
+        return base64.b64encode(value.value).decode("ascii")
+
+
+def _jsonable_items(value):
     if isinstance(value, dict):
         return {_cose_key(key): _jsonable(item) for key, item in value.items()}
-    if isinstance(value, (list, tuple)):
-        return [_jsonable(item) for item in value]
+    return [_jsonable(item) for item in value]
+
+
+def _jsonable(value):
+    if isinstance(value, cbor2.CBORTag):
+        return _jsonable_tag(value)
+    if isinstance(value, (dict, list, tuple)):
+        return _jsonable_items(value)
     if isinstance(value, (bytes, bytearray)):
         return base64.b64encode(value).decode("ascii")
     if isinstance(value, (datetime, date)):
@@ -385,6 +394,39 @@ def _credential_cleartext(token, credential_format: str, credential_id: str) -> 
     return _jwt_cleartext(token)
 
 
+def _or_text(value, fallback=""):
+    return value or fallback
+
+
+def _held_entries(issuer, group):
+    if "data_row" in group:
+        return {issuer: group}
+    return group
+
+
+def _is_held_entry(entry) -> bool:
+    return isinstance(entry, dict) and "data_row" in entry
+
+
+def _held_view(issuer, group, credential_id, entry, index) -> dict:
+    meta = lookup_attestation(str(credential_id), index)
+    status = str(_or_text(entry.get("status"))).strip()
+    credential_format = _or_text(meta.get("format"))
+    return {
+        "issuer": "" if "data_row" in group else issuer,
+        "id": credential_id,
+        "name": _or_text(meta.get("name"), credential_id),
+        "description": _or_text(meta.get("description")),
+        "format": credential_format,
+        "format_label": _or_text(meta.get("format_label"), _format_label(credential_format)),
+        "claims": meta.get("claims") or [],
+        "config_id": _or_text(meta.get("id"), credential_id),
+        "credential": _credential_cleartext(entry.get("data_row"), credential_format, credential_id),
+        "status_label": _STATUS_LABELS.get(status.lower(), _or_text(status, "Non verificata")),
+        "assertion": _jwt_cleartext(entry.get("status_assertion")),
+    }
+
+
 def _held_credential_views() -> list[dict]:
     views = []
     store = app_state.credential_store.get_store() or {}
@@ -392,27 +434,10 @@ def _held_credential_views() -> list[dict]:
     for issuer, group in store.items():
         if not isinstance(group, dict):
             continue
-        entries = {issuer: group} if "data_row" in group else group
+        entries = _held_entries(issuer, group)
         for credential_id, entry in entries.items():
-            if not isinstance(entry, dict) or "data_row" not in entry:
-                continue
-            meta = lookup_attestation(str(credential_id), index)
-            status = str(entry.get("status") or "").strip()
-            views.append(
-                {
-                    "issuer": "" if "data_row" in group else issuer,
-                    "id": credential_id,
-                    "name": meta.get("name") or credential_id,
-                    "description": meta.get("description") or "",
-                    "format": meta.get("format") or "",
-                    "format_label": meta.get("format_label") or _format_label(meta.get("format") or ""),
-                    "claims": meta.get("claims") or [],
-                    "config_id": meta.get("id") or credential_id,
-                    "credential": _credential_cleartext(entry.get("data_row"), meta.get("format") or "", credential_id),
-                    "status_label": _STATUS_LABELS.get(status.lower(), status or "Non verificata"),
-                    "assertion": _jwt_cleartext(entry.get("status_assertion")),
-                }
-            )
+            if _is_held_entry(entry):
+                views.append(_held_view(issuer, group, credential_id, entry, index))
     return views
 
 
@@ -479,6 +504,46 @@ def _status_list_code(lst: str, bits: int, index: int) -> int:
     return (raw[jump // 8] >> (jump % 8)) & ((1 << bits) - 1)
 
 
+def _credentials_page():
+    return redirect(url_for("wallet_routes.wallet_credentials"))
+
+
+def _issuer_status_jwks(stored_issuer):
+    ec = app_state.ec_store.get(stored_issuer)
+    if not isinstance(ec, dict):
+        return None
+    return extract_claim(ec, f"metadata.{METADATA_TYPE_CREDENTIAL_ISSUER}.jwks")
+
+
+def _require_status_list(claims, status_uri):
+    if not isinstance(claims, dict):
+        raise ValueError("La status list non contiene l'elenco degli stati")
+    if claims.get("sub") != status_uri:
+        raise ValueError("Il subject della status list non coincide con l'URI dell'attestazione")
+    status_list = claims.get("status_list")
+    if isinstance(status_list, dict) and isinstance(status_list.get("lst"), str):
+        return status_list
+    raise ValueError("La status list non contiene l'elenco degli stati")
+
+
+def _store_status_list(credential_id, status_uri, status_idx, jwks, service):
+    token = request_status_list(status_uri, proxies=service.proxies, no_proxy_domains=service.no_proxy_domains)
+    status_list = _require_status_list(decode_and_verify_jwt(token, jwks), status_uri)
+    code = _status_list_code(status_list["lst"], int(status_list.get("bits") or 1), status_idx)
+    app_state.credential_store.update_status(credential_id, token, _STATUS_LIST_CODES.get(code, str(code)))
+
+
+def _flash_status_failure(exc):
+    logger.error("❌ %s", sanitize_for_logging(str(exc)))
+    reason = " ".join(str(exc).split())
+    if len(reason) > 500:
+        reason = reason[:500] + "…"
+    if reason:
+        flash(_("Impossibile verificare lo stato di revoca. %(reason)s") % {"reason": reason}, "error")
+        return
+    flash(_("Impossibile verificare lo stato di revoca."), "error")
+
+
 @wallet_routes.route("/credentials/status", methods=["POST"])
 def credential_status():
     denied = _require_session()
@@ -489,48 +554,28 @@ def credential_status():
     _ensure_member_state()
     load_configured_issuers()
     stored_issuer, entry = _find_held_credential(issuer, credential_id)
-    if not entry or not isinstance(entry.get("data_row"), str):
+    token = entry.get("data_row") if isinstance(entry, dict) else None
+    if not isinstance(token, str):
         flash(_("Attestazione non trovata."), "error")
-        return redirect(url_for("wallet_routes.wallet_credentials"))
-    listed = _status_list_ref(entry["data_row"])
+        return _credentials_page()
+    listed = _status_list_ref(token)
     if not listed:
         flash(_("Questa attestazione non contiene una status list."), "error")
-        return redirect(url_for("wallet_routes.wallet_credentials"))
-    status_uri, status_idx = listed
-    ec = app_state.ec_store.get(stored_issuer)
-    jwks = extract_claim(ec, f"metadata.{METADATA_TYPE_CREDENTIAL_ISSUER}.jwks") if isinstance(ec, dict) else None
+        return _credentials_page()
+    jwks = _issuer_status_jwks(stored_issuer)
     if not isinstance(jwks, dict):
         flash(_("Questo issuer non pubblica l'endpoint di stato."), "error")
-        return redirect(url_for("wallet_routes.wallet_credentials"))
+        return _credentials_page()
     service = ItWalletService(session)
     peer = peer_role.set("credential_issuer")
     try:
-        token = request_status_list(
-            status_uri, proxies=service.proxies, no_proxy_domains=service.no_proxy_domains
-        )
-        claims = decode_and_verify_jwt(token, jwks)
-        if claims.get("sub") != status_uri:
-            raise ValueError("Il subject della status list non coincide con l'URI dell'attestazione")
-        status_list = claims.get("status_list") if isinstance(claims, dict) else None
-        if not isinstance(status_list, dict) or not isinstance(status_list.get("lst"), str):
-            raise ValueError("La status list non contiene l'elenco degli stati")
-        code = _status_list_code(status_list["lst"], int(status_list.get("bits") or 1), status_idx)
-        app_state.credential_store.update_status(
-            credential_id, token, _STATUS_LIST_CODES.get(code, str(code))
-        )
+        _store_status_list(credential_id, listed[0], listed[1], jwks, service)
         flash(_("Stato di revoca aggiornato."), "success")
     except Exception as exc:
-        logger.error("❌ %s", sanitize_for_logging(str(exc)))
-        reason = " ".join(str(exc).split())
-        if len(reason) > 500:
-            reason = reason[:500] + "…"
-        if reason:
-            flash(_("Impossibile verificare lo stato di revoca. %(reason)s") % {"reason": reason}, "error")
-        else:
-            flash(_("Impossibile verificare lo stato di revoca."), "error")
+        _flash_status_failure(exc)
     finally:
         peer_role.reset(peer)
-    return redirect(url_for("wallet_routes.wallet_credentials"))
+    return _credentials_page()
 
 
 @wallet_routes.route("/credentials/delete", methods=["POST"])
@@ -601,9 +646,7 @@ def wallet_callback():
 def search():
     search_type = (request.form.get("search_type") or "").strip()
     search_element = (request.form.get("search_element") or "").strip()
-    logger.info(
-        f"Entering method: search. Params [search_type: {search_type}, search_element: {search_element}]"
-    )
+    logger.info(f"Entering method: search. Params [search_type: {search_type}, search_element: {search_element}]")
     result = app_state.credential_store.get_store()
     search_type_error = None
     search_element_error = None

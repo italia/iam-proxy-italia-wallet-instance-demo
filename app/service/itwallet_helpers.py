@@ -78,9 +78,7 @@ def get_trust_root_and_eaa_provider_ec(
     ec_list = app_state.ec_store.all_values(query)
 
     if not ec_list:
-        raise ValueError(
-            "Nessun issuer configurato rilascia l'attestazione selezionata. Ricarica la pagina e riprova."
-        )
+        raise ValueError("Nessun issuer configurato rilascia l'attestazione selezionata. Ricarica la pagina e riprova.")
 
     ec = ec_list[0]
 

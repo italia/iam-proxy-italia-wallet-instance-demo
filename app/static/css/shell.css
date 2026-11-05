@@ -62,7 +62,7 @@
 .it-header-slim-wrapper.bg-primary .it-header-lang-dropdown .nav-link .icon,
 .it-header-slim-wrapper.bg-primary .it-header-lang-dropdown button.nav-link .icon {
   color: #fff;
-  fill: currentColor;
+  fill: currentcolor;
   width: 18px;
   height: 18px;
   flex-shrink: 0;
@@ -105,20 +105,20 @@
 }
 
 .it-header-lang-dropdown .link-list-wrapper ul.link-list li button.list-item span {
-  color: hsl(210deg, 100%, 40%);
+  color: hsl(210deg 100% 40%);
   display: inline-block;
   margin-right: 24px;
   line-height: normal;
 }
 
 .it-header-lang-dropdown .link-list-wrapper ul.link-list li button.list-item:hover:not(.disabled) span {
-  color: hsl(210deg, 100%, 40%);
+  color: hsl(210deg 100% 40%);
   text-decoration: underline;
 }
 
 .it-header-lang-dropdown .link-list-wrapper ul.link-list li button.list-item.active span,
 .it-header-lang-dropdown .link-list-wrapper ul.link-list li button.list-item.active:hover span {
-  color: hsl(210deg, 100%, 15%);
+  color: hsl(210deg 100% 15%);
   text-decoration: none;
 }
 
@@ -130,7 +130,7 @@
   color: inherit;
 }
 
-@media (max-width: 576px) {
+@media (width <= 576px) {
   .it-header-lang-dropdown .nav-link.dropdown-toggle,
   .it-header-lang-dropdown button.nav-link.dropdown-toggle {
     padding-left: 0 !important;
@@ -266,7 +266,7 @@
   background: #0066cc;
 }
 
-@media (max-width: 576px) {
+@media (width <= 576px) {
   .attestation-preview-row {
     grid-template-columns: 1fr;
   }
@@ -369,7 +369,7 @@
 .copy-field-button .icon {
   width: 1.05rem;
   height: 1.05rem;
-  fill: currentColor;
+  fill: currentcolor;
 }
 
 .copy-field-button:hover,
@@ -439,7 +439,7 @@
   scroll-margin-top: 1rem;
 }
 
-@media (max-width: 768px) {
+@media (width <= 768px) {
   .diagnostic-layout {
     grid-template-columns: 1fr;
   }
@@ -601,11 +601,11 @@ html.it-wallet-html body.it-wallet-body {
   z-index: 2;
 }
 
-.it-wallet-title-slot--start {
+.it-wallet-title-slot-start {
   justify-content: flex-start;
 }
 
-.it-wallet-title-slot--end {
+.it-wallet-title-slot-end {
   justify-content: flex-end;
 }
 
@@ -657,7 +657,7 @@ html.it-wallet-html body.it-wallet-body {
   width: 1.15rem;
   height: 1.15rem;
   color: #0066CC;
-  fill: currentColor;
+  fill: currentcolor;
   display: block;
   object-fit: contain;
 }
@@ -726,14 +726,14 @@ html.it-wallet-html body.it-wallet-body {
 }
 
 #trash-popup::backdrop {
-  background-color: rgba(0, 45, 90, 0.45);
+  background-color: rgb(0 45 90 / 0.45);
 }
 
 #trash-popup p {
   margin-bottom: 1rem;
 }
 
-@media (max-width: 575.98px) {
+@media (width <= 575.98px) {
   .it-wallet-body .header-title-section .container.py-3,
   .it-wallet-body .wallet-sections .container {
     padding-left: calc(var(--bs-gutter-x, 1.5rem) * 0.5);
@@ -829,7 +829,7 @@ html.it-wallet-html body.it-wallet-body {
   color: #fff;
 }
 
-@media (max-width: 900px) {
+@media (width <= 900px) {
   .it-wallet-page.container {
     padding-left: 8px !important;
     padding-right: 8px !important;

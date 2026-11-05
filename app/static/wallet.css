@@ -713,12 +713,6 @@ pre {
 }
 
 
-#cred-popup {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
 #cred-popup-title {
   font-size: 1.4rem;
   font-weight: bold;
@@ -1008,6 +1002,8 @@ input.form-check-input:focus-visible {
   position: fixed;
   inset: 0;
   z-index: 1050;
+  justify-content: center;
+  align-items: center;
   background: rgb(0 0 0 / 0.4);
 }
 

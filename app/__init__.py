@@ -153,11 +153,17 @@ def create_app():
     @app.before_request
     def require_authentication():
         path = request.path
-        if path.startswith("/static/") or path.startswith("/provider") or path.startswith("/wallet/lang/") or path in (
-            "/favicon.ico",
-            "/wallet/access",
-            "/wallet/activate",
-            CHROME_DEVTOOLS_PATH,
+        if (
+            path.startswith("/static/")
+            or path.startswith("/provider")
+            or path.startswith("/wallet/lang/")
+            or path
+            in (
+                "/favicon.ico",
+                "/wallet/access",
+                "/wallet/activate",
+                CHROME_DEVTOOLS_PATH,
+            )
         ):
             return None
         if session.get("authenticated"):

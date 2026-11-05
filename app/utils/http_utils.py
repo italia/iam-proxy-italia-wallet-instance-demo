@@ -60,7 +60,9 @@ def _response_object(response: requests.Response):
         return response.text
 
 
-def _record_http(method: str, url: str, req_kwargs: dict, response: requests.Response | None = None, error: Exception | None = None):
+def _record_http(
+    method: str, url: str, req_kwargs: dict, response: requests.Response | None = None, error: Exception | None = None
+):
     body = req_kwargs.get("json", req_kwargs.get("data"))
     record_exchange(
         method=method,
