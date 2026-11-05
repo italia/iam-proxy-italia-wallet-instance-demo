@@ -2,10 +2,11 @@ import base64
 import hmac
 import json
 import logging
-from datetime import datetime
+from datetime import date, datetime
 
 from urllib.parse import urlparse
 
+import cbor2
 from flask import Blueprint, current_app, flash, jsonify, redirect, render_template, request, session, url_for
 from flask_babel import gettext as _
 
@@ -19,6 +20,7 @@ from app.constants import (
 from app.routes.itwallet_routes import (
     _catalog_sections,
     _ensure_member_state,
+    _format_label,
     display_index,
     load_configured_issuers,
     lookup_attestation,
@@ -263,6 +265,27 @@ _STATUS_LABELS = {
 }
 
 
+_SD_JWT_FORMATS = {"dc+sd-jwt", "vc+sd-jwt"}
+_MDOC_FORMATS = {"mso_mdoc"}
+_COSE_ALGS = {-7: "ES256", -35: "ES384", -36: "ES512", -8: "EdDSA", -257: "RS256"}
+
+
+def _b64url(value: str) -> bytes:
+    return base64.urlsafe_b64decode(value + "=" * (-len(value) % 4))
+
+
+def _json_text(value) -> str:
+    return json.dumps(value, indent=2, ensure_ascii=False)
+
+
+def _jwt_part_json(part: str):
+    raw = _b64url(part)
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError:
+        return raw.decode("utf-8", errors="replace")
+
+
 def _jwt_cleartext(token) -> dict | None:
     if not isinstance(token, str):
         return None
@@ -270,18 +293,93 @@ def _jwt_cleartext(token) -> dict | None:
     parts = compact.split(".")
     if len(parts) < 3 or not parts[0] or not parts[1]:
         return None
-
-    def decode(part: str) -> str:
-        raw = base64.urlsafe_b64decode(part + "=" * (-len(part) % 4))
-        try:
-            return json.dumps(json.loads(raw), indent=2, ensure_ascii=False)
-        except (json.JSONDecodeError, UnicodeDecodeError):
-            return raw.decode("utf-8", errors="replace")
-
     try:
-        return {"header": decode(parts[0]), "payload": decode(parts[1])}
+        return {"header": _json_text(_jwt_part_json(parts[0])), "payload": _json_text(_jwt_part_json(parts[1]))}
     except Exception:
         return None
+
+
+def _sd_jwt_cleartext(token: str) -> dict | None:
+    view = _jwt_cleartext(token)
+    if not view:
+        return None
+    disclosures = []
+    for piece in token.strip().split("~")[1:]:
+        if not piece or piece.count(".") >= 2:
+            continue
+        try:
+            disclosures.append(json.loads(_b64url(piece)))
+        except Exception:
+            disclosures.append(piece)
+    view["disclosures"] = _json_text(disclosures)
+    return view
+
+
+def _jsonable(value):
+    if isinstance(value, cbor2.CBORTag):
+        if value.tag == 24 and isinstance(value.value, (bytes, bytearray)):
+            try:
+                return _jsonable(cbor2.loads(value.value))
+            except Exception:
+                return base64.b64encode(value.value).decode("ascii")
+        return {"tag": value.tag, "value": _jsonable(value.value)}
+    if isinstance(value, dict):
+        return {_cose_key(key): _jsonable(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_jsonable(item) for item in value]
+    if isinstance(value, (bytes, bytearray)):
+        return base64.b64encode(value).decode("ascii")
+    if isinstance(value, (datetime, date)):
+        return value.isoformat()
+    return value
+
+
+def _cose_key(key):
+    names = {1: "alg", 4: "kid"}
+    if key in names:
+        return names[key]
+    return str(key) if isinstance(key, int) else key
+
+
+def _cose_sign1(value):
+    if isinstance(value, cbor2.CBORTag):
+        value = value.value
+    if not isinstance(value, (list, tuple)) or len(value) < 3:
+        return None
+    protected, _unprotected, payload = value[0], value[1], value[2]
+    header = cbor2.loads(protected) if isinstance(protected, (bytes, bytearray)) else protected
+    if isinstance(header, dict) and header.get(1) in _COSE_ALGS:
+        header = dict(header)
+        header[1] = _COSE_ALGS[header[1]]
+    body = cbor2.loads(payload) if isinstance(payload, (bytes, bytearray)) else payload
+    return {"header": _json_text(_jsonable(header)), "payload": _json_text(_jsonable(body))}
+
+
+def _mdoc_cleartext(token: str) -> dict | None:
+    if not isinstance(token, str) or not token.strip():
+        return None
+    try:
+        issuer_signed = cbor2.loads(_b64url(token.strip()))
+    except Exception:
+        return None
+    if not isinstance(issuer_signed, dict):
+        return None
+    signed = _cose_sign1(issuer_signed.get("issuerAuth"))
+    if not signed:
+        return None
+    namespaces = issuer_signed.get("nameSpaces") or {}
+    signed["disclosures"] = _json_text(_jsonable(namespaces))
+    return signed
+
+
+def _credential_cleartext(token, credential_format: str, credential_id: str) -> dict | None:
+    fmt = (credential_format or "").lower()
+    key = str(credential_id or "")
+    if fmt in _SD_JWT_FORMATS or key.startswith(SD_JWT_PREFIX):
+        return _sd_jwt_cleartext(token) if isinstance(token, str) else None
+    if fmt in _MDOC_FORMATS or key.startswith(MSO_MDOC_PREFIX):
+        return _mdoc_cleartext(token) if isinstance(token, str) else None
+    return _jwt_cleartext(token)
 
 
 def _held_credential_views() -> list[dict]:
@@ -304,9 +402,10 @@ def _held_credential_views() -> list[dict]:
                     "name": meta.get("name") or credential_id,
                     "description": meta.get("description") or "",
                     "format": meta.get("format") or "",
+                    "format_label": meta.get("format_label") or _format_label(meta.get("format") or ""),
                     "claims": meta.get("claims") or [],
                     "config_id": meta.get("id") or credential_id,
-                    "credential": _jwt_cleartext(entry.get("data_row")),
+                    "credential": _credential_cleartext(entry.get("data_row"), meta.get("format") or "", credential_id),
                     "status_label": _STATUS_LABELS.get(status.lower(), status or "Non verificata"),
                     "assertion": _jwt_cleartext(entry.get("status_assertion")),
                 }
@@ -376,7 +475,13 @@ def credential_status():
         flash(_("Stato di revoca aggiornato."), "success")
     except Exception as exc:
         logger.error("❌ %s", sanitize_for_logging(str(exc)))
-        flash(_("Impossibile verificare lo stato di revoca."), "error")
+        reason = " ".join(str(exc).split())
+        if len(reason) > 500:
+            reason = reason[:500] + "…"
+        if reason:
+            flash(_("Impossibile verificare lo stato di revoca. %(reason)s") % {"reason": reason}, "error")
+        else:
+            flash(_("Impossibile verificare lo stato di revoca."), "error")
     finally:
         peer_role.reset(peer)
     return redirect(url_for("wallet_routes.wallet_credentials"))

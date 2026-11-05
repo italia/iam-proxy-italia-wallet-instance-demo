@@ -2,7 +2,7 @@ import json
 import logging
 from urllib.parse import urlparse
 
-from flask import Blueprint, current_app, g, jsonify, request, session
+from flask import Blueprint, current_app, g, jsonify, request, session, url_for
 from flask_babel import gettext as _
 
 from app.constants import (
@@ -11,9 +11,10 @@ from app.constants import (
     METADATA_TYPE_CREDENTIAL_ISSUER,
     OID_FED_WELL_KNOWN_PATH,
 )
+from app.i18n import get_locale
 from app.service.itwallet_service import ItWalletService
 from app.store import app_state
-from app.utils.diagnostic_log import list_entries, peer_role
+from app.utils.diagnostic_log import list_entries, peer_role, remove_entries
 from app.utils.utils import (
     estrai_parametro_query_string,
     guess_credential_configuration_icon,
@@ -23,6 +24,20 @@ from app.utils.utils import (
 logger = logging.getLogger(__name__)
 
 wallet_api_bp = Blueprint("wallet_api_bp", __name__, url_prefix="/itwallet")
+
+
+def _with_credential_view_url(result: dict) -> dict:
+    data = result.get("data") if isinstance(result, dict) else None
+    credential_id = data.get("credential_id") if isinstance(data, dict) else None
+    if not result.get("success") or not credential_id:
+        return result
+    from app.routes.wallet_routes import _held_credential_views
+
+    for index, item in enumerate(_held_credential_views()):
+        if item.get("id") == credential_id:
+            data["view_url"] = url_for("wallet_routes.wallet_credentials", _anchor=f"credential-{index}")
+            break
+    return result
 
 
 @wallet_api_bp.before_request
@@ -79,16 +94,17 @@ def configured_issuer_urls() -> list[str]:
     return [part.strip() for part in parts if str(part).strip()]
 
 
-def _italian_display(displays) -> dict:
+def _localized_display(displays, lang: str) -> dict:
     if isinstance(displays, dict):
         displays = [displays]
     if not isinstance(displays, list):
         return {}
+    prefix = (lang or "it").lower()
     chosen = next(
         (
             item
             for item in displays
-            if isinstance(item, dict) and str(item.get("locale", "")).lower().startswith("it")
+            if isinstance(item, dict) and str(item.get("locale", "")).lower().startswith(prefix)
         ),
         None,
     )
@@ -96,6 +112,10 @@ def _italian_display(displays) -> dict:
         return chosen
     first = displays[0] if displays else {}
     return first if isinstance(first, dict) else {}
+
+
+def _italian_display(displays) -> dict:
+    return _localized_display(displays, "it")
 
 
 def _claim_labels(config: dict) -> list[str]:
@@ -167,6 +187,18 @@ def _held_credential_ids() -> set[str]:
     return held
 
 
+_FORMAT_LABELS = {
+    "dc+sd-jwt": "SD-JWT",
+    "vc+sd-jwt": "SD-JWT",
+    "mso_mdoc": "mdoc CBOR",
+    "jwt_vc_json": "JWT",
+}
+
+
+def _format_label(value: str) -> str:
+    return _FORMAT_LABELS.get(value, value)
+
+
 def _attestations_from_ec(ec_payload: dict) -> list[dict]:
     supported = (
         ec_payload.get("metadata", {})
@@ -194,9 +226,17 @@ def _attestations_from_ec(ec_payload: dict) -> list[dict]:
                 "description": description,
                 "claims": _claim_labels(config),
                 "format": config.get("format") or "",
+                "format_label": _format_label(config.get("format") or ""),
                 "obtained": bool(app_state.credential_store.find_by_prefix_with_key(str(config_id))),
             }
         )
+    grouped: dict[tuple[str, str], list[dict]] = {}
+    for item in attestations:
+        grouped.setdefault((item["name"], item["format_label"]), []).append(item)
+    for group in grouped.values():
+        if len(group) > 1:
+            for item in group:
+                item["disambiguator"] = item["id"]
     return attestations
 
 
@@ -207,8 +247,24 @@ def _federation_source(entity_id: str) -> str:
     return f"{base}{OID_FED_WELL_KNOWN_PATH}"
 
 
-def _catalog_section(issuer: str, attestations: list[dict]) -> dict:
-    return {"issuer": issuer, "source": _federation_source(issuer), "attestations": attestations}
+def _credential_issuer_metadata(ec_payload: dict | None) -> dict:
+    if not isinstance(ec_payload, dict):
+        return {}
+    metadata = (ec_payload.get("metadata") or {}).get(METADATA_TYPE_CREDENTIAL_ISSUER) or {}
+    return metadata if isinstance(metadata, dict) else {}
+
+
+def _catalog_section(issuer: str, attestations: list[dict], ec_payload: dict | None = None) -> dict:
+    metadata = _credential_issuer_metadata(ec_payload)
+    uri = str(metadata.get("credential_issuer") or issuer or "").strip()
+    name = str(_localized_display(metadata.get("display") or [], get_locale()).get("name") or "").strip()
+    return {
+        "issuer": issuer,
+        "name": name,
+        "uri": uri,
+        "source": _federation_source(issuer),
+        "attestations": attestations,
+    }
 
 
 def _catalog_sections() -> list[dict]:
@@ -220,13 +276,19 @@ def _catalog_sections() -> list[dict]:
         attestations = _attestations_from_ec(payload)
         if not attestations:
             continue
-        sections.append(_catalog_section(payload.get("iss") or key, attestations))
+        sections.append(_catalog_section(payload.get("iss") or key, attestations, payload))
     return sections
 
 
-@wallet_api_bp.route("/diagnostics", methods=["GET"])
+@wallet_api_bp.route("/diagnostics", methods=["GET", "DELETE"])
 def diagnostics():
-    """Return the recent outbound request and response log."""
+    """Return the recent outbound request and response log, or remove selected exchanges."""
+    if request.method == "DELETE":
+        body = request.get_json(silent=True) or {}
+        ids = body.get("ids")
+        if not isinstance(ids, list):
+            return jsonify({"success": False, "message": _("Seleziona gli scambi da rimuovere.")}), 400
+        remove_entries([str(item) for item in ids])
     return jsonify({"success": True, "data": list_entries()}), 200
 
 
@@ -259,7 +321,7 @@ def issuer_catalog():
             ), 400
         stored_as = ec_payload.get("iss") or issuer_url
         app_state.ec_store.add(stored_as, ec_payload)
-        return jsonify({"success": True, "data": _catalog_section(stored_as, attestations)}), 200
+        return jsonify({"success": True, "data": _catalog_section(stored_as, attestations, ec_payload)}), 200
     except ValueError as ve:
         logger.error("❌ %s", sanitize_for_logging(str(ve)))
         return jsonify(
@@ -428,7 +490,7 @@ def completedAddCredentialItWallet():
         credentials_presenting = data.get("credentialsPresenting") if data else None
         service = ItWalletService(session)
         if not credentials_presenting:
-            result = service.complete_add_credential_from_browser()
+            result = _with_credential_view_url(service.complete_add_credential_from_browser())
             status_code = 200 if result["success"] else 500
             return jsonify(result), status_code
 
@@ -437,7 +499,7 @@ def completedAddCredentialItWallet():
 
         _ensure_member_state()
         service = ItWalletService(session)
-        result = service.complete_add_credential_wallet(credentials_presenting)
+        result = _with_credential_view_url(service.complete_add_credential_wallet(credentials_presenting))
 
         status_code = 200 if result["success"] else 500
         return jsonify(result), status_code

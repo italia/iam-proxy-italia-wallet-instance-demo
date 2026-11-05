@@ -16,6 +16,7 @@ from app.routes.wallet_provider import provider_bp
 from app.routes.wallet_routes import redirect_to_login, wallet_routes
 from app.i18n import get_locale, js_catalog
 from app.utils.utils import remove_str_prefix, sanitize_for_logging
+from app.version import PASSWORD_CONFIG_URL, PROJECT_URL, __version__
 
 DEBUG_LOG_FORMAT = "%(asctime)s.%(msecs)03d | %(short_logger_name)-10.15s | %(levelname)-8s | %(correlation_id)s | %(filename)s:%(lineno)d | %(message)s"
 LOG_FORMAT = (
@@ -170,7 +171,13 @@ def create_app():
 
     @app.context_processor
     def inject_translations():
-        return {"i18n_catalog": js_catalog(), "current_lang": get_locale()}
+        return {
+            "i18n_catalog": js_catalog(),
+            "current_lang": get_locale(),
+            "app_version": __version__,
+            "project_url": PROJECT_URL,
+            "password_config_url": PASSWORD_CONFIG_URL,
+        }
 
     # Register blueprints
     app.register_blueprint(provider_bp)

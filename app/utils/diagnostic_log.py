@@ -4,6 +4,7 @@ import contextvars
 import json
 import logging
 import threading
+import uuid
 from collections import deque
 from datetime import datetime, timezone
 from functools import wraps
@@ -83,6 +84,7 @@ def _as_object(value):
 
 def record_exchange(*, method, url, request_headers, request_body, status, response_body):
     entry = {
+        "id": uuid.uuid4().hex,
         "time": datetime.now(timezone.utc).isoformat(),
         "peer": peer_for(url),
         "method": (method or "").upper(),
@@ -102,3 +104,15 @@ def record_exchange(*, method, url, request_headers, request_body, status, respo
 def list_entries() -> list[dict]:
     with _lock:
         return list(_entries)
+
+
+def remove_entries(ids: list[str]) -> int:
+    wanted = {str(item) for item in ids if item}
+    if not wanted:
+        return 0
+    with _lock:
+        kept = [entry for entry in _entries if str(entry.get("id")) not in wanted]
+        removed = len(_entries) - len(kept)
+        _entries.clear()
+        _entries.extend(kept)
+    return removed

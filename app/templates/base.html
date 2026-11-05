@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-  <title>{% block title %}{{ _('Wallet demo') }}{% endblock %}</title>
+  <title>IAM IT-Wallet Instance Demo — {% block title %}{{ _('Wallet demo') }}{% endblock %}</title>
   <link rel="icon" href="{{ url_for('static', filename='img/IT-Wallet-Symbol-Primary-BlueItalia.svg') }}" type="image/svg+xml">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap-italia.min.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/shell.css') }}">
   {% block head %}{% endblock %}
 </head>
-<body class="it-wallet-body">
+<body class="it-wallet-body" data-icon-sprite="{{ url_for('static', filename='svg/sprites.svg') }}">
   <nav class="it-skip-links" aria-label="{{ _('Collegamenti di salto') }}">
     <a class="visually-hidden-focusable" href="#main-content">{{ _('Vai al contenuto principale') }}</a>
     <a class="visually-hidden-focusable" href="#page-footer">{{ _('Vai al piè di pagina') }}</a>
@@ -34,6 +34,7 @@
     }
   </script>
   <script src="{{ url_for('static', filename='js/bootstrap-italia.bundle.min.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/wallet/copy-fields.js') }}"></script>
   <script src="{{ url_for('static', filename='js/wallet/header-lang.js') }}"></script>
   {% block scripts %}{% endblock %}
 </body>

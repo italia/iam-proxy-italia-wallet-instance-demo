@@ -143,9 +143,56 @@
   margin: 0.25rem 0 0;
 }
 
+.catalog-section .catalog-issuer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0 0 1.25rem;
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.catalog-section .catalog-issuer-label {
+  font-weight: 600;
+}
+
+.catalog-section .catalog-obtain {
+  display: flex;
+  align-items: flex-end;
+  gap: 1.5rem;
+}
+
 .catalog-section .select-wrapper {
   flex: 1 1 auto;
   min-width: 0;
+}
+
+.catalog-section .select-wrapper label {
+  position: static;
+  transform: none;
+  display: block;
+  margin: 0 0 0.35rem;
+  padding: 0;
+  line-height: 1.4;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.catalog-section .select-wrapper select {
+  padding-right: 2.5rem;
+}
+
+.catalog-section .obtain-one {
+  flex: 0 0 auto;
+  align-self: flex-end;
+  height: 2.5rem;
+  margin: 0;
+  padding: 0 1.5rem;
+  border: 0;
+  border-radius: 4px;
+  line-height: 1.5;
 }
 
 .attestation-detail:empty {
@@ -225,6 +272,184 @@
   }
 }
 
+.diagnostic-layout {
+  display: grid;
+  grid-template-columns: 16.5rem minmax(0, 1fr);
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.diagnostic-nav {
+  position: sticky;
+  top: 1rem;
+  max-height: calc(100dvh - 2rem);
+  overflow: auto;
+  padding: 1rem;
+  border: 1px solid #d9e6f2;
+  border-radius: 4px;
+  background: #fff;
+}
+
+.diagnostic-nav .h6 {
+  margin: 0 0 0.75rem;
+}
+
+.diagnostic-nav-group + .diagnostic-nav-group {
+  margin-top: 1rem;
+}
+
+.diagnostic-nav-group h3 {
+  margin: 0 0 0.35rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.4;
+  color: #17324d;
+}
+
+.diagnostic-nav-group ul,
+.credential-nav ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.diagnostic-nav-group a,
+.credential-nav a {
+  display: block;
+  padding: 0.2rem 0;
+  color: #0066cc;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.diagnostic-nav-group a:hover,
+.diagnostic-nav-group a:focus-visible,
+.credential-nav a:hover,
+.credential-nav a:focus-visible {
+  text-decoration: underline;
+}
+
+.diagnostic-nav-group a[aria-current="true"],
+.credential-nav a[aria-current="true"] {
+  font-weight: 600;
+  color: #17324d;
+}
+
+.diagnostic-nav-group a.is-failed,
+.diagnostic-nav-group a.is-failed:hover,
+.diagnostic-nav-group a.is-failed:focus-visible,
+.diagnostic-nav-group a.is-failed[aria-current="true"] {
+  color: #d9364f;
+}
+
+.copy-field {
+  position: relative;
+}
+
+.copy-field-button {
+  position: absolute;
+  top: 0.35rem;
+  right: 0.35rem;
+  z-index: 1;
+  width: 2rem;
+  height: 2rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid #d9e6f2;
+  border-radius: 4px;
+  background: #fff;
+  color: #0066cc;
+  cursor: pointer;
+}
+
+.copy-field-button .icon {
+  width: 1.05rem;
+  height: 1.05rem;
+  fill: currentColor;
+}
+
+.copy-field-button:hover,
+.copy-field-button:focus-visible {
+  background: #f2f7fc;
+}
+
+.copy-field-button.is-copied {
+  color: #008055;
+  border-color: #008055;
+}
+
+.copy-field > pre,
+.copy-field > textarea,
+.copy-field > .long-text {
+  display: block;
+  padding-right: 2.75rem !important;
+}
+
+.input-group > .copy-field {
+  flex: 1 1 auto;
+  width: 1%;
+  min-width: 0;
+}
+
+.copy-field-input .copy-field-button {
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.diagnostic-log-column {
+  min-width: 0;
+}
+
+.diagnostic-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.diagnostic-select-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+.diagnostic-exchange-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.diagnostic-exchange-heading h2 {
+  margin: 0;
+}
+
+.diagnostic-exchange-heading label {
+  margin: 0.15rem 0 0;
+}
+
+.diagnostic-exchange,
+.diagnostic-exchange h2 {
+  scroll-margin-top: 1rem;
+}
+
+@media (max-width: 768px) {
+  .diagnostic-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .diagnostic-nav {
+    position: static;
+    max-height: none;
+  }
+}
+
 #diagnostic-log pre {
   white-space: pre-wrap;
   word-break: break-word;
@@ -286,6 +511,17 @@ footer {
   height: auto;
 }
 
+.wallet-footer-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1rem;
+  font-size: 0.875rem;
+}
+
+footer .wallet-footer-meta a {
+  color: #fff;
+}
+
 html.it-wallet-html body.it-wallet-body {
   height: auto;
   min-height: 100vh;
@@ -317,6 +553,14 @@ html.it-wallet-html body.it-wallet-body {
   width: auto;
   max-width: 100%;
   object-fit: contain;
+}
+
+.it-wallet-navbar-product {
+  color: #0066cc;
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
 }
 
 .it-wallet-body > main.it-wallet-page {
@@ -422,10 +666,18 @@ html.it-wallet-html body.it-wallet-body {
   color: #17324D;
 }
 
+.it-wallet-subtitle a {
+  color: #0066cc;
+}
+
 .wallet-access-form {
   max-width: 36rem;
   margin-left: auto;
   margin-right: auto;
+}
+
+.wallet-access-form .input-group {
+  align-items: flex-end;
 }
 
 .wallet-access-form .input-group > .password-field {
@@ -437,6 +689,32 @@ html.it-wallet-html body.it-wallet-body {
 
 .wallet-access-form .password-field .form-control {
   width: 100%;
+  height: 2.5rem;
+  padding-right: 2.75rem;
+}
+
+.wallet-access-form .password-icon {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 2.5rem;
+  margin: 0;
+  padding: 0 0.75rem;
+  border: 0;
+  background: transparent;
+}
+
+.wallet-access-form .input-group-append .btn {
+  height: 2.5rem;
+  margin: 0;
+  padding: 0 1.5rem;
+  border: 0;
+  border-radius: 4px;
+  line-height: 1.5;
 }
 
 #trash-popup {
@@ -516,6 +794,11 @@ html.it-wallet-html body.it-wallet-body {
 .wallet-sections a[aria-current="page"] {
   color: #17324d;
   border-bottom-color: #0066cc;
+}
+
+.credential-status-card,
+.credential-status-card h2 {
+  scroll-margin-top: 1rem;
 }
 
 .credential-status-card + .credential-status-card {

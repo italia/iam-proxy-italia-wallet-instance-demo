@@ -79,6 +79,30 @@ msgstr "Diagnostics"
 msgid "Richieste e risposte verso i credential issuer e i verificatori."
 msgstr "Requests and responses sent to credential issuers and verifiers."
 
+msgid "Seleziona tutti"
+msgstr "Select all"
+
+msgid "Rimuovi selezionati"
+msgstr "Remove selected"
+
+msgid "Esporta testo"
+msgstr "Export text"
+
+msgid "Esporta JSON"
+msgstr "Export JSON"
+
+msgid "Seleziona scambio"
+msgstr "Select exchange"
+
+msgid "Copia"
+msgstr "Copy"
+
+msgid "Copiato"
+msgstr "Copied"
+
+msgid "Seleziona gli scambi da rimuovere."
+msgstr "Select the exchanges to remove."
+
 msgid "Nessuno scambio registrato."
 msgstr "No exchange recorded yet."
 
@@ -97,11 +121,65 @@ msgstr "Cancel"
 msgid "Prodotto dimostrativo, non destinato alla produzione e non certificabile. Supporta la demo di IAM Proxy Italia."
 msgstr "Demonstration product. It is not for production and it cannot be certified. It supports the IAM Proxy Italia demo."
 
+msgid "Versione"
+msgstr "Version"
+
+msgid "Azioni"
+msgstr "Actions"
+
+msgid "Elenco degli scambi"
+msgstr "List of exchanges"
+
+msgid "Elenco degli attestati"
+msgstr "List of attestations"
+
+msgid "Attestati"
+msgstr "Attestations"
+
+msgid "Configurazione di entità"
+msgstr "Entity configuration"
+
+msgid "Metadata dell'issuer"
+msgstr "Issuer metadata"
+
+msgid "Pushed authorization"
+msgstr "Pushed authorization"
+
+msgid "Token"
+msgstr "Token"
+
+msgid "Nonce"
+msgstr "Nonce"
+
+msgid "Rilascio dell'attestazione"
+msgstr "Attestation issuance"
+
+msgid "Request URI"
+msgstr "Request URI"
+
+msgid "Risposta di presentazione"
+msgstr "Presentation response"
+
+msgid "Autorizzazione"
+msgstr "Authorization"
+
+msgid "Elenco di federazione"
+msgstr "Federation list"
+
+msgid "Altro"
+msgstr "Other"
+
+msgid "Pagina GitHub del progetto"
+msgstr "Project GitHub page"
+
 msgid "Accesso"
 msgstr "Sign in"
 
-msgid "Inserisci la password della demo."
-msgstr "Enter the demo password."
+msgid "Inserisci la password della demo che hai"
+msgstr "Enter the demo password that you"
+
+msgid "configurato nel progetto"
+msgstr "configured in the project"
 
 msgid "Password"
 msgstr "Password"
@@ -313,6 +391,9 @@ msgstr "Unknown error"
 msgid "Attestazione ottenuta."
 msgstr "Attestation saved."
 
+msgid "Visualizzala"
+msgstr "View it"
+
 msgid "Non riesco a salvare l'attestazione."
 msgstr "The wallet cannot save the attestation."
 
@@ -475,8 +556,17 @@ msgstr "Credential configuration ID"
 msgid "Fonte"
 msgstr "Source"
 
+msgid "Nome del credential issuer"
+msgstr "Credential Issuer Name"
+
+msgid "URI del credential issuer"
+msgstr "Credential Issuer URI"
+
 msgid "Header"
 msgstr "Header"
+
+msgid "Disclosure"
+msgstr "Disclosure"
 
 msgid "Payload"
 msgstr "Payload"
@@ -499,8 +589,8 @@ msgstr "Say which item to show."
 msgid "Emissione"
 msgstr "Issuance"
 
-msgid "Stato delle attestazioni"
-msgstr "Attestation status"
+msgid "Attestati ottenuti"
+msgstr "Obtained attestations"
 
 msgid "Presentazione"
 msgstr "Presentation"
@@ -564,3 +654,6 @@ msgstr "Revocation status updated."
 
 msgid "Impossibile verificare lo stato di revoca."
 msgstr "The revocation status could not be checked."
+
+msgid "Impossibile verificare lo stato di revoca. %(reason)s"
+msgstr "The revocation status could not be checked. %(reason)s"

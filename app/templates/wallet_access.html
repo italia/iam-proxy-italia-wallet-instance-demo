@@ -7,7 +7,7 @@
     <h1 class="it-wallet-title-heading mb-0" id="page-title">{{ _('Accesso') }}</h1>
     <div class="it-wallet-title-slot it-wallet-title-slot--end"></div>
   </div>
-  <p class="text-center mb-4 it-wallet-subtitle">{{ _('Inserisci la password della demo.') }}</p>
+  <p class="text-center mb-4 it-wallet-subtitle">{{ _('Inserisci la password della demo che hai') }} <a href="{{ password_config_url }}">{{ _('configurato nel progetto') }}</a>.</p>
   {% include "partials/flashes.html" %}
   <form class="wallet-access-form" action="{{ url_for('wallet_routes.wallet_access') }}" method="post">
     <input type="hidden" name="next" value="{{ next_path }}">

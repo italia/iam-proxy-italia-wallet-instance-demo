@@ -32,7 +32,7 @@
       <div class="form-group">
         <label for="issuer-url">{{ _('URL del credential issuer') }}</label>
         <div class="input-group">
-          <input type="url" class="form-control" id="issuer-url" name="issuerUrl" autocomplete="url" aria-describedby="issuer-url-error">
+          <input type="url" class="form-control long-text" id="issuer-url" name="issuerUrl" autocomplete="url" aria-describedby="issuer-url-error">
           <div class="input-group-append">
             <button type="submit" class="btn btn-primary">{{ _('Carica attestazioni') }}</button>
           </div>
@@ -46,21 +46,22 @@
         {% set section_index = loop.index0 %}
         <article class="it-card rounded border shadow-sm catalog-section mb-4" data-issuer="{{ section.issuer }}">
           <div class="it-card-body p-4">
-            <h2 class="h5">{{ section.issuer }}</h2>
+            <h2 class="catalog-issuer">
+              <span><span class="catalog-issuer-label">{{ _('Nome del credential issuer') }}:</span> {{ section.name }}</span>
+              <span><span class="catalog-issuer-label">{{ _('URI del credential issuer') }}:</span> {{ section.uri }}</span>
+            </h2>
             <div class="form-group mb-0">
-              <div class="input-group align-items-end">
-                <div class="select-wrapper flex-grow-1">
+              <div class="catalog-obtain">
+                <div class="select-wrapper">
                   <label for="issuer-select-{{ section_index }}">{{ _('Attestazione') }}</label>
                   <select id="issuer-select-{{ section_index }}" data-source="{{ section.source }}" aria-describedby="issuer-select-{{ section_index }}-detail issuer-select-{{ section_index }}-error">
                     <option value="" selected>{{ _("Scegli un'attestazione") }}</option>
                     {% for item in section.attestations %}
-                      <option value="{{ item.id }}" data-description="{{ item.description }}" data-claims='{{ item.claims | tojson }}' data-format="{{ item.format }}"{% if item.obtained %} disabled{% endif %}>{{ item.name }}{% if item.obtained %} — {{ _('Già ottenuta') }}{% endif %}</option>
+                      <option value="{{ item.id }}" data-description="{{ item.description }}" data-claims='{{ item.claims | tojson }}' data-format="{{ item.format }}"{% if item.obtained %} disabled{% endif %}>{{ item.name }}{% if item.format_label %} — {{ item.format_label }}{% endif %}{% if item.disambiguator %} — {{ item.disambiguator }}{% endif %}{% if item.obtained %} — {{ _('Già ottenuta') }}{% endif %}</option>
                     {% endfor %}
                   </select>
                 </div>
-                <div class="input-group-append">
-                  <button type="button" class="btn btn-primary obtain-one">{{ _('Ottieni') }}</button>
-                </div>
+                <button type="button" class="btn btn-primary obtain-one">{{ _('Ottieni') }}</button>
               </div>
               <p id="issuer-select-{{ section_index }}-error" class="field-error" hidden></p>
               <div id="issuer-select-{{ section_index }}-detail" class="attestation-detail mt-3"></div>

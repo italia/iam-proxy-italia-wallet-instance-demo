@@ -370,9 +370,13 @@ async function continueAddCredential() {
 
     if (data.success) {
       const credential_id = data?.data?.credential_id;
+      const viewUrl = data?.data?.view_url;
+      const viewLink = viewUrl
+        ? ` <a href="${String(viewUrl).replaceAll('"', "&quot;")}">${t("Visualizzala")}</a>`
+        : "";
       result.innerHTML = `
         <div class="alert alert-success" role="status">
-          <p>${t("Attestazione ottenuta.")}</p>
+          <p>${t("Attestazione ottenuta.")}${viewLink}</p>
         </div>
       `;
       addButton(credential_id);

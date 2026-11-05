@@ -11,26 +11,33 @@ function catalogSectionHtml(section, sectionIndex) {
     `<option value="" selected>${t("Scegli un'attestazione")}</option>`,
     ...(section.attestations || []).map((item) => {
       const obtained = item.obtained ? ` — ${t("Già ottenuta")}` : "";
+      const format = readableFormat(item.format || "");
+      const formatLabel = format ? ` — ${format}` : "";
+      const sameLabel = (section.attestations || []).filter(
+        (other) => other.name === item.name && (other.format || "") === (item.format || "")
+      );
+      const disambiguator = sameLabel.length > 1 ? ` — ${item.id}` : "";
       const disabled = item.obtained ? " disabled" : "";
-      return `<option value="${escapeCatalogText(item.id)}" data-description="${escapeCatalogText(item.description || "")}" data-claims="${escapeCatalogText(JSON.stringify(item.claims || []))}" data-format="${escapeCatalogText(item.format || "")}"${disabled}>${escapeCatalogText(item.name)}${obtained}</option>`;
+      return `<option value="${escapeCatalogText(item.id)}" data-description="${escapeCatalogText(item.description || "")}" data-claims="${escapeCatalogText(JSON.stringify(item.claims || []))}" data-format="${escapeCatalogText(item.format || "")}"${disabled}>${escapeCatalogText(item.name)}${escapeCatalogText(formatLabel)}${escapeCatalogText(disambiguator)}${obtained}</option>`;
     }),
   ].join("");
   const selectId = `issuer-select-${sectionIndex}`;
   return `
     <article class="it-card rounded border shadow-sm catalog-section mb-4" data-issuer="${escapeCatalogText(section.issuer)}">
       <div class="it-card-body p-4">
-        <h2 class="h5">${escapeCatalogText(section.issuer)}</h2>
+        <h2 class="catalog-issuer">
+          <span><span class="catalog-issuer-label">${t("Nome del credential issuer")}:</span> ${escapeCatalogText(section.name || "")}</span>
+          <span><span class="catalog-issuer-label">${t("URI del credential issuer")}:</span> ${escapeCatalogText(section.uri || section.issuer || "")}</span>
+        </h2>
         <div class="form-group mb-0">
-          <div class="input-group align-items-end">
-            <div class="select-wrapper flex-grow-1">
+          <div class="catalog-obtain">
+            <div class="select-wrapper">
               <label for="${selectId}">${t("Attestazione")}</label>
               <select id="${selectId}" data-source="${escapeCatalogText(section.source || "")}" aria-describedby="${selectId}-detail ${selectId}-error">
                 ${options}
               </select>
             </div>
-            <div class="input-group-append">
-              <button type="button" class="btn btn-primary obtain-one">${t("Ottieni")}</button>
-            </div>
+            <button type="button" class="btn btn-primary obtain-one">${t("Ottieni")}</button>
           </div>
           <p id="${selectId}-error" class="field-error" hidden></p>
           <div id="${selectId}-detail" class="attestation-detail mt-3"></div>
@@ -85,7 +92,7 @@ function readableFormat(value) {
   const names = {
     "dc+sd-jwt": "SD-JWT",
     "vc+sd-jwt": "SD-JWT",
-    mso_mdoc: "mdoc",
+    mso_mdoc: "mdoc CBOR",
     jwt_vc_json: "JWT",
   };
   return names[value] || value;
@@ -113,13 +120,13 @@ function fillAttestationDetail(select) {
   const list = document.createElement("dl");
   list.className = "attestation-preview";
   const configId = document.createElement("code");
-  configId.className = "attestation-config-id";
+  configId.className = "attestation-config-id long-text";
   configId.textContent = option.value;
   list.append(previewRow(t("Identificativo di configurazione"), configId));
   const source = select.dataset.source || "";
   if (source) {
     const sourceLink = document.createElement("a");
-    sourceLink.className = "attestation-source";
+    sourceLink.className = "attestation-source long-text";
     sourceLink.href = source;
     sourceLink.textContent = source;
     list.append(previewRow(t("Fonte"), sourceLink));
@@ -279,34 +286,231 @@ function diagnosticBlock(label, value) {
   return fragment;
 }
 
+const DIAGNOSTIC_PURPOSES = [
+  ["openid-federation", "Configurazione di entità"],
+  ["openid-credential-issuer", "Metadata dell'issuer"],
+  ["par", "Pushed authorization"],
+  ["pushed_authorization_request", "Pushed authorization"],
+  ["token", "Token"],
+  ["nonce", "Nonce"],
+  ["credential", "Rilascio dell'attestazione"],
+  ["status", "Stato di revoca"],
+  ["request_uri", "Request URI"],
+  ["request-uri", "Request URI"],
+  ["direct_post", "Risposta di presentazione"],
+  ["authorize", "Autorizzazione"],
+  ["list", "Elenco di federazione"],
+];
+
+function diagnosticPurpose(url) {
+  let segments = [];
+  try {
+    segments = new URL(url).pathname.toLowerCase().split("/").filter(Boolean);
+  } catch (error) {
+    segments = String(url || "").toLowerCase().split("?")[0].split("/").filter(Boolean);
+  }
+  const last = segments.at(-1) || "";
+  const match = DIAGNOSTIC_PURPOSES.find(([segment]) => segment === last);
+  return match ? match[1] : "Altro";
+}
+
+function diagnosticFailed(entry) {
+  if (entry.status === null || entry.status === undefined || entry.status === "") return true;
+  const status = Number(entry.status);
+  return !Number.isFinite(status) || status >= 400;
+}
+
+function diagnosticStamp(entry) {
+  const time = entry.time ? new Date(entry.time) : null;
+  const clock = time && !Number.isNaN(time.getTime())
+    ? time.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })
+    : "";
+  return [entry.method || "", entry.status ?? "", clock].filter((part) => part !== "").join(" ");
+}
+
+function renderDiagnosticNav(items) {
+  const list = document.getElementById("diagnostic-nav-list");
+  if (!list) return;
+  list.replaceChildren();
+  if (!items.length) {
+    const empty = document.createElement("p");
+    empty.className = "mb-0";
+    empty.textContent = t("Nessuno scambio registrato.");
+    list.append(empty);
+    return;
+  }
+  const groups = new Map();
+  items.forEach((item) => {
+    if (!groups.has(item.purpose)) groups.set(item.purpose, []);
+    groups.get(item.purpose).push(item);
+  });
+  groups.forEach((calls, purpose) => {
+    const group = document.createElement("section");
+    group.className = "diagnostic-nav-group";
+    const title = document.createElement("h3");
+    title.textContent = t(purpose);
+    const menu = document.createElement("ul");
+    calls.forEach((call) => {
+      const row = document.createElement("li");
+      const link = document.createElement("a");
+      link.href = `#${call.id}`;
+      link.textContent = call.label;
+      if (call.failed) link.classList.add("is-failed");
+      link.addEventListener("click", (event) => {
+        const target = document.getElementById(call.id);
+        if (!target) return;
+        event.preventDefault();
+        list.querySelectorAll("a[aria-current]").forEach((current) => current.removeAttribute("aria-current"));
+        link.setAttribute("aria-current", "true");
+        target.scrollIntoView({ behavior: "smooth", block: "start" });
+        history.replaceState(null, "", `#${call.id}`);
+      });
+      row.append(link);
+      menu.append(row);
+    });
+    group.append(title, menu);
+    list.append(group);
+  });
+}
+
+let diagnosticEntries = [];
+
+function diagnosticPeerName(peer) {
+  const peerNames = {
+    credential_issuer: t("Issuer di credenziali"),
+    relying_party: t("Verificatore"),
+    federation: t("Federazione"),
+  };
+  return peerNames[peer] || peer || "";
+}
+
+function syncDiagnosticToolbar() {
+  const boxes = [...document.querySelectorAll(".diagnostic-select-input")];
+  const checked = boxes.filter((box) => box.checked).length;
+  const remove = document.getElementById("diagnostic-remove");
+  const selectAll = document.getElementById("diagnostic-select-all");
+  const exportText = document.getElementById("diagnostic-export-text");
+  const exportJson = document.getElementById("diagnostic-export-json");
+  if (remove) remove.disabled = checked === 0;
+  if (selectAll) {
+    selectAll.disabled = boxes.length === 0;
+    selectAll.checked = boxes.length > 0 && checked === boxes.length;
+    selectAll.indeterminate = checked > 0 && checked < boxes.length;
+  }
+  const empty = diagnosticEntries.length === 0;
+  if (exportText) exportText.disabled = empty;
+  if (exportJson) exportJson.disabled = empty;
+}
+
+function diagnosticText(entries) {
+  return entries.map((entry) => {
+    const purpose = t(diagnosticPurpose(entry.url));
+    return [
+      `${purpose} · ${diagnosticStamp(entry)}`,
+      diagnosticPeerName(entry.peer),
+      entry.url || "",
+      "",
+      t("Richiesta"),
+      JSON.stringify(entry.request, null, 2),
+      "",
+      t("Risposta"),
+      JSON.stringify(entry.response, null, 2),
+    ].join("\n");
+  }).join("\n\n---\n\n");
+}
+
+function downloadDiagnosticFile(filename, type, content) {
+  const blob = new Blob([content], { type });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1500);
+}
+
 function renderDiagnostics(entries) {
   const box = document.getElementById("diagnostic-log");
   if (!box) return;
-  if (!entries?.length) {
+  const ordered = [...(entries || [])].reverse();
+  diagnosticEntries = ordered;
+  if (!ordered.length) {
     box.innerHTML = `<p class="mb-0">${t("Nessuno scambio registrato.")}</p>`;
+    renderDiagnosticNav([]);
+    syncDiagnosticToolbar();
     return;
   }
   box.replaceChildren();
-  for (const entry of [...entries].reverse()) {
+  const items = [];
+  ordered.forEach((entry, index) => {
+    const purpose = diagnosticPurpose(entry.url);
+    const anchor = `exchange-${index + 1}`;
     const article = document.createElement("article");
-    article.className = "border-bottom py-3";
-    const heading = document.createElement("p");
-    heading.className = "mb-1";
-    const peer = document.createElement("strong");
-    const peerNames = {
-      credential_issuer: t("Issuer di credenziali"),
-      relying_party: t("Verificatore"),
-      federation: t("Federazione"),
-    };
-    peer.textContent = peerNames[entry.peer] || entry.peer || "";
-    heading.append(peer, ` ${entry.method || ""} ${entry.status ?? ""}`);
+    article.className = "diagnostic-exchange border-bottom py-3";
+    const headingRow = document.createElement("div");
+    headingRow.className = "diagnostic-exchange-heading";
+    const choice = document.createElement("label");
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.className = "diagnostic-select-input";
+    checkbox.value = entry.id || "";
+    const caption = document.createElement("span");
+    caption.className = "visually-hidden";
+    caption.textContent = t("Seleziona scambio");
+    choice.append(checkbox, caption);
+    const heading = document.createElement("h2");
+    heading.className = "h5";
+    heading.id = anchor;
+    heading.textContent = `${t(purpose)} · ${diagnosticStamp(entry)}`;
+    headingRow.append(choice, heading);
+    const peer = document.createElement("p");
+    peer.className = "mb-1";
+    peer.textContent = diagnosticPeerName(entry.peer);
     const url = document.createElement("p");
-    url.className = "mb-2";
+    url.className = "mb-2 long-text";
     url.textContent = entry.url || "";
-    article.append(heading, url, diagnosticBlock(t("Richiesta"), entry.request), diagnosticBlock(t("Risposta"), entry.response));
+    article.append(headingRow, peer, url, diagnosticBlock(t("Richiesta"), entry.request), diagnosticBlock(t("Risposta"), entry.response));
     box.appendChild(article);
-  }
+    items.push({ id: anchor, purpose, label: diagnosticStamp(entry), failed: diagnosticFailed(entry) });
+  });
+  renderDiagnosticNav(items);
+  syncDiagnosticToolbar();
 }
+
+async function removeSelectedDiagnostics() {
+  const ids = [...document.querySelectorAll(".diagnostic-select-input:checked")].map((box) => box.value).filter(Boolean);
+  if (!ids.length) return;
+  const headers = { "Content-Type": "application/json" };
+  if (typeof SESSION_ID !== "undefined" && SESSION_ID) headers["X-Correlation-ID"] = SESSION_ID;
+  const response = await fetch("/itwallet/diagnostics", { method: "DELETE", headers, body: JSON.stringify({ ids }) });
+  const data = await response.json().catch(() => ({}));
+  if (response.ok && data.success) renderDiagnostics(data.data || []);
+}
+
+document.getElementById("diagnostic-log")?.addEventListener("change", (event) => {
+  if (event.target.classList.contains("diagnostic-select-input")) syncDiagnosticToolbar();
+});
+
+document.getElementById("diagnostic-select-all")?.addEventListener("change", (event) => {
+  document.querySelectorAll(".diagnostic-select-input").forEach((box) => {
+    box.checked = event.target.checked;
+  });
+  syncDiagnosticToolbar();
+});
+
+document.getElementById("diagnostic-remove")?.addEventListener("click", () => {
+  removeSelectedDiagnostics();
+});
+
+document.getElementById("diagnostic-export-text")?.addEventListener("click", () => {
+  downloadDiagnosticFile("scambi-http.txt", "text/plain;charset=utf-8", diagnosticText(diagnosticEntries));
+});
+
+document.getElementById("diagnostic-export-json")?.addEventListener("click", () => {
+  downloadDiagnosticFile("scambi-http.json", "application/json;charset=utf-8", JSON.stringify(diagnosticEntries, null, 2));
+});
 
 async function refreshDiagnostics() {
   const headers = {};
