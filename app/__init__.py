@@ -5,14 +5,16 @@ import sys
 from logging.handlers import RotatingFileHandler
 
 import yaml
-from flask import Flask, g, has_app_context
+from flask import Flask, g, has_app_context, request, session
+from flask_babel import Babel
 
-from app.constants import APP_SETTINGS_KEY, CONFIG_DIR, CORRELATION_ID_FALLBACK
+from app.constants import APP_SETTINGS_KEY, CHROME_DEVTOOLS_PATH, CONFIG_DIR, CORRELATION_ID_FALLBACK
 from app.models import AppConfig
-from app.routes.itwallet_routes import wallet_api_bp
+from app.routes.itwallet_routes import lookup_attestation, wallet_api_bp
 from app.routes.main_routes import main_routes
 from app.routes.wallet_provider import provider_bp
-from app.routes.wallet_routes import wallet_routes
+from app.routes.wallet_routes import redirect_to_login, wallet_routes
+from app.i18n import get_locale, js_catalog
 from app.utils.utils import remove_str_prefix, sanitize_for_logging
 
 DEBUG_LOG_FORMAT = "%(asctime)s.%(msecs)03d | %(short_logger_name)-10.15s | %(levelname)-8s | %(correlation_id)s | %(filename)s:%(lineno)d | %(message)s"
@@ -138,8 +140,37 @@ def create_app():
     # setup app
     app = Flask(__name__)
     load_config(app)
+    app.config["TEMPLATES_AUTO_RELOAD"] = True
     app.secret_key = app.config[APP_SETTINGS_KEY].app.secret_key
+    if os.environ.get("WALLET_TLS_CERT") and os.environ.get("WALLET_TLS_KEY"):
+        app.config["SESSION_COOKIE_SECURE"] = True
+    app.config["BABEL_DEFAULT_LOCALE"] = "it"
+    app.config["BABEL_TRANSLATION_DIRECTORIES"] = "translations"
+    Babel(app, locale_selector=get_locale)
     setup_logging(app)
+
+    @app.before_request
+    def require_authentication():
+        path = request.path
+        if path.startswith("/static/") or path.startswith("/provider") or path.startswith("/wallet/lang/") or path in (
+            "/favicon.ico",
+            "/wallet/access",
+            "/wallet/activate",
+            CHROME_DEVTOOLS_PATH,
+        ):
+            return None
+        if session.get("authenticated"):
+            return None
+        target = path
+        if request.query_string:
+            target = f"{path}?{request.query_string.decode()}"
+        return redirect_to_login(target)
+
+    app.jinja_env.globals["lookup_attestation"] = lookup_attestation
+
+    @app.context_processor
+    def inject_translations():
+        return {"i18n_catalog": js_catalog(), "current_lang": get_locale()}
 
     # Register blueprints
     app.register_blueprint(provider_bp)

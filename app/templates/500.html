@@ -1,16 +1,13 @@
-<!DOCTYPE html>
-<html lang="it">
-<head>
-  <meta charset="UTF-8">
-  <title>500 - Errore del server</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='error.css') }}">
-</head>
-<body>
-  <div class="error-container">
-    <img src="{{ url_for('static', filename='images/logo_eudi_wallet.svg') }}" alt="Wallet" class="logo">
-    <h1>500 - Errore del server</h1>
-    <p>Si è verificato un errore interno. I nostri tecnici sono già al lavoro per risolvere il problema.</p>
-    <a href="{{ url_for('main_routes.index') }}" class="btn-primary">Torna alla homepage</a>
+{% extends "base.html" %}
+{% block title %}{{ _('Errore del server') }}{% endblock %}
+{% block content %}
+  <div class="it-wallet-title-row">
+    <div class="it-wallet-title-slot it-wallet-title-slot--start"></div>
+    <h1 class="it-wallet-title-heading mb-0" id="page-title">{{ _('Errore del server') }}</h1>
+    <div class="it-wallet-title-slot it-wallet-title-slot--end"></div>
   </div>
-</body>
-</html>
+  <p class="text-center mb-4 it-wallet-subtitle">{{ _('Si è verificato un errore interno.') }}</p>
+  <p class="text-center">
+    <a class="btn btn-primary" href="{{ url_for('main_routes.index') }}">{{ _("Torna all'accesso") }}</a>
+  </p>
+{% endblock %}

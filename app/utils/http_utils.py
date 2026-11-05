@@ -7,6 +7,7 @@ from urllib.parse import urlparse
 
 import requests
 
+from app.utils.diagnostic_log import record_exchange
 from app.utils.utils import sanitize_for_logging
 
 logger = logging.getLogger(__name__)
@@ -50,6 +51,25 @@ def _parse_json_response(response: requests.Response, url: str) -> dict:
         return response.json()
     except ValueError as ve:
         raise ValueError(f"Risposta ricevuta da {url} non valida: {ve}") from ve
+
+
+def _response_object(response: requests.Response):
+    try:
+        return response.json()
+    except ValueError:
+        return response.text
+
+
+def _record_http(method: str, url: str, req_kwargs: dict, response: requests.Response | None = None, error: Exception | None = None):
+    body = req_kwargs.get("json", req_kwargs.get("data"))
+    record_exchange(
+        method=method,
+        url=url,
+        request_headers=req_kwargs.get("headers"),
+        request_body=body,
+        status=response.status_code if response is not None else None,
+        response_body=_response_object(response) if response is not None else (str(error) if error else None),
+    )
 
 
 def _execute_request(method: str, url: str, req_kwargs: dict) -> requests.Response:
@@ -111,8 +131,8 @@ def http_request_with_retry(
     for attempt in range(1, max_retries + 1):
         try:
             response = _execute_request(method, url, req_kwargs)
-            return _process_response(response, url, parse_response, handle_redirect)
         except requests.ConnectionError as ce:
+            _record_http(method, url, req_kwargs, error=ce)
             # codeql[py/log-injection]
             logger.error(
                 "❌ Tentativo %d - Errore di connessione: %s",
@@ -124,7 +144,11 @@ def http_request_with_retry(
                     f"Impossibile stabilire la connessione verso {url} dopo ripetuti tentativi"
                 ) from ce
             time.sleep(retry_delay)
-        except (requests.RequestException, ValueError, RuntimeError):
+            continue
+        except requests.RequestException as exc:
+            _record_http(method, url, req_kwargs, error=exc)
             raise
+        _record_http(method, url, req_kwargs, response=response)
+        return _process_response(response, url, parse_response, handle_redirect)
 
     raise RuntimeError(f"Richiesta fallita verso {url} dopo {max_retries} tentativi")

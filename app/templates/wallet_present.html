@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Presentazione') }}{% endblock %}
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='wallet.css') }}">
+{% endblock %}
+{% block content %}
+  <h1 class="h2" id="page-title">{{ _('Presentazione') }}</h1>
+  <p>{{ _("Inquadra il QR del verificatore per presentare un'attestazione già ottenuta.") }}</p>
+  <button type="button" class="btn btn-primary" onclick="openQrPopup()">{{ _('Presenta') }}</button>
+  <div id="result"></div>
+  <div id="overlay" style="display:none;" role="status" aria-live="polite">
+    <div class="loader"></div>
+    <span class="visually-hidden">{{ _('Caricamento') }}</span>
+  </div>
+  {% include 'core/qrcode/qrcode.html' %}
+  {% include 'core/presentation/presentation_phase.html' %}
+{% endblock %}
+{% block scripts %}
+  <script src="{{ url_for('static', filename='js/jsQR.min.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/wallet-utils.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/wallet/state.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/wallet/rp-scanner.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/wallet/presentation.js') }}"></script>
+{% endblock %}

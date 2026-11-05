@@ -1,0 +1,20 @@
+{% macro password_field(field_id, field_name, label, submit_label=None) %}
+<div class="form-group mb-4">
+  <label for="{{ field_id }}">{{ label }}</label>
+  <div class="input-group">
+    <div class="password-field">
+      <input type="password" data-bs-input class="form-control input-password" id="{{ field_id }}" name="{{ field_name }}" autocomplete="current-password" required>
+      <button type="button" class="password-icon btn" role="switch" aria-checked="false">
+        <span class="visually-hidden">{{ _('Mostra o nascondi la password') }}</span>
+        <svg class="password-icon-visible icon icon-sm" aria-hidden="true"><use href="{{ url_for('static', filename='svg/sprites.svg') }}#it-password-visible"></use></svg>
+        <svg class="password-icon-invisible icon icon-sm d-none" aria-hidden="true"><use href="{{ url_for('static', filename='svg/sprites.svg') }}#it-password-invisible"></use></svg>
+      </button>
+    </div>
+    {% if submit_label %}
+      <div class="input-group-append">
+        <button type="submit" class="btn btn-primary">{{ submit_label }}</button>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endmacro %}

@@ -17,7 +17,7 @@ class Service(ItWalletService):
     def search(self, search_type: str, search_element: str) -> dict:
         logger.info(f"Entering method: search. Params [search_type: {search_type}, search_element: {search_element}]")
         if not search_type or not search_element:
-            raise ValueError("Search type and search element cannot be empty.")
+            raise ValueError("Scegli il tipo di ricerca e scrivi cosa cercare.")
         if search_type not in ["scope", "credential_issuer", "attribute"]:
-            raise ValueError("Search type must be either 'scope', 'attribute' or 'credential_issuer'.")
+            raise ValueError("Questo tipo di ricerca non è disponibile.")
         return self.presentation_service.get_presentation_from_credential(search_type, search_element)

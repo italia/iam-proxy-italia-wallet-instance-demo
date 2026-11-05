@@ -38,7 +38,7 @@ class ProviderService(BaseService):
         #                                           proxies=self.proxy, no_proxy_domains=self.no_proxy_domains,
         #                                           parse_response=_parse_oid_fed_list)
         if not wallet_provider_list:
-            raise ValueError(f"No wallet_provider was found within the federation. {url}")
+            raise ValueError(f"Il trust anchor {url} non pubblica alcun wallet provider.")
         return wallet_provider_list
 
     def _create_header(self, params: dict):
@@ -57,7 +57,7 @@ class ProviderService(BaseService):
             parse_response=_parse_entity_statement_jwt,
         )
         if not entity_configuration_jwt:
-            raise ValueError(f"Exception forEntity Configuration {url}")
+            raise ValueError(f"Non riesco a leggere la configurazione del wallet provider {url}.")
         return decode_and_verify_jwt(entity_configuration_jwt)
 
     def __check_wallet_provider(self, wallet_provider_list: list[str], wallet_provider):
@@ -70,5 +70,7 @@ class ProviderService(BaseService):
                 wallet_provider_url = wp
                 break
         if not wallet_provider_url:
-            raise ValueError(f"No wallet_provider was found into list. {wallet_provider_url}")
+            raise ValueError(
+                "Il wallet provider configurato per questa demo non compare nell'elenco pubblicato dal trust anchor."
+            )
         return wallet_provider_url

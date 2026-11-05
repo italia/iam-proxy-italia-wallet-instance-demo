@@ -8,7 +8,6 @@ logger = logging.getLogger(__name__)
 
 class AppState:
     def __init__(self):
-        self.stored_hashed_pin = None
         self.wallet_initialized = False
         self.selected_country = ""
         self.selected_idp = ""

@@ -232,8 +232,14 @@ class CredentialStore:
         Returns:
             True se l'aggiornamento è avvenuto, False se la chiave non esiste.
         """
-        if key in self._store:
-            self._store[key]["status_assertion"] = new_status_assertion
-            self._store[key]["status"] = new_status
+        target = self._store.get(key)
+        if isinstance(target, dict) and "data_row" in target:
+            target["status_assertion"] = new_status_assertion
+            target["status"] = new_status
             return True
+        for value in self._store.values():
+            if isinstance(value, dict) and isinstance(value.get(key), dict):
+                value[key]["status_assertion"] = new_status_assertion
+                value[key]["status"] = new_status
+                return True
         return False

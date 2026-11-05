@@ -1,0 +1,566 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: wallet-instance-demo\n"
+"Language: en\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "Esci"
+msgstr "Sign out"
+
+msgid "lingua attiva:"
+msgstr "active language:"
+
+msgid "Selezione lingua, Italiano selezionata"
+msgstr "Language selection, Italian selected"
+
+msgid "Selezione lingua, English selezionata"
+msgstr "Language selection, English selected"
+
+msgid "Collegamenti di salto"
+msgstr "Skip links"
+
+msgid "Vai al contenuto principale"
+msgstr "Skip to main content"
+
+msgid "Vai al piè di pagina"
+msgstr "Skip to footer"
+
+msgid "Wallet demo"
+msgstr "Wallet demo"
+
+msgid "Presenta un'attestazione"
+msgstr "Present an attestation"
+
+msgid "Reimposta demo"
+msgstr "Reset the demo"
+
+msgid "È l'istanza wallet della demo IAM Proxy Italia."
+msgstr "This is the wallet instance of the IAM Proxy Italia demo."
+
+msgid "Puoi ottenere attestazioni da un credential issuer e presentarle a un verificatore."
+msgstr "You can obtain attestations from a credential issuer and present them to a verifier."
+
+msgid "Attestazioni ottenibili"
+msgstr "Attestations you can obtain"
+
+msgid "Caricamento"
+msgstr "Loading"
+
+msgid "URL del credential issuer"
+msgstr "Credential issuer URL"
+
+msgid "Carica attestazioni"
+msgstr "Load attestations"
+
+msgid "Attestazione"
+msgstr "Attestation"
+
+msgid "Scegli un'attestazione"
+msgstr "Choose an attestation"
+
+msgid "Già ottenuta"
+msgstr "Already obtained"
+
+msgid "Ottieni"
+msgstr "Obtain"
+
+msgid "Presenta"
+msgstr "Present"
+
+msgid "Inquadra il QR del verificatore per presentare un'attestazione già ottenuta."
+msgstr "Scan the verifier QR code to present an attestation you already hold."
+
+msgid "Diagnosi"
+msgstr "Diagnostics"
+
+msgid "Richieste e risposte verso i credential issuer e i verificatori."
+msgstr "Requests and responses sent to credential issuers and verifiers."
+
+msgid "Nessuno scambio registrato."
+msgstr "No exchange recorded yet."
+
+msgid "Chiudi"
+msgstr "Close"
+
+msgid "Vuoi resettare il wallet?"
+msgstr "Do you want to reset the wallet?"
+
+msgid "Conferma"
+msgstr "Confirm"
+
+msgid "Annulla"
+msgstr "Cancel"
+
+msgid "Prodotto dimostrativo, non destinato alla produzione e non certificabile. Supporta la demo di IAM Proxy Italia."
+msgstr "Demonstration product. It is not for production and it cannot be certified. It supports the IAM Proxy Italia demo."
+
+msgid "Accesso"
+msgstr "Sign in"
+
+msgid "Inserisci la password della demo."
+msgstr "Enter the demo password."
+
+msgid "Password"
+msgstr "Password"
+
+msgid "Accedi"
+msgstr "Sign in"
+
+msgid "Mostra o nascondi la password"
+msgstr "Show or hide the password"
+
+msgid "Password non corretta."
+msgstr "The password is not correct."
+
+msgid "Errore:"
+msgstr "Error:"
+
+msgid "Pagina non trovata"
+msgstr "Page not found"
+
+msgid "La risorsa richiesta non è disponibile."
+msgstr "The requested page is not available."
+
+msgid "Torna all'accesso"
+msgstr "Back to sign-in"
+
+msgid "Errore del server"
+msgstr "Server error"
+
+msgid "Si è verificato un errore interno."
+msgstr "An internal error occurred."
+
+msgid "Attestazioni ottenute"
+msgstr "Attestations you hold"
+
+msgid "Dettaglio"
+msgstr "Details"
+
+msgid "Tipo di ricerca"
+msgstr "Search type"
+
+msgid "Tipo ricerca"
+msgstr "Search type"
+
+msgid "Tutto"
+msgstr "Everything"
+
+msgid "Credential Issuer"
+msgstr "Credential issuer"
+
+msgid "Tipo credenziale"
+msgstr "Credential type"
+
+msgid "Attributi contenuti"
+msgstr "Contained attributes"
+
+msgid "Testo della ricerca"
+msgstr "Search text"
+
+msgid "Cerca"
+msgstr "Search"
+
+msgid "Scegli il tipo di ricerca."
+msgstr "Choose a search type."
+
+msgid "Questo tipo di ricerca non è disponibile."
+msgstr "This search type is not available."
+
+msgid "Scrivi cosa cercare."
+msgstr "Enter the text to search for."
+
+msgid "Si è verificato un errore interno durante la ricerca."
+msgstr "Something went wrong while searching."
+
+msgid "Scegli il tipo di ricerca e scrivi cosa cercare."
+msgstr "Choose a search type and enter the text to search for."
+
+msgid "Inquadra o carica il QR Code"
+msgstr "Scan or upload the QR code"
+
+msgid "Inquadra il QR Code oppure:"
+msgstr "Point the camera at the QR code, or:"
+
+msgid "Carica un'immagine QR"
+msgstr "Upload a QR image"
+
+msgid "Conferma presentazione"
+msgstr "Confirm presentation"
+
+msgid "Verranno condivisi i seguenti dati:"
+msgstr "These details will be shared:"
+
+msgid "Esito accesso"
+msgstr "Sign-in result"
+
+msgid "OK"
+msgstr "OK"
+
+msgid "Completato"
+msgstr "Done"
+
+msgid "Accesso completato. Torno al wallet per salvare l'attestazione."
+msgstr "Sign-in completed. Returning to the wallet to save the attestation."
+
+msgid "Dettaglio attestazione"
+msgstr "Attestation details"
+
+msgid "Chiudi finestra modale"
+msgstr "Close dialog"
+
+msgid "Grafico"
+msgstr "Overview"
+
+msgid "Rimuovi credenziale"
+msgstr "Remove attestation"
+
+msgid "Nome:"
+msgstr "Given name:"
+
+msgid "Cognome:"
+msgstr "Family name:"
+
+msgid "Data di nascita:"
+msgstr "Date of birth:"
+
+msgid "Luogo di nascita:"
+msgstr "Place of birth:"
+
+msgid "Nazionalità:"
+msgstr "Nationality:"
+
+msgid "Codice fiscale:"
+msgstr "Tax code:"
+
+msgid "Paese emittente:"
+msgstr "Issuing country:"
+
+msgid "Autorità emittente:"
+msgstr "Issuing authority:"
+
+msgid "Data di emissione:"
+msgstr "Date of issuance:"
+
+msgid "Data di scadenza:"
+msgstr "Date of expiry:"
+
+msgid "Dettagli aggiuntivi"
+msgstr "Additional details"
+
+msgid "Ottieni attestazione"
+msgstr "Obtain attestation"
+
+msgid "Richiesta"
+msgstr "Request"
+
+msgid "Risposta"
+msgstr "Response"
+
+msgid "Issuer di credenziali"
+msgstr "Credential issuer"
+
+msgid "Verificatore"
+msgstr "Verifier"
+
+msgid "Federazione"
+msgstr "Federation"
+
+msgid "Seleziona un'attestazione."
+msgstr "Select an attestation."
+
+msgid "Seleziona l'attestazione da ottenere."
+msgstr "Select the attestation to obtain."
+
+msgid "Inserisci un URL http o https."
+msgstr "Enter an http or https URL."
+
+msgid "Impossibile leggere i metadata di questo issuer."
+msgstr "The wallet cannot read this issuer's metadata."
+
+msgid "Questo indirizzo non pubblica attestazioni ottenibili."
+msgstr "This address does not publish attestations you can obtain."
+
+msgid "Richiesta in corso..."
+msgstr "Request in progress..."
+
+msgid "Ti sto portando all'issuer per scegliere l'identità digitale. Al termine torni qui e l'attestazione viene salvata."
+msgstr "Taking you to the issuer to choose a digital identity. When that finishes, you return here and the attestation is saved."
+
+msgid "Per il rilascio di {name}, non sarà condiviso alcun dato con l'issuer."
+msgstr "No details will be shared with the issuer to issue {name}."
+
+msgid "Per il rilascio di {name}, saranno condivisi con l'issuer i seguenti dati:"
+msgstr "These details will be shared with the issuer to issue {name}:"
+
+msgid "Premendo Continua autorizzi la trasmissione delle informazioni."
+msgstr "Continue authorizes sending this information."
+
+msgid "Continua"
+msgstr "Continue"
+
+msgid "La risposta non contiene l'elenco dei dati da condividere."
+msgstr "The response does not list the details to be shared."
+
+msgid "Non riesco a ottenere l'attestazione."
+msgstr "The wallet cannot obtain the attestation."
+
+msgid "Errore sconosciuto"
+msgstr "Unknown error"
+
+msgid "Attestazione ottenuta."
+msgstr "Attestation saved."
+
+msgid "Non riesco a salvare l'attestazione."
+msgstr "The wallet cannot save the attestation."
+
+msgid "Per l'accesso con il verificatore selezionato, non sarà condiviso alcun dato."
+msgstr "No details will be shared to sign in with the selected verifier."
+
+msgid "Per l'accesso con il verificatore selezionato, saranno condivisi i seguenti dati:"
+msgstr "These details will be shared to sign in with the selected verifier:"
+
+msgid "Impossibile effettuare l'accesso"
+msgstr "The wallet cannot complete the sign-in."
+
+msgid "Rimuovere l'attestazione {name}?"
+msgstr "Remove attestation {name}?"
+
+msgid "Attestazione {name} rimossa."
+msgstr "Attestation {name} removed."
+
+msgid "Attestazione {name} rimossa. Il wallet è stato reimpostato."
+msgstr "Attestation {name} removed. The wallet has been reset."
+
+msgid "Non riesco a eliminare l'attestazione."
+msgstr "The wallet cannot delete the attestation."
+
+msgid "Errore generico"
+msgstr "Something went wrong."
+
+msgid "sconosciuto"
+msgstr "unknown"
+
+msgid "Impossibile visualizzare l'elemento selezionato"
+msgstr "The wallet cannot show the selected item."
+
+msgid "Il wallet è stato reimpostato."
+msgstr "The wallet has been reset."
+
+msgid "La fotocamera non è disponibile. Serve HTTPS oppure localhost."
+msgstr "The camera is not available. Use HTTPS or localhost."
+
+msgid "Non riesco a usare la fotocamera. Controlla i permessi."
+msgstr "The wallet cannot use the camera. Check the permissions."
+
+msgid "Non trovo un QR valido in questa immagine. Riprova con un'immagine più nitida."
+msgstr "No valid QR code was found in this image. Try a sharper picture."
+
+msgid "Non riesco a inviare i dati:"
+msgstr "The wallet could not send the data:"
+
+msgid "Accesso completato."
+msgstr "Sign-in completed."
+
+msgid "Accesso non riuscito."
+msgstr "Sign-in failed."
+
+msgid "I dati da condividere con l'issuer non sono nel formato atteso."
+msgstr "The details to share with the issuer are not in the expected format."
+
+msgid "I dati da presentare al verificatore non sono nel formato atteso."
+msgstr "The details to present to the verifier are not in the expected format."
+
+msgid "Manca l'elenco dei dati da presentare al verificatore."
+msgstr "The list of details to present to the verifier is missing."
+
+msgid "Il verificatore indicato nel QR non è un URL valido."
+msgstr "The verifier in the QR code is not a valid URL."
+
+msgid "Il contenuto del QR non è un URL valido."
+msgstr "The QR code content is not a valid URL."
+
+msgid "Il client indicato nel QR non corrisponde al verificatore."
+msgstr "The client in the QR code does not match the verifier."
+
+msgid "Questa attestazione è già nel wallet."
+msgstr "This attestation is already in the wallet."
+
+msgid "Mancano le chiavi di questo wallet. Reimposta la demo e riprova."
+msgstr "This wallet is missing its keys. Reset the demo and try again."
+
+msgid "Non riesco a preparare la prova di possesso richiesta dall'issuer."
+msgstr "The wallet cannot prepare the proof of possession the issuer requires."
+
+msgid "Il wallet provider non pubblica le chiavi per firmare l'attestazione del wallet."
+msgstr "The wallet provider does not publish the keys needed to sign the wallet attestation."
+
+msgid "La sessione della demo non è più valida. Esci e accedi di nuovo."
+msgstr "The demo session is no longer valid. Sign out and sign in again."
+
+msgid "Non riesco a preparare la richiesta di autorizzazione verso l'issuer."
+msgstr "The wallet cannot prepare the authorization request for the issuer."
+
+msgid "L'issuer non ha restituito l'indirizzo della richiesta di autorizzazione."
+msgstr "The issuer did not return the address of the authorization request."
+
+msgid "Non è configurato il trust anchor della demo, quindi non posso completare il rilascio."
+msgstr "The demo trust anchor is not configured, so the wallet cannot finish issuing the attestation."
+
+msgid "Non trovo più l'attestazione richiesta. Premi di nuovo Ottieni."
+msgstr "The requested attestation is no longer available. Press Obtain again."
+
+msgid "Non trovo più la verifica della richiesta. Premi di nuovo Ottieni."
+msgstr "The request verification is no longer available. Press Obtain again."
+
+msgid "L'issuer non ha ancora restituito l'autorizzazione. Completa l'accesso e riprova."
+msgstr "The issuer has not returned the authorization yet. Finish signing in and try again."
+
+msgid "Non trovo più l'issuer di questa richiesta. Premi di nuovo Ottieni."
+msgstr "The issuer for this request is no longer available. Press Obtain again."
+
+msgid "Non ho più la configurazione dell'issuer. Ricarica la pagina e premi di nuovo Ottieni."
+msgstr "The issuer configuration is no longer available. Reload the page and press Obtain again."
+
+msgid "L'issuer non ha restituito l'autorizzazione."
+msgstr "The issuer did not return the authorization."
+
+msgid "La risposta non appartiene a questa richiesta. Premi di nuovo Ottieni."
+msgstr "The response does not belong to this request. Press Obtain again."
+
+msgid "L'issuer ha rifiutato l'accesso: %(detail)s."
+msgstr "The issuer refused the sign-in: %(detail)s."
+
+msgid "L'issuer non ha restituito il codice di autorizzazione."
+msgstr "The issuer did not return the authorization code."
+
+msgid "La risposta arriva da un issuer diverso da quello della richiesta."
+msgstr "The response comes from an issuer other than the one in the request."
+
+msgid "L'issuer non ha restituito l'attestazione."
+msgstr "The issuer did not return the attestation."
+
+msgid "Non è configurato il trust anchor della demo, quindi non posso identificare il wallet provider."
+msgstr "The demo trust anchor is not configured, so the wallet cannot identify the wallet provider."
+
+msgid "Non trovo il wallet provider della demo nel trust anchor. Senza di esso il wallet non può ottenere l'attestazione."
+msgstr "The demo wallet provider is not in the trust anchor. Without it the wallet cannot obtain the attestation."
+
+msgid "Il wallet provider risponde, ma la sua configurazione non contiene i dati attesi."
+msgstr "The wallet provider responded, but its configuration does not contain the expected data."
+
+msgid "Il wallet provider configurato per questa demo non compare nell'elenco pubblicato dal trust anchor."
+msgstr "The wallet provider configured for this demo is not in the list published by the trust anchor."
+
+msgid "Non è configurato il trust anchor della demo, quindi non posso chiedere l'attestazione."
+msgstr "The demo trust anchor is not configured, so the wallet cannot request the attestation."
+
+msgid "Nessun issuer configurato rilascia l'attestazione selezionata. Ricarica la pagina e riprova."
+msgstr "No configured issuer issues the selected attestation. Reload the page and try again."
+
+msgid "Descrizione"
+msgstr "Description"
+
+msgid "Formato"
+msgstr "Format"
+
+msgid "Dati contenuti"
+msgstr "Included data"
+
+msgid "Identificativo di configurazione"
+msgstr "Credential configuration ID"
+
+msgid "Fonte"
+msgstr "Source"
+
+msgid "Header"
+msgstr "Header"
+
+msgid "Payload"
+msgstr "Payload"
+
+msgid "Payload cifrato: serve la chiave del destinatario per leggerlo."
+msgstr "Encrypted payload: the recipient key is required to read it."
+
+msgid "Il QR non contiene il parametro client_id."
+msgstr "The QR code does not contain the client_id parameter."
+
+msgid "Il QR non contiene il parametro request_uri."
+msgstr "The QR code does not contain the request_uri parameter."
+
+msgid "Il QR non contiene il parametro state."
+msgstr "The QR code does not contain the state parameter."
+
+msgid "Indica il tipo di elemento da mostrare."
+msgstr "Say which item to show."
+
+msgid "Emissione"
+msgstr "Issuance"
+
+msgid "Stato delle attestazioni"
+msgstr "Attestation status"
+
+msgid "Presentazione"
+msgstr "Presentation"
+
+msgid "Scambi HTTP"
+msgstr "HTTP exchanges"
+
+msgid "Sezioni del wallet"
+msgstr "Wallet sections"
+
+msgid "Scegli un credential issuer, seleziona un'attestazione e richiedine l'emissione."
+msgstr "Choose a credential issuer, select an attestation and request issuance."
+
+msgid "Attestazioni già ottenute: metadata, intestazione, payload e stato di revoca."
+msgstr "Attestations already obtained: metadata, header, payload and revocation status."
+
+msgid "Nessuna attestazione ottenuta."
+msgstr "No attestation obtained yet."
+
+msgid "Metadata"
+msgstr "Metadata"
+
+msgid "Issuer"
+msgstr "Issuer"
+
+msgid "Stato di revoca"
+msgstr "Revocation status"
+
+msgid "Non verificata"
+msgstr "Not checked"
+
+msgid "Valida"
+msgstr "Valid"
+
+msgid "Revocata"
+msgstr "Revoked"
+
+msgid "Sospesa"
+msgstr "Suspended"
+
+msgid "Verifica revoca"
+msgstr "Check revocation"
+
+msgid "Questa attestazione non è un JWT."
+msgstr "This attestation is not a JWT."
+
+msgid "Assertion di stato"
+msgstr "Status assertion"
+
+msgid "Attestazione non trovata."
+msgstr "Attestation not found."
+
+msgid "Lo stato di revoca si può verificare solo per le attestazioni SD-JWT."
+msgstr "Revocation status can be checked only for SD-JWT attestations."
+
+msgid "Questo issuer non pubblica l'endpoint di stato."
+msgstr "This issuer does not publish a status endpoint."
+
+msgid "Stato di revoca aggiornato."
+msgstr "Revocation status updated."
+
+msgid "Impossibile verificare lo stato di revoca."
+msgstr "The revocation status could not be checked."

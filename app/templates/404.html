@@ -1,16 +1,13 @@
-<!DOCTYPE html>
-<html lang="it">
-<head>
-  <meta charset="UTF-8">
-  <title>404 - Pagina non trovata</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='error.css') }}">
-</head>
-<body>
-  <div class="error-container">
-    <img src="{{ url_for('static', filename='images/logo_eudi_wallet.svg') }}" alt="Wallet" class="logo">
-    <h1>404 - Pagina non trovata</h1>
-    <p>La risorsa richiesta non è disponibile o è stata spostata.</p>
-    <a href="{{ url_for('main_routes.index') }}" class="btn-primary">Torna alla homepage</a>
+{% extends "base.html" %}
+{% block title %}{{ _('Pagina non trovata') }}{% endblock %}
+{% block content %}
+  <div class="it-wallet-title-row">
+    <div class="it-wallet-title-slot it-wallet-title-slot--start"></div>
+    <h1 class="it-wallet-title-heading mb-0" id="page-title">{{ _('Pagina non trovata') }}</h1>
+    <div class="it-wallet-title-slot it-wallet-title-slot--end"></div>
   </div>
-</body>
-</html>
+  <p class="text-center mb-4 it-wallet-subtitle">{{ _('La risorsa richiesta non è disponibile.') }}</p>
+  <p class="text-center">
+    <a class="btn btn-primary" href="{{ url_for('main_routes.index') }}">{{ _("Torna all'accesso") }}</a>
+  </p>
+{% endblock %}

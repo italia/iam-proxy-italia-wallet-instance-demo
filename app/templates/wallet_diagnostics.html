@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Scambi HTTP') }}{% endblock %}
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='wallet.css') }}">
+{% endblock %}
+{% block content %}
+  <h1 class="h2" id="page-title">{{ _('Scambi HTTP') }}</h1>
+  <p>{{ _('Richieste e risposte verso i credential issuer e i verificatori.') }}</p>
+  <div id="diagnostic-log">
+    <p class="mb-0">{{ _('Nessuno scambio registrato.') }}</p>
+  </div>
+{% endblock %}
+{% block scripts %}
+  <script src="{{ url_for('static', filename='js/wallet/catalog.js') }}"></script>
+{% endblock %}

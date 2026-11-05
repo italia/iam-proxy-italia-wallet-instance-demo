@@ -3,7 +3,6 @@ import os
 from flask import Blueprint, current_app, redirect, render_template, send_from_directory, session, url_for
 
 from app.constants import APP_SETTINGS_KEY, CHROME_DEVTOOLS_PATH, FAVICON_MIMETYPE
-from app.store import app_state
 
 main_routes = Blueprint("main_routes", __name__)
 
@@ -40,8 +39,6 @@ def debug_session():
 
 @main_routes.route("/")
 def index():
-    if not app_state.stored_hashed_pin:
-        return redirect(url_for("wallet_routes.show_activation"))
-    if session.get("pin_authenticated"):
+    if session.get("authenticated"):
         return redirect(url_for("wallet_routes.wallet_home"))
     return redirect(url_for("wallet_routes.wallet_access"))

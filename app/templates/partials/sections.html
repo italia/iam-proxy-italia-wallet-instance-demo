@@ -1,0 +1,12 @@
+{% if session.get('authenticated') %}
+<nav class="wallet-sections" aria-label="{{ _('Sezioni del wallet') }}">
+  <div class="container">
+  <ul>
+    <li><a href="{{ url_for('wallet_routes.wallet_home') }}"{% if request.endpoint == 'wallet_routes.wallet_home' %} aria-current="page"{% endif %}>{{ _('Emissione') }}</a></li>
+    <li><a href="{{ url_for('wallet_routes.wallet_credentials') }}"{% if request.endpoint == 'wallet_routes.wallet_credentials' %} aria-current="page"{% endif %}>{{ _('Stato delle attestazioni') }}</a></li>
+    <li><a href="{{ url_for('wallet_routes.wallet_present') }}"{% if request.endpoint == 'wallet_routes.wallet_present' %} aria-current="page"{% endif %}>{{ _('Presentazione') }}</a></li>
+    <li><a href="{{ url_for('wallet_routes.wallet_diagnostics') }}"{% if request.endpoint == 'wallet_routes.wallet_diagnostics' %} aria-current="page"{% endif %}>{{ _('Scambi HTTP') }}</a></li>
+  </ul>
+  </div>
+</nav>
+{% endif %}

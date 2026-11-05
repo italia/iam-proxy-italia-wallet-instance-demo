@@ -2,51 +2,29 @@
 <div class="container" {% if not wallet_initialized %}style="display:none;"{% endif %}>
   <div class="row">
     <article class="it-card it-card-image rounded shadow-sm border">
-      <h3 class="it-card-title ">
-        <div id="search_result">
-          {% if error_message %}
-            <div class="alert alert-danger d-flex align-items-center" role="alert">
-              <div>
-                <strong>Errore:</strong> {{ error_message }}
-              </div>
-            </div>
-          {% endif %}
-          {% if success_message %}
-            <div class="alert alert-success d-flex align-items-center" role="alert">
-              <div>
-                <strong>Successo:</strong> {{ success_message }}
-              </div>
-            </div>
-          {% endif %}
-        </div>
-      </h3>
+      <h3 class="it-card-title">{{ _('Attestazioni ottenute') }}</h3>
       <div class="it-card-body">
         <div class="it-carousel-wrapper splide it-carousel-landscape-abstract-three-cols-arrow-visible" data-bs-carousel-splide data-splide='{"height":"auto"}'>
           <div class="splide__track">
             <ul class="splide__list">
                 {% for credential_issuer, credential_list in credential_keys.items() %}
                     {% for credential_type, credential_object in credential_list.items() %}
-                    {% set credential_format = credential_object.get("format") %}
-                    {% set credential_label = (
-                        credential_object.get("credential_metadata", {}).get("display", [])
-                        | selectattr("locale", "equalto", "it-IT")
-                        | map(attribute="description")
-                        | first
-                    ) %}
                     {% set id_credential = credential_issuer ~ ':' ~ credential_type %}
+                    {% set meta = lookup_attestation(credential_type, display_index or {}) %}
                       <li class="splide__slide lined_slide">
                         <div class="it-single-slide-wrapper h-100 p-2">
                           <article class="it-card it-card-height-full rounded shadow-sm border">
                             <h3 class="it-card-title it-card-title-icon ">
-                              {{ credential_type }}
+                              {{ meta.name or credential_type }}
                             </h3>
                             <div class="it-card-body">
-                              <address class="it-card-signature">{{ credential_format }}</address>
-                              <p class="it-card-text">{{ credential_label }} </p>
+                              {% if meta.format %}<address class="it-card-signature">{{ meta.format }}</address>{% endif %}
+                              {% if meta.description %}<p class="it-card-text">{{ meta.description }}</p>{% endif %}
+                              {% if meta.claims %}<p class="it-card-text">{{ meta.claims | join(", ") }}</p>{% endif %}
                             </div>
                             <footer class="it-card-related it-card-footer">
                               <div class="it-card-taxonomy">
-                                    <button id="{{ id_credential }}" type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target=".credential-detail-modal-xl">Dettaglio</button>
+                                    <button id="{{ id_credential }}" type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target=".credential-detail-modal-xl">{{ _('Dettaglio') }}</button>
                               </div>
                               <time class="it-card-date">{{ credential_issuer }}</time>
                             </footer>
@@ -60,22 +38,28 @@
         </div>
       </div>
       <footer class="it-card-related it-card-footer">
-          <div class="input-group">
+          <div class="mb-3">
+              <label for="search_type">{{ _('Tipo di ricerca') }}</label>
               <div class="select-wrapper">
-                  <select id="search_type" name="search_type">
-                    <option selected="" value="">Tipo ricerca</option>
-                    <option value="all">Tutto</option>
-                    <option value="credential_issuer">Credential Issuer</option>
-                    <option value="scope">Tipo credenziale</option>
-                    <option value="attribute">attributo/i contenuti</option>
+                  <select id="search_type" name="search_type" aria-describedby="search-type-error"{% if search_type_error %} aria-invalid="true"{% endif %}>
+                    <option value="" {% if not search_type %}selected{% endif %}>{{ _('Tipo ricerca') }}</option>
+                    <option value="all" {% if search_type == 'all' %}selected{% endif %}>{{ _('Tutto') }}</option>
+                    <option value="credential_issuer" {% if search_type == 'credential_issuer' %}selected{% endif %}>{{ _('Credential Issuer') }}</option>
+                    <option value="scope" {% if search_type == 'scope' %}selected{% endif %}>{{ _('Tipo credenziale') }}</option>
+                    <option value="attribute" {% if search_type == 'attribute' %}selected{% endif %}>{{ _('Attributi contenuti') }}</option>
                   </select>
               </div>
+              <p id="search-type-error" class="field-error"{% if not search_type_error %} hidden{% endif %}>{{ search_type_error }}</p>
           </div>
-          <div class="input-group">
-              <input type="text" class="form-control" id="search_element" name="search_element">
-              <div class="input-group-append">
-                <button class="btn btn-primary" type="submit" id="search-btn">Cerca</button>
+          <div class="mb-3">
+              <label for="search_element">{{ _('Testo della ricerca') }}</label>
+              <div class="input-group">
+                  <input type="text" class="form-control" id="search_element" name="search_element" value="{{ search_element or '' }}" aria-describedby="search-element-error"{% if search_element_error %} aria-invalid="true"{% endif %}>
+                  <div class="input-group-append">
+                      <button class="btn btn-primary" type="submit" id="search-btn">{{ _('Cerca') }}</button>
+                  </div>
               </div>
+              <p id="search-element-error" class="field-error"{% if not search_element_error %} hidden{% endif %}>{{ search_element_error }}</p>
           </div>
       </footer>
     </article>

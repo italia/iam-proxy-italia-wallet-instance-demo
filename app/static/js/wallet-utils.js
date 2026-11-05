@@ -18,70 +18,12 @@
       options.body = JSON.stringify(body);
     }
 
-    // Torna direttamente il Response grezzo
-    return await fetch(url, options);
+    const response = await fetch(url, options);
+    if (!String(url).includes("/itwallet/diagnostics") && typeof refreshDiagnostics === "function") {
+      refreshDiagnostics();
+    }
+    return response;
   }
-
-function showTab(tabId) {
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-  document.querySelector('.tab[data-tab="'+tabId+'"]').classList.add('active');
-  document.getElementById(tabId).classList.add('active');
-
-  const tabContent = document.getElementById(tabId);
-  const copyBtn = document.getElementById('copyBtn');
-
-  let hasCode = false;
-  const rawText = tabContent.textContent.trim();
-  const rawHtml = tabContent.innerHTML.trim();
-
-  // Controllo: se contiene tag HTML
-  const hasHtmlTags = /<[^>]+>/.test(rawHtml);  // regex che trova qualunque tag
-
-  // Applica syntaxHighlight se il contenuto è JSON (prova a fare il parsing)
-  try {
-    const parsed = JSON.parse(rawText);  // Se non è valido, va in catch
-    tabContent.innerHTML = '<pre>' + syntaxHighlight(parsed) + '</pre>';
-    hasCode = true;
-  } catch (e) {
-      // Se NON è JSON ma è solo testo senza tag HTML complessi
-      if (rawText.length > 0 && !hasHtmlTags) {
-        hasCode = true;
-      }
-  }
-
-  console.log('hasCode:', hasCode);
-
-  // Mostra o nascondi il bottone copy
-  if (copyBtn) {
-    copyBtn.style.display = hasCode ? 'inline-block' : 'none';
-  }
-}
-
-function copyActiveTabContent() {
-  const activeTab = document.querySelector('.tab-content.active');
-  const copyBtn = document.getElementById('copyBtn');
-  
-  if (activeTab && copyBtn) {
-    let textToCopy = activeTab.innerText || activeTab.textContent;
-    textToCopy = textToCopy.trim();
-
-    navigator.clipboard.writeText(textToCopy)
-      .then(() => {
-        copyBtn.textContent = 'Copied';
-        setTimeout(() => {
-          copyBtn.textContent = 'Copy';
-        }, 2000); // Dopo 2 secondi torna a "Copy"
-      })
-      .catch(err => {
-        console.error('Errore nel copiare: ', err);
-        copyBtn.textContent = 'Error';
-        setTimeout(() => {
-          copyBtn.textContent = 'Copy';
-        }, 2000);
-      });
-  }
-}
 
 function syntaxHighlight(json) {
   if (typeof json != 'string') {
@@ -162,9 +104,9 @@ function formatCredenziale(value) {
     /*
       Ritorna il formato della credenziale in base al suo credential_id.
     */
-    if (!value) return "sconosciuto";
+    if (!value) return t("sconosciuto");
     const prefixes = ["jwt", "dc_sd_jwt", "mso_mdoc"];
-    return prefixes.find(p => value.toLowerCase().startsWith(p)) || "sconosciuto";
+    return prefixes.find(p => value.toLowerCase().startsWith(p)) || t("sconosciuto");
 }
 
 function createButtonHml(credential_id) {
@@ -224,7 +166,7 @@ async function confirmViewObjectTypeInMemory() {
   credPopupBody.innerHTML = `
     <div class="spinner-wrapper">
       <div class="spinner"></div>
-      <p>Richiesta in corso...</p>
+      <p>${t("Richiesta in corso...")}</p>
     </div>
   `;
 
@@ -261,7 +203,7 @@ async function confirmViewObjectTypeInMemory() {
             <div id="json"><pre>${prettyJson}</pre></div>
             <div class="json-navigator">${navigator}</div>
             <div class="button-wrapper">
-              <button id="cancelPresentCredential" class="popup-btn cancel" onclick="closeCredPopup()">Annulla</button>
+              <button id="cancelPresentCredential" class="popup-btn cancel" onclick="closeCredPopup()">${t("Annulla")}</button>
             </div>
           </div>
         `;
@@ -284,12 +226,12 @@ async function confirmViewObjectTypeInMemory() {
     } else {
       result.innerHTML = `
         <div class="flash-container flash-error">
-          <p>${data?.data?.error || "Impossibile visualizzare la tipologia di oggetto selezionata"}</p>
+          <p>${data?.data?.error || t("Impossibile visualizzare l'elemento selezionato")}</p>
         </div>`;
     }
 
   } catch (err) {
-    const message = err?.message || "Errore sconosciuto";
+    const message = err?.message || t("Errore sconosciuto");
     result.innerHTML = `
       <div class="flash-container flash-error">
         <p>${message}</p>
@@ -313,7 +255,7 @@ async function confirmAddCredential() {
     credPopupBody.innerHTML = `
       <div class="spinner-wrapper">
         <div class="spinner"></div>
-        <p>Richiesta in corso...</p>
+        <p>${t("Richiesta in corso...")}</p>
       </div>
     `;
 
@@ -327,6 +269,14 @@ async function confirmAddCredential() {
 
       const data = await response.json();
 
+      if (data.success && data.data && data.data.redirect_url) {
+        credPopupBody.innerHTML = `
+          <p>${t("Ti sto portando all'issuer per scegliere l'identità digitale. Al termine torni qui e l'attestazione viene salvata.")}</p>
+        `;
+        window.location.assign(data.data.redirect_url);
+        return;
+      }
+
       if (data.success) {
         let frase = "";
 
@@ -336,7 +286,7 @@ async function confirmAddCredential() {
           credPopupBlocked = true;
 
           if (credentialsPresenting.length === 0) {
-            frase = `<p>Per il rilascio di <b>${selectedValue}</b>, non sarà condiviso alcun dato con l'EAA Provider.</p>`;
+            frase = `<p>${t("Per il rilascio di {name}, non sarà condiviso alcun dato con l'issuer.", { name: `<b>${selectedValue}</b>` })}</p>`;
           } else {
             // Costruiamo i <li> con credenziali e claims
             const descrizioni = credentialsPresenting.map(cred => {
@@ -355,9 +305,9 @@ async function confirmAddCredential() {
             });
 
             frase = `
-              <p>Per il rilascio di <b>${selectedValue}</b>, saranno condivisi con l'EAA Provider i seguenti dati:</p>
+              <p>${t("Per il rilascio di {name}, saranno condivisi con l'issuer i seguenti dati:", { name: `<b>${selectedValue}</b>` })}</p>
               <ul style="margin-top: 0px">${descrizioni.join("")}</ul>
-              <p>Premendo Continua autorizzi la trasmissione delle informazioni.</p>
+              <p>${t("Premendo Continua autorizzi la trasmissione delle informazioni.")}</p>
             `;
           }
 
@@ -365,27 +315,26 @@ async function confirmAddCredential() {
             <div class="custom-confirm-wrapper">
               <div class="confirm-text">${frase}</div>
               <div class="button-wrapper">
-                <button id="continuePresentCredential" class="popup-btn confirm" onclick="continueAddCredential()">Continua</button>
-                <button id="cancelPresentCredential" class="popup-btn cancel" onclick="closeCredPopup()">Annulla</button>
+                <button id="continuePresentCredential" class="popup-btn confirm" onclick="continueAddCredential()">${t("Continua")}</button>
+                <button id="cancelPresentCredential" class="popup-btn cancel" onclick="closeCredPopup()">${t("Annulla")}</button>
               </div>
             </div>`;
         } else {
-          console.error("credentials non è un array!", credentialsPresenting);
           result.innerHTML = `
-            <div class="flash-container flash-error">
-              <p>Credentials non è un array!</p>
+            <div class="alert alert-danger" role="alert">
+              <p>${t("La risposta non contiene l'elenco dei dati da condividere.")}</p>
             </div>`;
         }
       } else {
         result.innerHTML = `
-          <div class="flash-container flash-error">
-            <p>${data?.data?.error || "Impossibile aggiungere la credenziale"}</p>
+          <div class="alert alert-danger" role="alert">
+            <p>${data?.data?.error || t("Non riesco a ottenere l'attestazione.")}</p>
           </div>`;
       }
     } catch (err) {
-      const message = err?.message || "Errore sconosciuto";
+      const message = err?.message || t("Errore sconosciuto");
       result.innerHTML = `
-        <div class="flash-container flash-error">
+        <div class="alert alert-danger" role="alert">
           <p>${message}</p>
         </div>`;
     } finally {
@@ -403,12 +352,14 @@ async function continueAddCredential() {
   credPopupBody.innerHTML = `
     <div class="spinner-wrapper">
       <div class="spinner"></div>
-      <p>Richiesta in corso...</p>
+      <p>${t("Richiesta in corso...")}</p>
     </div>
   `;
 
   try {
-    const response = await executeFetch("/itwallet/addCredential/complete", "POST", { credentialsPresenting: credentialsPresenting });
+    const response = await executeFetch("/itwallet/addCredential/complete", "POST", {
+      credentialsPresenting: credentialsPresenting || null,
+    });
 
     if (!response.ok) {
       const errorMessage = await getErrorMessage(response);
@@ -419,32 +370,42 @@ async function continueAddCredential() {
 
     if (data.success) {
       const credential_id = data?.data?.credential_id;
-      const tag = tagCredenziale(credential_id);
       result.innerHTML = `
-        <div class="flash-container flash-success">
-          <p>Credenziale ${tag} aggiunta con successo!</p>
+        <div class="alert alert-success" role="status">
+          <p>${t("Attestazione ottenuta.")}</p>
         </div>
       `;
-      // Aggiungi bottone
       addButton(credential_id);
+      if (typeof refreshIssuerCatalog === "function") refreshIssuerCatalog();
+      window.obtainNext = true;
     }
     else {
       result.innerHTML = `
-        <div class="flash-container flash-error">
-          <p>${data?.data?.error || "Fallita l'elaborazione della richiesta"}</p>
+        <div class="alert alert-danger" role="alert">
+          <p>${data?.data?.error || t("Non riesco a salvare l'attestazione.")}</p>
         </div>`;
+      if (typeof obtainQueue !== "undefined") obtainQueue = [];
+      window.obtainNext = false;
     }
   } catch (err) {
-    const message = err?.message || "Fallita l'elaborazione della richiesta";
+    const message = err?.message || t("Non riesco a salvare l'attestazione.");
     result.innerHTML = `
-      <div class="flash-container flash-error">
+      <div class="alert alert-danger" role="alert">
         <p>${message}</p>
       </div>`;
+    if (typeof obtainQueue !== "undefined") obtainQueue = [];
+    window.obtainNext = false;
   } finally {
-    // Chiude il popup in automamtico
     setTimeout(() => {
-      credPopup.classList.remove("show");
-    }, 2000);
+      if (credPopup) credPopup.classList.remove("show");
+      if (window.obtainNext && typeof obtainQueue !== "undefined" && obtainQueue.length) {
+        const nextId = obtainQueue.shift();
+        selectedValue = nextId;
+        credPopup.classList.add("show");
+        confirmAddCredential();
+      }
+      window.obtainNext = false;
+    }, 400);
   }
 }
 
@@ -458,7 +419,7 @@ async function loginToRelyingParty() {
     credPopupBody.innerHTML = `
       <div class="spinner-wrapper">
         <div class="spinner"></div>
-        <p>Richiesta in corso...</p>
+        <p>${t("Richiesta in corso...")}</p>
       </div>
     `;
 
@@ -478,7 +439,7 @@ async function loginToRelyingParty() {
 
       if (Array.isArray(credentialsPresenting)) {
         if (credentialsPresenting.length === 0) {
-          frase = `<p>Per la login con il Relying Party selezionato, non sarà condiviso alcun dato.</p>`;
+          frase = `<p>${t("Per l'accesso con il verificatore selezionato, non sarà condiviso alcun dato.")}</p>`;
         } else {
           // Costruiamo i <li> con credenziali e claims
           const descrizioni = credentialsPresenting.map(cred => {
@@ -497,9 +458,9 @@ async function loginToRelyingParty() {
           });
 
           frase = `
-            <p>Per la login con il Relying Party selezionato, saranno condivisi i seguenti dati:</p>
+            <p>${t("Per l'accesso con il verificatore selezionato, saranno condivisi i seguenti dati:")}</p>
             <ul style="margin-top: 0px">${descrizioni.join("")}</ul>
-            <p>Premendo Continua autorizzi la trasmissione delle informazioni.</p>
+            <p>${t("Premendo Continua autorizzi la trasmissione delle informazioni.")}</p>
           `;
         }
 
@@ -507,8 +468,8 @@ async function loginToRelyingParty() {
           <div class="custom-confirm-wrapper">
             <div class="confirm-text">${frase}</div>
             <div class="button-wrapper">
-              <button id="continuePresentCredential" class="popup-btn confirm" onclick="loginContinueCredPopup()">Continua</button>
-              <button id="cancelPresentCredential" class="popup-btn cancel" onclick="closeCredPopup()">Annulla</button>
+              <button id="continuePresentCredential" class="popup-btn confirm" onclick="loginContinueCredPopup()">${t("Continua")}</button>
+              <button id="cancelPresentCredential" class="popup-btn cancel" onclick="closeCredPopup()">${t("Annulla")}</button>
             </div>
           </div>`;
       } else {
@@ -521,11 +482,11 @@ async function loginToRelyingParty() {
     } else {
       credPopupBody.innerHTML = `
         <div class="flash-container flash-error">
-          <p>${data?.data?.error || "Impossibile effettuare il login"}</p>
+          <p>${data?.data?.error || t("Impossibile effettuare l'accesso")}</p>
         </div>`;
     }
   } catch (err) {
-    const message = err?.message || "Impossibile effettuare il login";
+    const message = err?.message || t("Impossibile effettuare l'accesso");
     credPopupBody.innerHTML = `
       <div class="flash-container flash-error">
         <p>${message}</p>
@@ -540,7 +501,7 @@ async function loginContinueCredPopup() {
     credPopupBody.innerHTML = `
     <div class="spinner-wrapper">
       <div class="spinner"></div>
-      <p>Richiesta in corso...</p>
+      <p>${t("Richiesta in corso...")}</p>
     </div>
     `;
 
@@ -557,18 +518,18 @@ async function loginContinueCredPopup() {
       const authorization_response_code = data?.data;
       credPopupBody.innerHTML = `
         <div class="flash-container flash-success">
-          <p>Login concluso con successo!</p>
+          <p>${t("Accesso completato.")}</p>
         </div>
       `;
     }
     else {
       credPopupBody.innerHTML = `
         <div class="flash-container flash-error">
-          <p>${data?.data?.error || "Impossibile effettuare il login"}</p>
+          <p>${data?.data?.error || t("Impossibile effettuare l'accesso")}</p>
         </div>`;
     }
   } catch (err) {
-    const message = err?.message || "Impossibile effettuare il login";
+    const message = err?.message || t("Impossibile effettuare l'accesso");
     credPopupBody.innerHTML = `
       <div class="flash-container flash-error">
         <p>${message}</p>
@@ -580,7 +541,9 @@ function closeCredPopup() {
   if (credPopup) {
     if (!credPopupBody.querySelector('.spinner-wrapper')) {
       credPopup.classList.remove("show");
+      credPopup.setAttribute("aria-hidden", "true");
       lastOpenedButtonId=null
+      if (typeof obtainQueue !== "undefined") obtainQueue = [];
     }
   }
 }
@@ -589,14 +552,14 @@ async function deleteCredential() {
   if (credPopup && lastOpenedButtonId) {
     console.log("Ricevuta richiesa rimozione credenziale, id bottone origine:", lastOpenedButtonId);
 
-    const confirmed = confirm(`Sei sicuro di voler rimuovere la credenziale "${lastOpenedButtonId}"?`);
+    const confirmed = confirm(t("Rimuovere l'attestazione {name}?", { name: lastOpenedButtonId }));
     
     if (confirmed) {
       // Mostra spinner durante la richiesta
       credPopupBody.innerHTML = `
         <div class="spinner-wrapper">
           <div class="spinner"></div>
-          <p>Richiesta in corso...</p>
+          <p>${t("Richiesta in corso...")}</p>
         </div>
       `;
 
@@ -621,65 +584,28 @@ async function deleteCredential() {
               if (wallet_initialized) {
                 result.innerHTML = `
                     <div class="flash-container flash-success">
-                      <p>Credenziale ${tag} rimossa con successo!</p>
+                      <p>${t("Attestazione {name} rimossa.", { name: tag })}</p>
                     </div>`;
               } 
               else {
-                if (addBtn){
-                  // nascondi pulsante aggiungi credenziali
-                  addBtn.style.display = "none";
-                }
-
-                if (rpBtn){
-                  // nascondi pulsante login RP
-                  rpBtn.style.display = "none";
-                }
-
-                if (credentialsBtnDiv){
-                  // nascondi div credenziali
-                  credentialsBtnDiv.style.display = "none";
-                }
-
                 if (trashIcon){
-                  // nascondi icon trash
-                  trashIcon.style.display = "none";
-                }
-
-                if (statesDiv){
-                  // mostra select stato membro
-                  statesDiv.style.display = "block";
-                  if (selectElement && selectElement.tomselect) {
-                    selectElement.tomselect.clear(); // resetta la selezione
-                    // mostra initBtn
-                    if (initBtn){
-                      initBtn.style.display = "inline-flex";
-                      initBtn.disabled = true;
-                    }
-                  }
-
-                  // mostra select stato membro
-                  idpDiv.style.display = "block";
-                }
-
-                if (idpDiv){
-                  // mostra radio button idp
-                  idpDiv.style.display = "block";
+                  trashIcon.hidden = true;
                 }
 
                 result.innerHTML = `
                     <div class="flash-container flash-success">
-                      <p>Credenziale ${tag} rimossa con successo ed effettuato il reset del wallet!</p>
+                      <p>${t("Attestazione {name} rimossa. Il wallet è stato reimpostato.", { name: tag })}</p>
                     </div>`;
               }
             }
             else {
               result.innerHTML = `
                 <div class="flash-container flash-error">
-                  <p>${data?.data?.error || "Fallita l'elaborazione della richiesta"}</p>
+                  <p>${data?.data?.error || t("Non riesco a eliminare l'attestazione.")}</p>
                 </div>`;
             }
           } catch (err) {
-            const message = err?.message || "Fallita l'elaborazione della richiesta";
+            const message = err?.message || t("Non riesco a eliminare l'attestazione.");
             result.innerHTML = `
               <div class="flash-container flash-error">
                 <p>${message}</p>
@@ -693,70 +619,6 @@ async function deleteCredential() {
 }
 
 /**
- * Estrae l'host da una URL.
- * @param {string} url - La URL di partenza.
- * @returns {string|null} L'host se valido, altrimenti null.
- */
-function getHostFromUrl(url) {
-  try {
-    const parsedUrl = new URL(url);
-    return parsedUrl.host;  // include eventuale porta (es. example.com:8080)
-    // Se vuoi solo il dominio senza porta, usa:
-    // return parsedUrl.hostname;
-  } catch (e) {
-    console.error("❌ URL non valida:", e);
-    return null;
-  }
-}
-
-function apriQrPopup() {
-    const popupWidth = 500;
-    const popupHeight = 620;
-    //const left = (window.screen.width - popupWidth) / 2;
-    //const top = (window.screen.height - popupHeight) / 2;
-
-    const redirectUrl = "/static/qr_code_reader.html";
-
-    const popup = window.open(
-      redirectUrl,
-      "walletPopup",
-      `width=${popupWidth},height=${popupHeight},left=40,top=40,resizable=yes,scrollbars=yes`
-    );
-
-    if (!popup || popup.closed || typeof popup.closed === 'undefined') {
-      alert("Popup bloccato! Abilita i popup per questo sito.");
-      return;
-    }
-
-    popup.focus();
-
-    // Aggiungi un event listener temporaneo per click nella pagina principale
-    const closeOnClickOutside = (event) => {
-        if (popup && !popup.closed) {
-            popup.close();
-        }
-
-        document.removeEventListener('click', closeOnClickOutside);
-    };
-
-    // Ritardo per evitare che il click di apertura venga subito intercettato
-    setTimeout(() => {
-        document.addEventListener('click', closeOnClickOutside);
-    }, 500);
-}
-
-function showDegree(degreeId) {
-    const links = document.querySelectorAll(".degree-link");
-    const details = document.querySelectorAll(".degree-details");
-
-    links.forEach(l => l.classList.remove("active"));
-    details.forEach(d => d.style.display = "none");
-
-    document.querySelector(`.degree-link[data-degree='${degreeId}']`).classList.add("active");
-    document.querySelector(`.degree-details[data-degree='${degreeId}']`).style.display = "block";
-}
-
-/**
  * Estrae un messaggio di errore leggibile da una Response fetch.
  * Se il backend risponde con JSON { data: { error, error_description } }
  * lo formatta come stringa. Altrimenti torna il testo grezzo.
@@ -764,7 +626,7 @@ function showDegree(degreeId) {
 async function getErrorMessage(response) {
   try {
     const errorJson = await response.json();
-    const err = errorJson?.data?.error || "Errore generico";
+    const err = errorJson?.data?.error || t("Errore generico");
     const desc = errorJson?.data?.error_description;
     return desc ? `${err} - ${desc}` : err;
   } catch (e) {

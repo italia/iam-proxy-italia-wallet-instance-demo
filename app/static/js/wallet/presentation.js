@@ -59,7 +59,7 @@ function showPresentationResult(success) {
   const messageElement = document.getElementById('presentation-result-message');
   if (!modalElement || !messageElement) return;
 
-  messageElement.textContent = success ? "Login completato con successo." : "Login fallito.";
+  messageElement.textContent = success ? t("Accesso completato.") : t("Accesso non riuscito.");
   messageElement.className = `mt-3 mb-0 ${success ? "text-success" : "text-danger"}`;
   bootstrap.Modal.getOrCreateInstance(modalElement).show();
 }

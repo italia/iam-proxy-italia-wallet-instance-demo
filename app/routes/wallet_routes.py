@@ -1,15 +1,33 @@
+import base64
+import hmac
 import json
 import logging
 from datetime import datetime
 
-import bcrypt
-from flask import Blueprint, current_app, flash, jsonify, redirect, render_template, request, session, url_for
+from urllib.parse import urlparse
 
-from app.constants import APP_SETTINGS_KEY, JWT_PREFIX, MSO_MDOC_PREFIX, SD_JWT_PREFIX
+from flask import Blueprint, current_app, flash, jsonify, redirect, render_template, request, session, url_for
+from flask_babel import gettext as _
+
+from app.constants import (
+    APP_SETTINGS_KEY,
+    JWT_PREFIX,
+    METADATA_TYPE_CREDENTIAL_ISSUER,
+    MSO_MDOC_PREFIX,
+    SD_JWT_PREFIX,
+)
+from app.routes.itwallet_routes import (
+    _catalog_sections,
+    _ensure_member_state,
+    display_index,
+    load_configured_issuers,
+    lookup_attestation,
+)
 from app.service.itwallet_service import ItWalletService
 from app.service.v1.service import Service
 from app.store import app_state
 from app.utils.parsers import parser_credential_format_to_internal
+from app.utils.diagnostic_log import peer_role
 from app.utils.utils import (
     extract_claim,
     generate_nonce,
@@ -130,22 +148,41 @@ def credential_tag(value):
     return val[:3].upper()
 
 
-@wallet_routes.route("/activate", methods=["GET"])
+def safe_next_path(raw: str | None) -> str | None:
+    """Accept only a same-app relative path. Reject external and protocol-relative URLs."""
+    if not raw:
+        return None
+    candidate = raw.strip()
+    if not candidate.startswith("/") or candidate.startswith("//") or "\\" in candidate or "://" in candidate:
+        return None
+    parsed = urlparse(candidate)
+    if parsed.scheme or parsed.netloc:
+        return None
+    if parsed.path in ("/wallet/access", "/wallet/activate"):
+        return None
+    return candidate
+
+
+def redirect_to_login(target: str):
+    from urllib.parse import urlencode
+
+    return redirect(f"{url_for('wallet_routes.wallet_access')}?{urlencode({'next': target})}")
+
+
+@wallet_routes.route("/lang/<lang_code>", methods=["GET"])
+def set_language(lang_code: str):
+    if lang_code not in ("it", "en"):
+        lang_code = "it"
+    session["lang"] = lang_code
+    destination = (request.args.get("next") or "").strip()
+    parsed = urlparse(destination)
+    if destination.startswith("/") and not destination.startswith("//") and not parsed.scheme and not parsed.netloc:
+        return redirect(destination)
+    return redirect(url_for("wallet_routes.wallet_access"))
+
+
+@wallet_routes.route("/activate", methods=["GET", "POST"])
 def show_activation():
-    return render_template("wallet_activation.html")
-
-
-@wallet_routes.route("/activate", methods=["POST"])
-def activate_wallet():
-    pin = request.form.get("pin")
-    confirm = request.form.get("confirm_pin")
-    if pin != confirm or not pin.isdigit() or not (4 <= len(pin) <= 8):
-        flash("PIN non valido o non corrispondente", "error")
-        return redirect(url_for("wallet_routes.show_activation"))
-
-    app_state.stored_hashed_pin = bcrypt.hashpw(pin.encode(), bcrypt.gensalt())  # Hash the PIN and save it to memory
-    flash("Wallet attivato correttamente!", "success")
-
     return redirect(url_for("wallet_routes.wallet_access"))
 
 
@@ -153,11 +190,10 @@ def activate_wallet():
 def wallet_access():
     logger.info("Entering method: wallet_access. Params []")
     if request.method == "POST":
-        if not (pin_attempt := request.form.get("pin_attempt", "")):
-            return render_template("wallet_access.html")
-
-        if app_state.stored_hashed_pin and bcrypt.checkpw(pin_attempt.encode(), app_state.stored_hashed_pin):
-            session["pin_authenticated"] = True
+        password_attempt = request.form.get("password", "")
+        configured = current_app.config[APP_SETTINGS_KEY].app.password
+        if password_attempt and hmac.compare_digest(password_attempt, configured):
+            session["authenticated"] = True
 
             if not request.args.get("session_id"):
                 logger.info("No session_id in request, generating new one.")
@@ -168,54 +204,34 @@ def wallet_access():
                 session["session_id"] = session_id
 
             logger.info(f"session_id: {session_id} authenticated successfully.")
-
-            oauth_authorization_server = extract_claim(current_app.config, "wallet_instance.oauth_authorization_server")
-
-            wallet_initialized = app_state.wallet_initialized
-
-            if oauth_authorization_server and not wallet_initialized:
-                app_state.selected_country = "IT"
-                app_state.selected_idp = None
-                service = ItWalletService(session, external_discovery=True)
-                try:
-                    result = service.initialize_wallet(idp=None, country="IT")
-                    return redirect(result.get("data", {}).get("redirect_url"))
-                except ValueError as ve:
-                    logger.error(f"Error, message: {ve}")
-                    error_message = str(ve)
-                except Exception as e:
-                    logger.error(f"Error, message: {e}")
-                    error_message = "Exception when call discovery page. Contact administrator."
-                flash(error_message, "error")
-            else:
-                return redirect(url_for("wallet_routes.wallet_home", session_id=session_id))
+            destination = safe_next_path(request.form.get("next") or request.args.get("next"))
+            if destination:
+                return redirect(destination)
+            return redirect(url_for("wallet_routes.wallet_home", session_id=session_id))
         else:
-            logger.error("Error: Wrong PIN attempt for wallet access.")
-            flash("PIN errato. Riprova.", "error")
+            logger.error("Error: Wrong password attempt for wallet access.")
+            flash(_("Password non corretta."), "error")
 
-    return render_template("wallet_access.html")
+    return render_template("wallet_access.html", next_path=safe_next_path(request.args.get("next")) or "")
 
 
 @wallet_routes.route("/home", methods=["GET"])
 def wallet_home():
     logger.info(f"Entering method: wallet_home. Params [session_id: {request.args.get('session_id', '')}]")
 
-    if not session.get("pin_authenticated"):
-        return redirect(url_for("wallet_routes.wallet_access"))
+    if not session.get("authenticated"):
+        target = request.path
+        if request.query_string:
+            target = f"{request.path}?{request.query_string.decode()}"
+        return redirect_to_login(target)
 
-    oauth_authorization_server = extract_claim(current_app.config, "wallet_instance.oauth_authorization_server")
-    wallet_initialized = app_state.wallet_initialized
+    _ensure_member_state()
+    catalog_error = load_configured_issuers()
+    attestations = display_index()
 
     session_id = request.args.get("session_id", "")
     init_error_message = request.args.get("init_error_message", "")
     init_success_message = request.args.get("init_success_message", "")
-
-    show_wallet_access = (
-        oauth_authorization_server and not wallet_initialized and not init_error_message and not init_success_message
-    )
-
-    if show_wallet_access:
-        return render_template("wallet_access.html")
 
     if init_error_message:
         flash(init_error_message, "init_error_message")
@@ -230,19 +246,167 @@ def wallet_home():
         "wallet_home.html",
         session_id=session_id,
         selected_country=selected_country,
-        wallet_initialized=wallet_initialized,
+        wallet_initialized=app_state.wallet_initialized,
         credential_keys=credential_keys,
+        catalog_sections=_catalog_sections(),
+        display_index=attestations,
+        catalog_error=catalog_error,
         init_error_message=init_error_message,
         init_success_message=init_success_message,
     )
 
 
+_STATUS_LABELS = {
+    "valid": "Valida",
+    "revoked": "Revocata",
+    "suspended": "Sospesa",
+}
+
+
+def _jwt_cleartext(token) -> dict | None:
+    if not isinstance(token, str):
+        return None
+    compact = token.split("~", 1)[0].strip()
+    parts = compact.split(".")
+    if len(parts) < 3 or not parts[0] or not parts[1]:
+        return None
+
+    def decode(part: str) -> str:
+        raw = base64.urlsafe_b64decode(part + "=" * (-len(part) % 4))
+        try:
+            return json.dumps(json.loads(raw), indent=2, ensure_ascii=False)
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            return raw.decode("utf-8", errors="replace")
+
+    try:
+        return {"header": decode(parts[0]), "payload": decode(parts[1])}
+    except Exception:
+        return None
+
+
+def _held_credential_views() -> list[dict]:
+    views = []
+    store = app_state.credential_store.get_store() or {}
+    index = display_index()
+    for issuer, group in store.items():
+        if not isinstance(group, dict):
+            continue
+        entries = {issuer: group} if "data_row" in group else group
+        for credential_id, entry in entries.items():
+            if not isinstance(entry, dict) or "data_row" not in entry:
+                continue
+            meta = lookup_attestation(str(credential_id), index)
+            status = str(entry.get("status") or "").strip()
+            views.append(
+                {
+                    "issuer": "" if "data_row" in group else issuer,
+                    "id": credential_id,
+                    "name": meta.get("name") or credential_id,
+                    "description": meta.get("description") or "",
+                    "format": meta.get("format") or "",
+                    "claims": meta.get("claims") or [],
+                    "config_id": meta.get("id") or credential_id,
+                    "credential": _jwt_cleartext(entry.get("data_row")),
+                    "status_label": _STATUS_LABELS.get(status.lower(), status or "Non verificata"),
+                    "assertion": _jwt_cleartext(entry.get("status_assertion")),
+                }
+            )
+    return views
+
+
+def _find_held_credential(issuer: str, credential_id: str):
+    store = app_state.credential_store.get_store() or {}
+    group = store.get(issuer)
+    if isinstance(group, dict):
+        if "data_row" in group and credential_id == issuer:
+            return issuer, group
+        entry = group.get(credential_id)
+        if isinstance(entry, dict):
+            return issuer, entry
+    for stored_issuer, stored_group in store.items():
+        if isinstance(stored_group, dict) and isinstance(stored_group.get(credential_id), dict):
+            return stored_issuer, stored_group[credential_id]
+    return None, None
+
+
+def _require_session():
+    if session.get("authenticated"):
+        return None
+    target = request.path
+    if request.query_string:
+        target = f"{request.path}?{request.query_string.decode()}"
+    return redirect_to_login(target)
+
+
+@wallet_routes.route("/credentials", methods=["GET"])
+def wallet_credentials():
+    denied = _require_session()
+    if denied:
+        return denied
+    _ensure_member_state()
+    load_configured_issuers()
+    return render_template("wallet_credentials.html", credentials=_held_credential_views())
+
+
+@wallet_routes.route("/credentials/status", methods=["POST"])
+def credential_status():
+    denied = _require_session()
+    if denied:
+        return denied
+    credential_id = (request.form.get("credential_id") or "").strip()
+    issuer = (request.form.get("issuer") or "").strip()
+    _ensure_member_state()
+    load_configured_issuers()
+    stored_issuer, entry = _find_held_credential(issuer, credential_id)
+    if not entry or not isinstance(entry.get("data_row"), str):
+        flash(_("Attestazione non trovata."), "error")
+        return redirect(url_for("wallet_routes.wallet_credentials"))
+    if "~" not in entry["data_row"] and not entry["data_row"].startswith("eyJ"):
+        flash(_("Lo stato di revoca si può verificare solo per le attestazioni SD-JWT."), "error")
+        return redirect(url_for("wallet_routes.wallet_credentials"))
+    ec = app_state.ec_store.get(stored_issuer)
+    status_url = extract_claim(ec, f"metadata.{METADATA_TYPE_CREDENTIAL_ISSUER}.status_assertion_endpoint") if isinstance(ec, dict) else None
+    jwks = extract_claim(ec, f"metadata.{METADATA_TYPE_CREDENTIAL_ISSUER}.jwks") if isinstance(ec, dict) else None
+    if not status_url or not isinstance(jwks, dict):
+        flash(_("Questo issuer non pubblica l'endpoint di stato."), "error")
+        return redirect(url_for("wallet_routes.wallet_credentials"))
+    peer = peer_role.set("credential_issuer")
+    try:
+        ItWalletService(session)._status_assertion_management(status_url, jwks, credential_id, entry["data_row"])
+        flash(_("Stato di revoca aggiornato."), "success")
+    except Exception as exc:
+        logger.error("❌ %s", sanitize_for_logging(str(exc)))
+        flash(_("Impossibile verificare lo stato di revoca."), "error")
+    finally:
+        peer_role.reset(peer)
+    return redirect(url_for("wallet_routes.wallet_credentials"))
+
+
+@wallet_routes.route("/present", methods=["GET"])
+def wallet_present():
+    denied = _require_session()
+    if denied:
+        return denied
+    return render_template("wallet_present.html")
+
+
+@wallet_routes.route("/diagnostics", methods=["GET"])
+def wallet_diagnostics():
+    denied = _require_session()
+    if denied:
+        return denied
+    return render_template("wallet_diagnostics.html")
+
+
 @wallet_routes.route("/logout", methods=["GET"])
 def logout():
     session_id = session.get("session_id", "")
+    lang = session.get("lang")
     # codeql[py/log-injection]
     logger.info("✅ Effettuato logout (sessione cancellata id=%s).", sanitize_for_logging(session_id))
     session.clear()
+    if lang:
+        session["lang"] = lang
     return redirect(url_for("wallet_routes.wallet_access"))
 
 
@@ -259,71 +423,60 @@ def wallet_callback():
         logger.info("Ricevuta request GET %s senza query string", sanitize_for_logging(current_path))
 
     session["query_params"] = dict(params_list)
-    oauth_authorization_server = extract_claim(current_app.config, "wallet_instance.oauth_authorization_server")
-    wallet_initialized = app_state.wallet_initialized
-
-    if oauth_authorization_server and not wallet_initialized:
-        logger.info("init wallet process")
-        service = ItWalletService(session)
-        init_success_message = ""
-        init_error_message = ""
-        try:
-            service.complete_initialize_wallet()
-            init_success_message = "Wallet inizializzato con successo!"
-        except ValueError as value_error:
-            logger.error(f"Error, message: {value_error}")
-            init_error_message = str(value_error)
-        except Exception as exception:
-            logger.error(f"Error, message: {exception}")
-            init_error_message = "Exception when call discovery page. Contact administrator."
-        session_id = request.args.get("session_id", "")
-        return redirect(
-            url_for(
-                "wallet_routes.wallet_home",
-                session_id=session_id,
-                init_success_message=init_success_message,
-                init_error_message=init_error_message,
-            )
-        )
-
     return render_template("wallet_cb.html")
 
 
 @wallet_routes.route("/v1/search", methods=["POST"])
 def search():
+    search_type = (request.form.get("search_type") or "").strip()
+    search_element = (request.form.get("search_element") or "").strip()
     logger.info(
-        f"Entering method: search. Params [search_type: {request.form.get('search_type')}, search_element: {request.form.get('search_element')}]"
+        f"Entering method: search. Params [search_type: {search_type}, search_element: {search_element}]"
     )
-    result = {}
-    error_message = None
-    success_message = None
+    result = app_state.credential_store.get_store()
+    search_type_error = None
+    search_element_error = None
     status_code = 200
-    try:
-        service = Service(session)
-        result = service.search(request.form.get("search_type"), request.form.get("search_element"))
-    except ValueError as ve:
-        logger.error(f"Error, message: {ve}")
-        error_message = str(ve)
-        credential_store = app_state.credential_store
-        result = credential_store.get_store()
+    allowed_types = {"scope", "credential_issuer", "attribute"}
+    if not search_type:
+        search_type_error = _("Scegli il tipo di ricerca.")
+    elif search_type not in allowed_types:
+        search_type_error = _("Questo tipo di ricerca non è disponibile.")
+    if not search_element:
+        search_element_error = _("Scrivi cosa cercare.")
+    if search_type_error or search_element_error:
         status_code = 400
-    except Exception as e:
-        logger.error(f"Error, message: {e}")
-        error_message = "Si è verificato un errore interno durante la ricerca."
-        status_code = 500
+    else:
+        try:
+            service = Service(session)
+            result = service.search(search_type, search_element)
+        except ValueError as ve:
+            logger.error(f"Error, message: {ve}")
+            search_element_error = _(str(ve))
+            status_code = 400
+        except Exception as e:
+            logger.error(f"Error, message: {e}")
+            search_element_error = _("Si è verificato un errore interno durante la ricerca.")
+            status_code = 500
 
     session_id = request.args.get("session_id", "")
     selected_country = app_state.selected_country
     wallet_initialized = app_state.wallet_initialized
-    credential_keys = result
+    _ensure_member_state()
+    catalog_error = load_configured_issuers()
     return render_template(
         "wallet_home.html",
         session_id=session_id,
         selected_country=selected_country,
         wallet_initialized=wallet_initialized,
-        credential_keys=credential_keys,
-        success_message=success_message,
-        error_message=error_message,
+        credential_keys=result,
+        catalog_sections=_catalog_sections(),
+        display_index=display_index(),
+        catalog_error=catalog_error,
+        search_type=search_type,
+        search_element=search_element,
+        search_type_error=search_type_error,
+        search_element_error=search_element_error,
     ), status_code
 
 
@@ -385,11 +538,6 @@ def credentialTypeTemplate():
     #         for i, pagina in enumerate(content_list, start=1):
     #             logger.debug("Pagina %d:\n%s\n%s", i, sanitize_for_logging(pagina), "-" * 40)
 
-    # template_name = _get_template_name_for_credential_key(key)
-    # if not template_name:
-    #     logger.error("Nessun template configurato per la credenziale con chiave %s", sanitize_for_logging(key))
-    #     return "Nessun template trovato per la credenziale nel wallet", 500
-
     try:
         return render_template(
             "template_detail.html",
@@ -444,36 +592,7 @@ def authorization_phase():
         return jsonify({"success": False, "error_message": f"Exception :{e}."}), 400
 
 
-def _get_template_name_for_credential_key(key: str) -> str | None:
-    """
-    Resolve a trusted credential store key to a whitelisted template name.
-    Prevents XSS/template injection by using only config-validated names.
-    Template names follow the pattern: config_id or config_id + "-credid".
-    """
-    wallet_credential_supported = extract_claim(
-        current_app.config, "metadata.credential_flow.credential_configurations_supported"
-    )
-    if not wallet_credential_supported:
-        return None
-    supported_list = list(wallet_credential_supported)
-
-    id_credential = extract_claim(current_app.config, "metadata.initialize_flow.credential_configuration_id")
-    if id_credential:
-        supported_list.append(id_credential)
-
-    key_lower = key.lower()
-    # Find the config id that matches the key (longest prefix match first)
-    for config_id in sorted(supported_list, key=len, reverse=True):
-        if not key_lower.startswith(config_id.lower()):
-            continue
-        # Try config_id + "-credid" first (common template pattern), then config_id
-        for candidate in (config_id + "-credid", config_id):
-            if all(c.isalnum() or c in "_-" for c in candidate):
-                return candidate
-    return None
-
-
 def _clear_session():
-    preserved = {"session_id": session.get("session_id"), "pin_authenticated": session.get("pin_authenticated")}
+    preserved = {"session_id": session.get("session_id"), "authenticated": session.get("authenticated")}
     session.clear()
     session.update({k: v for k, v in preserved.items() if v is not None})

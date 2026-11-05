@@ -70,7 +70,7 @@ def get_trust_root_and_eaa_provider_ec(
     trust_root_url = extract_claim(current_app.config, f"ms_trust_configuration.{country}.trust_root")
 
     if not trust_root_url:
-        raise ValueError(f"Nessun Trust root per il paese {country}")
+        raise ValueError("Non è configurato il trust anchor della demo, quindi non posso chiedere l'attestazione.")
     query = (
         f"metadata.{METADATA_TYPE_CREDENTIAL_ISSUER}.credential_configurations_supported.{credential_configuration_id}"
     )
@@ -79,7 +79,7 @@ def get_trust_root_and_eaa_provider_ec(
 
     if not ec_list:
         raise ValueError(
-            f"Nessun {METADATA_TYPE_CREDENTIAL_ISSUER} trovato che supporti credenziali di tipo {credential_configuration_id}"
+            "Nessun issuer configurato rilascia l'attestazione selezionata. Ricarica la pagina e riprova."
         )
 
     ec = ec_list[0]

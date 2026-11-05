@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="{{ current_lang }}" class="it-wallet-html">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <title>{% block title %}{{ _('Wallet demo') }}{% endblock %}</title>
+  <link rel="icon" href="{{ url_for('static', filename='img/IT-Wallet-Symbol-Primary-BlueItalia.svg') }}" type="image/svg+xml">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap-italia.min.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/shell.css') }}">
+  {% block head %}{% endblock %}
+</head>
+<body class="it-wallet-body">
+  <nav class="it-skip-links" aria-label="{{ _('Collegamenti di salto') }}">
+    <a class="visually-hidden-focusable" href="#main-content">{{ _('Vai al contenuto principale') }}</a>
+    <a class="visually-hidden-focusable" href="#page-footer">{{ _('Vai al piè di pagina') }}</a>
+  </nav>
+  {% include "partials/header.html" %}
+  {% include "partials/sections.html" %}
+  <main id="main-content" class="container my-4 it-wallet-page" aria-labelledby="page-title">
+    {% block content %}{% endblock %}
+  </main>
+  {% include "partials/footer.html" %}
+  <script>
+    window.WALLET_I18N = {{ i18n_catalog|tojson }};
+    function t(message, vars) {
+      var catalog = window.WALLET_I18N || {};
+      var text = Object.prototype.hasOwnProperty.call(catalog, message) ? catalog[message] : message;
+      if (vars) {
+        Object.keys(vars).forEach(function (key) {
+          text = text.replaceAll("{" + key + "}", vars[key]);
+        });
+      }
+      return text;
+    }
+  </script>
+  <script src="{{ url_for('static', filename='js/bootstrap-italia.bundle.min.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/wallet/header-lang.js') }}"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

@@ -18,6 +18,7 @@ class LogSetting(BaseModel):
 
 class AppSettings(BaseModel):
     secret_key: str
+    password: str
     logging: LogSetting
     host: str
     port: int
@@ -34,3 +35,4 @@ class AppConfig(BaseModel):
     wallet_instance: dict
     ms_trust_configuration: dict
     metadata: dict
+    credential_issuers: str = ""

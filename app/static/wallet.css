@@ -21,47 +21,6 @@ pre {
   margin: 0;
 }
 
-/*
-.container {
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 4px 15px rgb(0 0 0 / 0.1);
-  padding: 30px 40px;
-  max-width: 480px;
-  width: 90%;
-}
-*/
-
-header {
-  text-align: center;
-  margin-bottom: 25px;
-}
-
-header img {
-  height: 68px;
-  margin-bottom: 15px;
-}
-
-header h1 {
-  font-size: 1.5rem;   /* riduci a 1.5 rem, puoi provare anche 1.2rem o 1.4rem */
-  white-space: nowrap; /* evita che vada a capo */
-  overflow: hidden;    /* nasconde eventuale testo che esce dal contenitore */
-  text-overflow: ellipsis; /* opzionale: aggiunge "..." se il testo è troppo lungo */
-  margin-top: 10px; /* o 5px, o 0px se vuoi attaccarlo */
-  text-align: center;
-}
-
-main {
-  text-align: justify;
-}
-
-main p {
-  font-size: 1rem;
-  margin-bottom: 25px;
-  line-height: 1.4;
-  color: #3b4750;
-}
-
 #idp p {
   font-weight: 500;
   margin-bottom: 6px; /* riduci lo spazio sotto al <p> */
@@ -81,8 +40,6 @@ main p {
 
 #states {
   display: block;
-  margin: 0 auto 20px; /* margine sopra e sotto, centrato orizzontalmente */
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   width: 100%;
 }
 
@@ -409,84 +366,6 @@ main p {
   cursor: pointer;
   opacity: 0.3;
 }
-
-/* Popup Trash */
-
-.trash-icon {
-  width: auto;
-  height: 24px;
-  cursor: pointer;
-  opacity: 0.3;
-}
-
-/* Popup piccolo sotto il cestino */
-#trash-popup {
-  position: absolute;
-  z-index: 1000;
-  width: 260px;
-  min-height: 60px;
-  padding: 12px;
-  background: #fff;
-  border: 1px solid #ccc;
-  border-radius: 10px;
-  box-shadow: 0 4px 12px rgb(0 0 0 / 0.2);
-  font-size: 1em;
-  display: none;
-}
-
-#trash-popup.popup-visible {
-  display: block;
-}
-
-.trash-popup-content {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  align-items: center;
-  background-color: #e0edf9f7;
-  padding: 10px;
-}
-
-.trash-popup-content p {
-  font-size: 1rem;
-  font-weight: 500;
-  margin: 0;
-}
-
-.trash-popup-buttons {
-  display: flex;
-  justify-content: center; /* centra orizzontalmente */
-  gap: 10px; /* spazio tra i bottoni */
-  margin-top: 10px; /* opzionale, spazio sopra i bottoni */
-}
-
-.trash-popup-btn {
-  padding: 6px 12px;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: bold;
-  width: 100px;
-}
-
-#trash-popup-confirm-btn {
-  background-color: #d93025;
-}
-
-#trash-popup-confirm-btn:hover {
-  background-color: #c62828;
-}
-
-/* Bottone "Annulla" → grigio */
-#trash-popup-cancel-btn {
-  background-color: #666;
-}
-
-#trash-popup-cancel-btn:hover {
-  background-color: #555;
-}
-
 
 /* Flash messages */
 
@@ -826,171 +705,6 @@ main p {
   margin: 0;
 }
 
-.custom-select-wrapper .custom-select {
-  position: relative;
-  width: 100%;
-  cursor: pointer;
-}
-
-/* custom-select-wrapper */
-
-#qr-icon {
-  width: auto;
-  height: 30px;
-  cursor: pointer;
-  vertical-align: middle;
-}
-
-.custom-select-wrapper .custom-select .selected {
-  padding: 12px 16px;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  background: #fdfdfd;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 1.2em;
-  font-weight: 500;
-  width: 100%;
-  box-sizing: border-box;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  min-height: 48px;
-  position: relative;
-}
-
-.custom-select-wrapper {
-  font-family: "Segoe UI", sans-serif;
-  color: #333;
-  max-width: 100%;
-  margin-top: 30px;
-}
-
-.custom-select-wrapper .textarea-wrapper {
-  margin-top: 20px;
-}
-
-
-
-.custom-select-wrapper .textarea-wrapper textarea {
-  width: 100%;
-  min-height: 80px;
-  padding: 5px 6px;
-  font-size: 14px;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  resize: vertical; /* permette il ridimensionamento verticale */
-  font-family: inherit;
-  box-sizing: border-box;
-  transition: border-color 0.3s ease;
-}
-
-.custom-select-wrapper .textarea-wrapper textarea:focus {
-  outline: none;
-  border-color: #007bff;
-  box-shadow: 0 0 0 2px rgb(0 123 255 / 0.15);
-}
-
-
-.custom-select-wrapper .custom-select .selected::after {
-  content: "▼";
-  font-size: 1em;
-  color: #888;
-  margin-left: 12px;
-  flex-shrink: 0;
-}
-
-.custom-select-wrapper .custom-select.open .select-options {
-  display: block;
-}
-
-.custom-select-wrapper .select-options {
-  display: none;
-  position: absolute;
-  top: 100%;
-  left: 0;
-  width: 100%;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  background: white;
-  z-index: 10;
-  max-height: 230px;
-  overflow-y: auto;
-  box-shadow: 0 4px 10px rgb(0 0 0 / 0.1);
-  margin-top: 4px;
-  padding: 4px 0;
-  box-sizing: border-box;
-}
-
-.custom-select-wrapper .select-options li {
-  padding: 10px 16px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 1.2em;
-  transition: background 0.2s ease;
-  cursor: pointer;
-}
-
-.custom-select-wrapper .select-options li:hover {
-  background-color: #f0f8ff;
-}
-
-.custom-select-wrapper .select-options .icon {
-  font-size: 1.3em;
-  flex-shrink: 0;
-  width: 1.4em;
-  text-align: center;
-}
-
-
-.button-continue {
-  margin-top: 20px;
-  padding: 10px 16px;
-  border: none;
-  border-radius: 8px;
-  background-color: #0049a8;
-  color: white;
-  font-size: 1.3em;
-  cursor: pointer;
-  transition: background-color 0.3s ease;
-  display: inline-block;
-}
-
-.button-continue:disabled {
-  opacity: 0.9;
-  background-color: #ccc;
-  pointer-events: none;
-}
-
-.button-continue:hover:not(:disabled) {
-  background-color: #0000a8;
-}
-
-.button-cancel {
-  margin-top: 20px;
-  padding: 10px 16px;
-  border: none;
-  border-radius: 8px;
-  background-color: #0049a8;
-  color: white;
-  font-size: 1.3em;
-  cursor: pointer;
-  transition: background-color 0.3s ease;
-  display: inline-block;
-}
-
-.button-cancel:disabled {
-  opacity: 0.9;
-  background-color: #ccc;
-  pointer-events: none;
-}
-
-.button-cancel:hover:not(:disabled) {
-  background-color: #0000a8;
-}
-
 .button-wrapper {
   display: flex;
   justify-content: center;
@@ -1066,23 +780,6 @@ main p {
 }
 
 .cred-popup-close-btn:hover {
-  color: #0078d4;
-}
-
-/* Trash button icon */
-.cred-popup-trash-btn {
-  position: absolute;
-  top: 15px;
-  right: 50px;
-  background: transparent;
-  border: none;
-  font-size: 1.2rem;
-  cursor: pointer;
-  color: #333;
-  transition: color 0.3s ease;
-}
-
-.cred-popup-trash-btn:hover {
   color: #0078d4;
 }
 
@@ -1305,6 +1002,18 @@ input.form-check-input:focus-visible {
 }
 
 /* Responsive */
+
+#cred-popup {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 1050;
+  background: rgb(0 0 0 / 0.4);
+}
+
+#cred-popup.show {
+  display: flex;
+}
 
 @media (width <= 480px) {
   header h1 {

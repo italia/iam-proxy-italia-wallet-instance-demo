@@ -175,12 +175,12 @@ my-wallet:1.0.0     latest    abc123def456   250MB
 
 2️⃣ Open your browser at: https://localhost:8080/
 
-3️⃣ You will be presented with a welcome screen where you will be asked to create a PIN for future logins.
+3️⃣ Enter the demo password (`WALLET_INSTANCE_PASSWORD`).
 
 
 ### 6.1 Use Case: PID Issuance flow (Wallet initiated)
 
-1. In the Wallet home page that appears, select your EU State, choose an identification method (one of *CIE Level 3*, *CIE Level 2*, *SPID Level 2*) and tap "Inizializza" button.
+1. In the Wallet home page, select an attestation from the configured issuer catalog and tap "Ottieni", then "Continua".
 2. The Wallet Instance discovers the trusted PID Provider using the Federation Services of the Trust Annchor, establishing the trust to the PID Provider according to the Trust Model and obtaining its metadata that discloses the formats of the PID, the algorithms supported, and any other parameter required for interoperability needs.
 3.  Using the Authorization Code Flow defined in [OpenID4VCI](https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html), the Wallet Instance requests the PID to the PID Provider.
 4. The PID Provider checks the authenticity and validity of the Wallet Instance, establishing the trust to the Wallet Provider and obtaining Wallet metadata with the parameters required for interoperability needs, according to the Trust Model.
@@ -193,7 +193,7 @@ my-wallet:1.0.0     latest    abc123def456   250MB
 ### 6.2 Use Case: EAA Issuance flow (Wallet initiated)
 
 1. The Wallet Instance obtains the list of the trusted Credential Providers using the Federation Services of the Trust Anchor, then inspects the metadata looking for the Digital Credential capabilities of each Provider.
-2. On the Wallet home page, tap "Aggiungi" button, select a Digital Credential type from the popup that appears, and then tap "Conferma" button.
+2. On the Wallet home page, load the credential issuer catalog, select a Digital Credential and tap "Ottieni", then "Continua".
 3. Using the Authorization Code Flow defined in [OpenID4VCI](https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html), the Wallet Instance requests the selected Digital Credential to the right Provider.
 4. The Credential Provider checks the authenticity and validity of the Wallet Instance, establishing the trust to the Wallet Provider and obtaining Wallet metadata with the parameters required for interoperability needs, according to the Trust Model.
 5. The Credential Provider, acting as a Relying Party Instance, authenticates the User evaluating the presentation of the PID.
@@ -204,10 +204,9 @@ my-wallet:1.0.0     latest    abc123def456   250MB
 
 ### 6.3 Use Case: Presentation Remote flow
 
-1. On the Wallet home page, tap 'Relying Party' button and wait for the Wallet Instance to obtain the list of trusted Relying Parties using the Trust Anchor's Federation Services.
-2. Select a Relying Party from the popup that appears.
-3. In another browser tab, navigate to the homepage of the selected Relying Party... 
-4. TO-DO
+1. On the Wallet home page, tap "Presenta" and scan the verifier QR code.
+2. In another browser tab, navigate to the homepage of the selected Relying Party... 
+3. TO-DO
 
 <br/>
 

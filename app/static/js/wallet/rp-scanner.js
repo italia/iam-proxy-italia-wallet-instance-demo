@@ -1,14 +1,3 @@
-
-if (rpBtn && !rpBtn.hasAddHandler) {
-  rpBtn.addEventListener("click", async (e) => {
-    e.preventDefault();
-    if (result) result.innerHTML = ``;
-    credPopup.classList.add("show");
-    credPopupTitle.innerHTML = "Relying Party";
-  });
-  rpBtn.hasAddHandler = true;
-}
-
 let qrStream = null;
 let qrAnimationId = null;
 let isQrScanning = false;
@@ -38,7 +27,7 @@ async function startQrScanner() {
   const canvas = canvasElement.getContext("2d", { willReadFrequently: true });
 
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    alert("Fotocamera non supportata o contesto non sicuro (richiede HTTPS o localhost).");
+    alert(t("La fotocamera non è disponibile. Serve HTTPS oppure localhost."));
     stopQrScanner();
     return;
   }
@@ -52,7 +41,7 @@ async function startQrScanner() {
     qrAnimationId = requestAnimationFrame(tick);
   } catch (err) {
     console.error("Impossibile accedere alla fotocamera:", err);
-    alert("Errore di accesso alla fotocamera. Verifica i permessi.");
+    alert(t("Non riesco a usare la fotocamera. Controlla i permessi."));
     stopQrScanner();
   }
 
@@ -105,7 +94,7 @@ function handleQrFileUpload(event) {
         console.log("QR Code rilevato da file:", code.data);
         await processQrPresentation(code.data);
       } else {
-        alert("Impossibile trovare un QR Code valido in questa immagine. Riprova con un'immagine più nitida.");
+        alert(t("Non trovo un QR valido in questa immagine. Riprova con un'immagine più nitida."));
       }
 
       event.target.value = "";
@@ -130,6 +119,6 @@ async function processQrPresentation(qrData) {
 
   } catch (err) {
     console.error("Errore durante la presentazione del wallet:", err);
-    alert("Errore nell'invio dei dati al backend: " + err.message);
+    alert(t("Non riesco a inviare i dati:") + " " + err.message);
   }
 }
