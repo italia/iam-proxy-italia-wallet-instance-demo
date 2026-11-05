@@ -658,6 +658,9 @@ msgstr "Attestation not found."
 msgid "Lo stato di revoca si può verificare solo per le attestazioni SD-JWT."
 msgstr "Revocation status can be checked only for SD-JWT attestations."
 
+msgid "Questa attestazione non contiene una status list."
+msgstr "This attestation does not contain a status list."
+
 msgid "Questo issuer non pubblica l'endpoint di stato."
 msgstr "This issuer does not publish a status endpoint."
 

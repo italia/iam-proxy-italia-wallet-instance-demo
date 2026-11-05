@@ -2,8 +2,8 @@ import base64
 import hmac
 import json
 import logging
+import zlib
 from datetime import date, datetime
-
 from urllib.parse import urlparse
 
 import cbor2
@@ -28,8 +28,10 @@ from app.routes.itwallet_routes import (
 from app.service.itwallet_service import ItWalletService
 from app.service.v1.service import Service
 from app.store import app_state
-from app.utils.parsers import parser_credential_format_to_internal
 from app.utils.diagnostic_log import peer_role
+from app.utils.itwalletUtils import request_status_list
+from app.utils.jwtUtils import decode_and_verify_jwt
+from app.utils.parsers import parser_credential_format_to_internal
 from app.utils.utils import (
     extract_claim,
     generate_nonce,
@@ -263,6 +265,7 @@ _STATUS_LABELS = {
     "revoked": "Revocata",
     "suspended": "Sospesa",
 }
+_STATUS_LIST_CODES = {0: "valid", 1: "revoked", 2: "suspended"}
 
 
 _SD_JWT_FORMATS = {"dc+sd-jwt", "vc+sd-jwt"}
@@ -447,6 +450,35 @@ def wallet_credentials():
     return render_template("wallet_credentials.html", credentials=_held_credential_views())
 
 
+def _status_list_ref(token: str) -> tuple[str, int] | None:
+    compact = token.split("~", 1)[0]
+    parts = compact.split(".")
+    if len(parts) < 2 or not parts[1]:
+        return None
+    payload = _jwt_part_json(parts[1])
+    status = payload.get("status") if isinstance(payload, dict) else None
+    listed = status.get("status_list") if isinstance(status, dict) else None
+    if not isinstance(listed, dict) or not isinstance(listed.get("uri"), str):
+        return None
+    try:
+        index = int(listed.get("idx"))
+    except (TypeError, ValueError):
+        return None
+    return listed["uri"], index
+
+
+def _status_list_code(lst: str, bits: int, index: int) -> int:
+    if bits not in (1, 2, 4, 8) or index < 0:
+        raise ValueError("Indice di status list non valido")
+    padded = lst + "=" * (-len(lst) % 4)
+    raw = zlib.decompress(base64.urlsafe_b64decode(padded))
+    total = (len(raw) * 8) // bits
+    if index >= total:
+        raise ValueError("Indice di status list fuori dall'elenco")
+    jump = bits * index
+    return (raw[jump // 8] >> (jump % 8)) & ((1 << bits) - 1)
+
+
 @wallet_routes.route("/credentials/status", methods=["POST"])
 def credential_status():
     denied = _require_session()
@@ -460,18 +492,32 @@ def credential_status():
     if not entry or not isinstance(entry.get("data_row"), str):
         flash(_("Attestazione non trovata."), "error")
         return redirect(url_for("wallet_routes.wallet_credentials"))
-    if "~" not in entry["data_row"] and not entry["data_row"].startswith("eyJ"):
-        flash(_("Lo stato di revoca si può verificare solo per le attestazioni SD-JWT."), "error")
+    listed = _status_list_ref(entry["data_row"])
+    if not listed:
+        flash(_("Questa attestazione non contiene una status list."), "error")
         return redirect(url_for("wallet_routes.wallet_credentials"))
+    status_uri, status_idx = listed
     ec = app_state.ec_store.get(stored_issuer)
-    status_url = extract_claim(ec, f"metadata.{METADATA_TYPE_CREDENTIAL_ISSUER}.status_assertion_endpoint") if isinstance(ec, dict) else None
     jwks = extract_claim(ec, f"metadata.{METADATA_TYPE_CREDENTIAL_ISSUER}.jwks") if isinstance(ec, dict) else None
-    if not status_url or not isinstance(jwks, dict):
+    if not isinstance(jwks, dict):
         flash(_("Questo issuer non pubblica l'endpoint di stato."), "error")
         return redirect(url_for("wallet_routes.wallet_credentials"))
+    service = ItWalletService(session)
     peer = peer_role.set("credential_issuer")
     try:
-        ItWalletService(session)._status_assertion_management(status_url, jwks, credential_id, entry["data_row"])
+        token = request_status_list(
+            status_uri, proxies=service.proxies, no_proxy_domains=service.no_proxy_domains
+        )
+        claims = decode_and_verify_jwt(token, jwks)
+        if claims.get("sub") != status_uri:
+            raise ValueError("Il subject della status list non coincide con l'URI dell'attestazione")
+        status_list = claims.get("status_list") if isinstance(claims, dict) else None
+        if not isinstance(status_list, dict) or not isinstance(status_list.get("lst"), str):
+            raise ValueError("La status list non contiene l'elenco degli stati")
+        code = _status_list_code(status_list["lst"], int(status_list.get("bits") or 1), status_idx)
+        app_state.credential_store.update_status(
+            credential_id, token, _STATUS_LIST_CODES.get(code, str(code))
+        )
         flash(_("Stato di revoca aggiornato."), "success")
     except Exception as exc:
         logger.error("❌ %s", sanitize_for_logging(str(exc)))

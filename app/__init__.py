@@ -9,12 +9,12 @@ from flask import Flask, g, has_app_context, request, session
 from flask_babel import Babel
 
 from app.constants import APP_SETTINGS_KEY, CHROME_DEVTOOLS_PATH, CONFIG_DIR, CORRELATION_ID_FALLBACK
+from app.i18n import get_locale, js_catalog
 from app.models import AppConfig
 from app.routes.itwallet_routes import lookup_attestation, wallet_api_bp
 from app.routes.main_routes import main_routes
 from app.routes.wallet_provider import provider_bp
 from app.routes.wallet_routes import redirect_to_login, wallet_routes
-from app.i18n import get_locale, js_catalog
 from app.utils.utils import remove_str_prefix, sanitize_for_logging
 from app.version import PASSWORD_CONFIG_URL, PROJECT_URL, __version__
 

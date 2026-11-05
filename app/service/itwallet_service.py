@@ -34,8 +34,6 @@ from bs4 import BeautifulSoup
 from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePrivateKey, EllipticCurvePublicKey
 from flask import current_app
 from flask_babel import gettext
-
-from app.utils.diagnostic_log import diagnostic_peer
 from jwcrypto.common import base64url_decode
 from pyeudiw.jwt.exceptions import LifetimeException
 from pyeudiw.jwt.jws_helper import JWSHelper
@@ -80,6 +78,7 @@ from app.service.itwallet_helpers import (
 )
 from app.store import app_state
 from app.utils.cborUtils import decode_and_verify_issuer_signed
+from app.utils.diagnostic_log import diagnostic_peer
 from app.utils.http_utils import _parse_json_response, http_request_with_retry
 from app.utils.itwalletUtils import (
     generate_dpop_jwt,

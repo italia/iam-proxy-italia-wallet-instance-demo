@@ -440,6 +440,28 @@ def request_presentation_callback(
     )
 
 
+def request_status_list(
+    url: str,
+    max_retries: int = 3,
+    retry_delay: float = 1.0,
+    proxies: dict = None,
+    no_proxy_domains: list[str] = None,
+) -> str:
+    """GET the Status List Token at the URI carried by the credential."""
+    headers = {"Accept": "application/statuslist+jwt"}
+    logger.info(">>>> Invio GET a %s", sanitize_for_logging(url))
+    return http_request_with_retry(
+        "GET",
+        url,
+        headers=headers,
+        max_retries=max_retries,
+        retry_delay=retry_delay,
+        proxies=proxies,
+        no_proxy_domains=no_proxy_domains,
+        parse_response=_parse_jwt_response("application/statuslist+jwt"),
+    )
+
+
 def request_status(
     url: str,
     status_assertion_requests: list[str],
