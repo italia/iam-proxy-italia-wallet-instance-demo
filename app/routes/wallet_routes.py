@@ -487,6 +487,26 @@ def credential_status():
     return redirect(url_for("wallet_routes.wallet_credentials"))
 
 
+@wallet_routes.route("/credentials/delete", methods=["POST"])
+def credential_delete():
+    denied = _require_session()
+    if denied:
+        return denied
+    credential_id = (request.form.get("credential_id") or "").strip()
+    issuer = (request.form.get("issuer") or "").strip()
+    _ensure_member_state()
+    load_configured_issuers()
+    stored_issuer, entry = _find_held_credential(issuer, credential_id)
+    if not entry:
+        flash(_("Attestazione non trovata."), "error")
+        return redirect(url_for("wallet_routes.wallet_credentials"))
+    if not app_state.credential_store.remove_held(stored_issuer or issuer, credential_id):
+        flash(_("Impossibile rimuovere l'attestazione."), "error")
+        return redirect(url_for("wallet_routes.wallet_credentials"))
+    flash(_("Attestazione rimossa."), "success")
+    return redirect(url_for("wallet_routes.wallet_credentials"))
+
+
 @wallet_routes.route("/present", methods=["GET"])
 def wallet_present():
     denied = _require_session()

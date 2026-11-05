@@ -805,6 +805,30 @@ html.it-wallet-html body.it-wallet-body {
   margin-top: 1.5rem;
 }
 
+.credential-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.credential-actions form {
+  margin: 0;
+}
+
+.credential-actions .credential-remove {
+  background-color: #d9364f;
+  border-color: #d9364f;
+  color: #fff;
+}
+
+.credential-actions .credential-remove:hover,
+.credential-actions .credential-remove:focus {
+  background-color: #b02a37;
+  border-color: #b02a37;
+  color: #fff;
+}
+
 @media (max-width: 900px) {
   .it-wallet-page.container {
     padding-left: 8px !important;

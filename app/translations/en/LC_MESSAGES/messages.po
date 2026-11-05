@@ -634,6 +634,18 @@ msgstr "Suspended"
 msgid "Verifica revoca"
 msgstr "Check revocation"
 
+msgid "Rimuovi"
+msgstr "Remove"
+
+msgid "Rimuovere questa attestazione?"
+msgstr "Remove this attestation?"
+
+msgid "Attestazione rimossa."
+msgstr "Attestation removed."
+
+msgid "Impossibile rimuovere l'attestazione."
+msgstr "The attestation could not be removed."
+
 msgid "Questa attestazione non è un JWT."
 msgstr "This attestation is not a JWT."
 

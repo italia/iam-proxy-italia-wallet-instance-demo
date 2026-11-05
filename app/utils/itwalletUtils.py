@@ -627,7 +627,7 @@ def generate_request_object_jwt(
 
     # Crea header JWT
 
-    headers = {"typ": "jwt", "alg": alg, "kid": kid}
+    headers = {"typ": "oauth-authz-req+jwt", "alg": alg, "kid": kid}
 
     # Serializza la chiave privata per firmare con PyJWT
     private_pem = issuer_private_key.private_bytes(
@@ -728,7 +728,7 @@ def generate_par_request_object_jwt(
         "jti": str(uuid.uuid4()),
     }
 
-    headers = {"typ": "jwt", "alg": alg, "kid": kid}
+    headers = {"typ": "oauth-authz-req+jwt", "alg": alg, "kid": kid}
 
     private_pem = issuer_private_key.private_bytes(
         encoding=serialization.Encoding.PEM,

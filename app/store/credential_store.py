@@ -131,6 +131,26 @@ class CredentialStore:
         if key in self._store:
             del self._store[key]
 
+    def remove_held(self, issuer: str, credential_id: str) -> bool:
+        """Remove one held credential, including those stored under an issuer."""
+        group = self._store.get(issuer)
+        if isinstance(group, dict):
+            if "data_row" in group and credential_id == issuer:
+                del self._store[issuer]
+                return True
+            if isinstance(group.get(credential_id), dict):
+                del group[credential_id]
+                if not group:
+                    del self._store[issuer]
+                return True
+        for stored_issuer, stored_group in list(self._store.items()):
+            if isinstance(stored_group, dict) and isinstance(stored_group.get(credential_id), dict):
+                del stored_group[credential_id]
+                if not stored_group:
+                    del self._store[stored_issuer]
+                return True
+        return False
+
     def exists(self, key) -> bool:
         """Verifica se una credenziale è presente."""
         return key in self._store
