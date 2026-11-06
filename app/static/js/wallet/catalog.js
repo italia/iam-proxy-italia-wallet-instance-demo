@@ -643,7 +643,6 @@ document.getElementById("issuer-catalog-form")?.addEventListener("submit", async
     else setIssuerUrlError(message);
     return;
   }
-  if (input) input.value = "";
   upsertCatalogSection(data.data);
 });
 

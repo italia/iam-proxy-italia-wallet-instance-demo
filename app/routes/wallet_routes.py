@@ -276,7 +276,6 @@ _STATUS_LIST_CODES = {0: "valid", 1: "revoked", 2: "suspended"}
 
 _SD_JWT_FORMATS = {"dc+sd-jwt", "vc+sd-jwt"}
 _MDOC_FORMATS = {"mso_mdoc"}
-_COSE_ALGS = {-7: "ES256", -35: "ES384", -36: "ES512", -8: "EdDSA", -257: "RS256"}
 
 
 def _b64url(value: str) -> bytes:
@@ -359,18 +358,54 @@ def _cose_key(key):
     return str(key) if isinstance(key, int) else key
 
 
+def _cbor_diag_items(value):
+    if isinstance(value, dict):
+        return "{" + ", ".join(f"{_cbor_diag(key)}: {_cbor_diag(item)}" for key, item in value.items()) + "}"
+    return "[" + ", ".join(_cbor_diag(item) for item in value) + "]"
+
+
+def _cbor_diag(value) -> str:
+    if isinstance(value, cbor2.CBORTag):
+        return f"{value.tag}({_cbor_diag(value.value)})"
+    if isinstance(value, (dict, list, tuple)):
+        return _cbor_diag_items(value)
+    if isinstance(value, (bytes, bytearray)):
+        return "h'" + value.hex() + "'"
+    if isinstance(value, str):
+        return json.dumps(value, ensure_ascii=False)
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if value is None:
+        return "null"
+    if isinstance(value, (datetime, date)):
+        return json.dumps(value.isoformat(), ensure_ascii=False)
+    if isinstance(value, int):
+        return str(value)
+    return json.dumps(value, ensure_ascii=False, default=str)
+
+
+def _decoded_cbor(value):
+    if not isinstance(value, (bytes, bytearray)) or not value:
+        return value
+    try:
+        return cbor2.loads(value)
+    except Exception:
+        return value
+
+
+def _cose_headers_text(protected, unprotected) -> str:
+    unprotected_map = {} if unprotected is None else unprotected
+    return _cbor_diag(_decoded_cbor(protected)) + "\n" + _cbor_diag(unprotected_map)
+
+
 def _cose_sign1(value):
     if isinstance(value, cbor2.CBORTag):
         value = value.value
     if not isinstance(value, (list, tuple)) or len(value) < 3:
         return None
-    protected, _unprotected, payload = value[0], value[1], value[2]
-    header = cbor2.loads(protected) if isinstance(protected, (bytes, bytearray)) else protected
-    if isinstance(header, dict) and header.get(1) in _COSE_ALGS:
-        header = dict(header)
-        header[1] = _COSE_ALGS[header[1]]
+    protected, unprotected, payload = value[0], value[1], value[2]
     body = cbor2.loads(payload) if isinstance(payload, (bytes, bytearray)) else payload
-    return {"header": _json_text(_jsonable(header)), "payload": _json_text(_jsonable(body))}
+    return {"header": _cose_headers_text(protected, unprotected), "payload": _json_text(_jsonable(body))}
 
 
 def _mdoc_cleartext(token: str) -> dict | None:
