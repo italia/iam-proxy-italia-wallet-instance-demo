@@ -1,8 +1,10 @@
+import io
 import json
 import logging
-from urllib.parse import urlparse
+from urllib.parse import quote, urlparse
 
-from flask import Blueprint, current_app, g, jsonify, request, session, url_for
+import pyqrcode
+from flask import Blueprint, Response, current_app, g, jsonify, request, session, url_for
 from flask_babel import gettext as _
 
 from app.constants import (
@@ -15,6 +17,7 @@ from app.i18n import get_locale
 from app.service.itwallet_service import ItWalletService
 from app.store import app_state
 from app.utils.diagnostic_log import list_entries, peer_role, remove_entries
+from app.utils.http_utils import http_request_with_retry
 from app.utils.utils import (
     estrai_parametro_query_string,
     guess_credential_configuration_icon,
@@ -24,6 +27,11 @@ from app.utils.utils import (
 logger = logging.getLogger(__name__)
 
 wallet_api_bp = Blueprint("wallet_api_bp", __name__, url_prefix="/itwallet")
+
+_DISCOVERY_DIRECT = "openid"
+_DISCOVERY_FEDERATION = "openid-federation"
+_DISCOVERY_LOTL = "eudiw-lotl"
+_DIRECT_WELL_KNOWN = "/.well-known/openid-credential-issuer"
 
 
 def _with_credential_view_url(result: dict) -> dict:
@@ -83,6 +91,18 @@ def _ensure_member_state() -> None:
     trust = current_app.config.get("ms_trust_configuration") or {}
     if isinstance(trust, dict) and trust:
         app_state.selected_country = next(iter(trust))
+
+
+def configured_trust_anchor() -> str:
+    trust = current_app.config.get("ms_trust_configuration") or {}
+    italy = trust.get("IT") if isinstance(trust, dict) else None
+    if not isinstance(italy, dict):
+        return ""
+    return str(italy.get("trust_root") or "").strip()
+
+
+def configured_eudiw_lotl() -> str:
+    return str(current_app.config[APP_SETTINGS_KEY].eudiw_lotl or "").strip()
 
 
 def configured_issuer_urls() -> list[str]:
@@ -273,6 +293,21 @@ def _federation_source(entity_id: str) -> str:
     return f"{base}{OID_FED_WELL_KNOWN_PATH}"
 
 
+def _metadata_source(entity_id: str, discovery: str) -> str:
+    if discovery != _DISCOVERY_DIRECT:
+        return _federation_source(entity_id)
+    base = (entity_id or "").strip().rstrip("/")
+    if base.endswith(_DIRECT_WELL_KNOWN):
+        return base
+    return f"{base}{_DIRECT_WELL_KNOWN}"
+
+
+def _stored_discovery(ec_payload) -> str:
+    if not isinstance(ec_payload, dict):
+        return ""
+    return str(ec_payload.get("_wallet_discovery") or "")
+
+
 def _credential_issuer_metadata(ec_payload: dict | None) -> dict:
     if not isinstance(ec_payload, dict):
         return {}
@@ -280,15 +315,39 @@ def _credential_issuer_metadata(ec_payload: dict | None) -> dict:
     return metadata if isinstance(metadata, dict) else {}
 
 
+def _offer_authorization_server(metadata: dict) -> str:
+    servers = metadata.get("authorization_servers")
+    if not isinstance(servers, list) or len(servers) < 2 or not isinstance(servers[0], str):
+        return ""
+    return servers[0].strip()
+
+
+def _credential_offer_uri(issuer_uri: str, configuration_id: str, authorization_server: str = "") -> str:
+    grant = {"authorization_server": authorization_server} if authorization_server else {}
+    payload = {
+        "credential_issuer": issuer_uri,
+        "credential_configuration_ids": [configuration_id],
+        "grants": {"authorization_code": grant},
+    }
+    encoded = quote(json.dumps(payload, separators=(",", ":")), safe="")
+    return f"openid-credential-offer://?credential_offer={encoded}"
+
+
+def _attach_offer_uris(uri: str, attestations: list[dict], authorization_server: str) -> None:
+    for item in attestations:
+        item["offer_uri"] = _credential_offer_uri(uri, str(item.get("id") or ""), authorization_server)
+
+
 def _catalog_section(issuer: str, attestations: list[dict], ec_payload: dict | None = None) -> dict:
     metadata = _credential_issuer_metadata(ec_payload)
     uri = str(metadata.get("credential_issuer") or issuer or "").strip()
     name = str(_localized_display(metadata.get("display") or [], get_locale()).get("name") or "").strip()
+    _attach_offer_uris(uri, attestations, _offer_authorization_server(metadata))
     return {
         "issuer": issuer,
         "name": name,
         "uri": uri,
-        "source": _federation_source(issuer),
+        "source": _metadata_source(issuer, _stored_discovery(ec_payload)),
         "attestations": attestations,
     }
 
@@ -318,22 +377,69 @@ def diagnostics():
     return jsonify({"success": True, "data": list_entries()}), 200
 
 
-@wallet_api_bp.route("/issuerCatalog", methods=["GET", "POST"])
-def issuer_catalog():
-    """List attestations from credential issuer metadata, or load another issuer URL."""
-    if request.method == "GET":
-        return jsonify({"success": True, "data": _catalog_sections()}), 200
+def _offer_qr_svg(offer: str) -> str:
+    prefix = "openid-credential-offer://?credential_offer="
+    if not offer.startswith(prefix) or len(offer) > 4096:
+        raise ValueError("invalid credential offer")
+    buffer = io.BytesIO()
+    pyqrcode.create(offer, error="M").svg(buffer, scale=4, quiet_zone=2)
+    return buffer.getvalue().decode("utf-8")
 
-    body = request.get_json(silent=True) or {}
-    issuer_url = (body.get("issuerUrl") or "").strip()
-    parsed = urlparse(issuer_url)
-    if parsed.scheme not in ("http", "https") or not parsed.netloc:
-        return jsonify({"success": False, "field": "issuerUrl", "message": _("Inserisci un URL http o https.")}), 400
 
+@wallet_api_bp.route("/credential-offer.svg", methods=["GET"])
+def credential_offer_qr():
+    try:
+        svg = _offer_qr_svg(request.args.get("offer") or "")
+    except ValueError:
+        return jsonify({"success": False, "message": _("Credential offer non valida.")}), 400
+    return Response(svg, mimetype="image/svg+xml")
+
+
+def _parse_direct_metadata(response) -> dict:
+    metadata = response.json()
+    if not isinstance(metadata, dict):
+        raise ValueError("credential issuer metadata is not an object")
+    return metadata
+
+
+def _direct_issuer_payload(service: ItWalletService, issuer_url: str) -> dict:
+    metadata = http_request_with_retry(
+        "GET",
+        f"{issuer_url.rstrip('/')}{_DIRECT_WELL_KNOWN}",
+        headers={"Accept": "application/json"},
+        proxies=service.proxies,
+        no_proxy_domains=service.no_proxy_domains,
+        parse_response=_parse_direct_metadata,
+    )
+    issuer = str(metadata.get("credential_issuer") or issuer_url).strip()
+    return {
+        "iss": issuer,
+        "metadata": {METADATA_TYPE_CREDENTIAL_ISSUER: metadata},
+        "_wallet_discovery": _DISCOVERY_DIRECT,
+    }
+
+
+def _fetch_issuer_payload(service: ItWalletService, issuer_url: str, discovery: str) -> dict:
+    if discovery == _DISCOVERY_DIRECT:
+        return _direct_issuer_payload(service, issuer_url)
+    payload = service._entity_configuration_management(issuer_url, [METADATA_TYPE_CREDENTIAL_ISSUER])
+    payload["_wallet_discovery"] = _DISCOVERY_FEDERATION
+    return payload
+
+
+def _discovery_rejection(discovery: str) -> str:
+    if discovery == _DISCOVERY_LOTL:
+        return _("eudiw lotl non è ancora implementato.")
+    if discovery not in (_DISCOVERY_DIRECT, _DISCOVERY_FEDERATION):
+        return _("Seleziona una modalità di discovery.")
+    return ""
+
+
+def _store_discovered_issuer(issuer_url: str, discovery: str):
     peer = peer_role.set("credential_issuer")
     try:
         service = ItWalletService(session)
-        ec_payload = service._entity_configuration_management(issuer_url, [METADATA_TYPE_CREDENTIAL_ISSUER])
+        ec_payload = _fetch_issuer_payload(service, issuer_url, discovery)
         attestations = _attestations_from_ec(ec_payload)
         if not attestations:
             return jsonify(
@@ -358,6 +464,27 @@ def issuer_catalog():
         ), 500
     finally:
         peer_role.reset(peer)
+
+
+def _issuer_catalog_post():
+    body = request.get_json(silent=True) or {}
+    issuer_url = (body.get("issuerUrl") or "").strip()
+    parsed = urlparse(issuer_url)
+    if parsed.scheme not in ("http", "https") or not parsed.netloc:
+        return jsonify({"success": False, "field": "issuerUrl", "message": _("Inserisci un URL http o https.")}), 400
+    discovery = (body.get("discovery") or _DISCOVERY_FEDERATION).strip()
+    rejected = _discovery_rejection(discovery)
+    if rejected:
+        return jsonify({"success": False, "field": "discovery", "message": rejected}), 400
+    return _store_discovered_issuer(issuer_url, discovery)
+
+
+@wallet_api_bp.route("/issuerCatalog", methods=["GET", "POST"])
+def issuer_catalog():
+    """List attestations from credential issuer metadata, or load another issuer URL."""
+    if request.method == "GET":
+        return jsonify({"success": True, "data": _catalog_sections()}), 200
+    return _issuer_catalog_post()
 
 
 @wallet_api_bp.route("/credentialSupported", methods=["GET"])

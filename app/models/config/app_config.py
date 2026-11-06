@@ -36,3 +36,4 @@ class AppConfig(BaseModel):
     ms_trust_configuration: dict
     metadata: dict
     credential_issuers: str = ""
+    eudiw_lotl: str = ""

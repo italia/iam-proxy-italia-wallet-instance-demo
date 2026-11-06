@@ -29,16 +29,27 @@
     </div>
 
     <form id="issuer-catalog-form" class="mb-4" novalidate>
-      <div class="form-group">
-        <label for="issuer-url">{{ _('URL del credential issuer') }}</label>
-        <div class="input-group">
-          <input type="url" class="form-control long-text" id="issuer-url" name="issuerUrl" autocomplete="url" aria-describedby="issuer-url-error">
-          <div class="input-group-append">
-            <button type="submit" class="btn btn-primary">{{ _('Carica attestazioni') }}</button>
-          </div>
+      <div class="issuer-load-row">
+        <div class="issuer-url-field">
+          <label for="issuer-url">{{ _('URL del credential issuer') }}</label>
+          <input type="url" class="form-control long-text" id="issuer-url" name="issuerUrl" autocomplete="url" aria-describedby="issuer-url-error" value="{{ default_issuer_url }}" data-copy-ignore="true">
         </div>
-        <p id="issuer-url-error" class="field-error" hidden></p>
+        <div class="issuer-trust-field">
+          <label for="trust-anchor">{{ _('Trust Anchor') }}</label>
+          <input type="url" class="form-control long-text" id="trust-anchor" name="trustAnchor" autocomplete="url" value="{{ default_trust_anchor }}" data-copy-ignore="true" data-compose-trust-anchor="{{ default_trust_anchor }}" data-eudiw-lotl="{{ eudiw_lotl_url }}">
+        </div>
+        <div class="issuer-discovery-field">
+          <label for="issuer-discovery">{{ _('Modalità di discovery') }}</label>
+          <select id="issuer-discovery" class="form-control issuer-discovery-select" name="discovery" aria-describedby="issuer-discovery-error">
+            <option value="openid">{{ _('openid (direct)') }}</option>
+            <option value="openid-federation" selected>{{ _('openid federation') }}</option>
+            <option value="eudiw-lotl" class="discovery-pending">{{ _('eudiw lotl (not implemented yet)') }}</option>
+          </select>
+        </div>
+        <button type="submit" class="btn btn-primary">{{ _('Carica attestazioni') }}</button>
       </div>
+      <p id="issuer-url-error" class="field-error" hidden></p>
+      <p id="issuer-discovery-error" class="field-error" hidden></p>
     </form>
 
     <div id="issuer-catalog">
@@ -49,6 +60,7 @@
             <h2 class="catalog-issuer">
               <span><span class="catalog-issuer-label">{{ _('Nome del credential issuer') }}:</span> {{ section.name }}</span>
               <span><span class="catalog-issuer-label">{{ _('URI del credential issuer') }}:</span> {{ section.uri }}</span>
+              <span><span class="catalog-issuer-label">{{ _('Numero di credenziali offerte') }}:</span> {{ section.attestations|length }}</span>
             </h2>
             <div class="form-group mb-0">
               <div class="catalog-obtain">
@@ -57,7 +69,7 @@
                   <select id="issuer-select-{{ section_index }}" data-source="{{ section.source }}" aria-describedby="issuer-select-{{ section_index }}-detail issuer-select-{{ section_index }}-error">
                     <option value="" selected>{{ _("Scegli un'attestazione") }}</option>
                     {% for item in section.attestations %}
-                      <option value="{{ item.id }}" data-description="{{ item.description }}" data-claims='{{ item.claims | tojson }}' data-format="{{ item.format }}"{% if item.obtained %} disabled{% endif %}>{{ item.name }}{% if item.format_label %} — {{ item.format_label }}{% endif %}{% if item.disambiguator %} — {{ item.disambiguator }}{% endif %}{% if item.obtained %} — {{ _('Già ottenuta') }}{% endif %}</option>
+                      <option value="{{ item.id }}" data-description="{{ item.description }}" data-claims='{{ item.claims | tojson }}' data-format="{{ item.format }}" data-offer-uri="{{ item.offer_uri }}"{% if item.obtained %} disabled{% endif %}>{{ item.name }}{% if item.format_label %} — {{ item.format_label }}{% endif %}{% if item.disambiguator %} — {{ item.disambiguator }}{% endif %}{% if item.obtained %} — {{ _('Già ottenuta') }}{% endif %}</option>
                     {% endfor %}
                   </select>
                 </div>

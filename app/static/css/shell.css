@@ -199,6 +199,13 @@
   display: none;
 }
 
+.credential-offer-qr {
+  display: block;
+  width: 11.25rem;
+  height: auto;
+  background: #fff;
+}
+
 .attestation-preview {
   display: flex;
   flex-direction: column;
@@ -509,6 +516,112 @@ footer {
   position: relative;
   width: 100%;
   height: auto;
+}
+
+.issuer-load-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 1rem;
+}
+
+.issuer-load-row .issuer-url-field,
+.issuer-load-row .issuer-trust-field {
+  flex: 1 1 18rem;
+  min-width: 0;
+}
+
+.issuer-load-row .issuer-discovery-field {
+  flex: 0 1 18rem;
+  min-width: 12rem;
+}
+
+.issuer-load-row .issuer-url-field label,
+.issuer-load-row .issuer-trust-field label,
+.issuer-load-row .issuer-discovery-field label {
+  display: block;
+  margin: 0 0 0.35rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.issuer-load-row .btn {
+  height: 2.5rem;
+  margin: 0;
+  padding: 0 1.5rem;
+  border: 0;
+  border-radius: 4px;
+  line-height: 1.5;
+}
+
+.issuer-load-row .form-control,
+.issuer-load-row select.issuer-discovery-select {
+  height: 2.5rem;
+  border: 0;
+  border-bottom: 1px solid #5c6f82;
+  border-radius: 0;
+  background-color: #fff;
+  box-shadow: none;
+}
+
+.issuer-load-row select.issuer-discovery-select {
+  padding-right: 0.5rem;
+  padding-left: 0.5rem;
+}
+
+.issuer-load-row .form-control:focus,
+.issuer-load-row select.issuer-discovery-select:focus {
+  border-bottom-color: #0066cc;
+  outline: 0;
+  box-shadow: none;
+}
+
+.issuer-discovery-select.discovery-pending,
+.issuer-discovery-select option.discovery-pending {
+  color: #5c6f82;
+}
+
+html.hide-credential-persistence .credential-persistence {
+  display: none;
+}
+
+.credential-persistence {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 0 0 1.5rem;
+  padding: 1rem 1.25rem;
+  background: #f2f7fc;
+  border: 1px solid #d9e6f2;
+  border-radius: 4px;
+}
+
+.credential-persistence p {
+  margin: 0 0 0.35rem;
+}
+
+.credential-persistence p:last-child {
+  margin-bottom: 0;
+}
+
+.credential-persistence .btn {
+  flex: 0 0 auto;
+  margin: 0;
+}
+
+.wallet-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
+}
+
+.wallet-footer p {
+  max-width: 46rem;
+  margin-bottom: 0;
 }
 
 .wallet-footer-meta {

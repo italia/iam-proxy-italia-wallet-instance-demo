@@ -18,7 +18,7 @@ function catalogSectionHtml(section, sectionIndex) {
       );
       const disambiguator = sameLabel.length > 1 ? ` — ${item.id}` : "";
       const disabled = item.obtained ? " disabled" : "";
-      return `<option value="${escapeCatalogText(item.id)}" data-description="${escapeCatalogText(item.description || "")}" data-claims="${escapeCatalogText(JSON.stringify(item.claims || []))}" data-format="${escapeCatalogText(item.format || "")}"${disabled}>${escapeCatalogText(item.name)}${escapeCatalogText(formatLabel)}${escapeCatalogText(disambiguator)}${obtained}</option>`;
+      return `<option value="${escapeCatalogText(item.id)}" data-description="${escapeCatalogText(item.description || "")}" data-claims="${escapeCatalogText(JSON.stringify(item.claims || []))}" data-format="${escapeCatalogText(item.format || "")}" data-offer-uri="${escapeCatalogText(item.offer_uri || "")}"${disabled}>${escapeCatalogText(item.name)}${escapeCatalogText(formatLabel)}${escapeCatalogText(disambiguator)}${obtained}</option>`;
     }),
   ].join("");
   const selectId = `issuer-select-${sectionIndex}`;
@@ -28,6 +28,7 @@ function catalogSectionHtml(section, sectionIndex) {
         <h2 class="catalog-issuer">
           <span><span class="catalog-issuer-label">${t("Nome del credential issuer")}:</span> ${escapeCatalogText(section.name || "")}</span>
           <span><span class="catalog-issuer-label">${t("URI del credential issuer")}:</span> ${escapeCatalogText(section.uri || section.issuer || "")}</span>
+          <span><span class="catalog-issuer-label">${t("Numero di credenziali offerte")}:</span> ${escapeCatalogText((section.attestations || []).length)}</span>
         </h2>
         <div class="form-group mb-0">
           <div class="catalog-obtain">
@@ -77,6 +78,42 @@ function setIssuerUrlError(message) {
   }
 }
 
+function setDiscoveryError(message) {
+  const select = document.getElementById("issuer-discovery");
+  const error = document.getElementById("issuer-discovery-error");
+  if (error) {
+    error.hidden = !message;
+    error.textContent = message || "";
+  }
+  if (select) {
+    if (message) select.setAttribute("aria-invalid", "true");
+    else select.removeAttribute("aria-invalid");
+  }
+}
+
+function discoveryValue() {
+  return document.getElementById("issuer-discovery")?.value || "openid-federation";
+}
+
+function syncTrustAnchor() {
+  const input = document.getElementById("trust-anchor");
+  if (!input) return;
+  const mode = discoveryValue();
+  if (mode === "eudiw-lotl") {
+    input.value = input.dataset.eudiwLotl || "";
+    return;
+  }
+  input.value = input.dataset.composeTrustAnchor || "";
+}
+
+function syncDiscoveryMode() {
+  const select = document.getElementById("issuer-discovery");
+  const pending = discoveryValue() === "eudiw-lotl";
+  select?.classList.toggle("discovery-pending", pending);
+  setDiscoveryError(pending ? t("eudiw lotl non è ancora implementato.") : "");
+  syncTrustAnchor();
+}
+
 function claimLabels(raw) {
   if (!raw) return [];
   try {
@@ -108,6 +145,21 @@ function previewRow(label, content) {
   else value.append(content);
   row.append(term, value);
   return row;
+}
+
+function appendCredentialOffer(list, option) {
+  const offer = option.dataset.offerUri || "";
+  if (!offer) return;
+  const link = document.createElement("a");
+  link.className = "attestation-source long-text";
+  link.href = offer;
+  link.textContent = offer;
+  list.append(previewRow(t("Credential offer"), link));
+  const image = document.createElement("img");
+  image.className = "credential-offer-qr";
+  image.alt = t("QR code della credential offer");
+  image.src = `/itwallet/credential-offer.svg?offer=${encodeURIComponent(offer)}`;
+  list.append(previewRow(t("QR code della credential offer"), image));
 }
 
 function fillAttestationDetail(select) {
@@ -146,6 +198,7 @@ function fillAttestationDetail(select) {
     });
     list.append(previewRow(t("Dati contenuti"), claimsList));
   }
+  appendCredentialOffer(list, option);
   if (list.childElementCount) detail.append(list);
 }
 
@@ -562,8 +615,16 @@ document.getElementById("issuer-catalog")?.addEventListener("click", (event) => 
   confirmAddCredential();
 });
 
+document.getElementById("issuer-discovery")?.addEventListener("change", syncDiscoveryMode);
+syncTrustAnchor();
+
 document.getElementById("issuer-catalog-form")?.addEventListener("submit", async (event) => {
   event.preventDefault();
+  if (discoveryValue() === "eudiw-lotl") {
+    syncDiscoveryMode();
+    return;
+  }
+  setDiscoveryError("");
   const input = document.getElementById("issuer-url");
   const issuerUrl = input?.value?.trim() || "";
   if (!issuerUrl) {
@@ -571,10 +632,15 @@ document.getElementById("issuer-catalog-form")?.addEventListener("submit", async
     return;
   }
   setIssuerUrlError("");
-  const response = await executeFetch("/itwallet/issuerCatalog", "POST", { issuerUrl });
+  const response = await executeFetch("/itwallet/issuerCatalog", "POST", {
+    issuerUrl,
+    discovery: discoveryValue(),
+  });
   const data = await response.json().catch(() => ({}));
   if (!response.ok || !data.success) {
-    setIssuerUrlError(data.message || t("Impossibile leggere i metadata di questo issuer."));
+    const message = data.message || t("Impossibile leggere i metadata di questo issuer.");
+    if (data.field === "discovery") setDiscoveryError(message);
+    else setIssuerUrlError(message);
     return;
   }
   if (input) input.value = "";

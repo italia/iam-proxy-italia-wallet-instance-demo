@@ -1,0 +1,16 @@
+---
+description: How to change the wallet instance demo against the IT-Wallet specification
+alwaysApply: true
+---
+
+# Wallet instance demo
+
+The normative text is the IT-Wallet Technical Specifications. Its reStructuredText rules apply only in that repository.
+
+- User-facing copy is an Italian `msgid`. The English `msgstr` states the same fact and is compiled into `messages.mo`.
+- Implement a specified check once. Do not change its strength unless the user asks.
+- Revocation reads the Status List in the credential. Do not call a status assertion endpoint.
+- A success message reports the outcome. It does not say that a status was updated.
+- Example hostnames stay under `example.org`.
+- Do not commit or push unless the user asks in this request.
+- Change only the requested part.

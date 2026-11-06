@@ -118,8 +118,56 @@ msgstr "Confirm"
 msgid "Annulla"
 msgstr "Cancel"
 
-msgid "Prodotto dimostrativo, non destinato alla produzione e non certificabile. Supporta la demo di IAM Proxy Italia."
-msgstr "Demonstration product. It is not for production and it cannot be certified. It supports the IAM Proxy Italia demo."
+msgid "Trust Anchor"
+msgstr "Trust Anchor"
+
+msgid "Modalità di discovery"
+msgstr "Discovery mode"
+
+msgid "openid (direct)"
+msgstr "openid (direct)"
+
+msgid "openid federation"
+msgstr "openid federation"
+
+msgid "eudiw lotl (not implemented yet)"
+msgstr "eudiw lotl (not implemented yet)"
+
+msgid "eudiw lotl non è ancora implementato."
+msgstr "eudiw lotl is not implemented yet."
+
+msgid "Seleziona una modalità di discovery."
+msgstr "Select a discovery mode."
+
+msgid "Non mostrare più"
+msgstr "Don't show again."
+
+msgid "Questa demo supporta gli sviluppatori nella prova di emissione e presentazione."
+msgstr "This demo supports developers in trying issuance and presentation."
+
+msgid "Non è un wallet di produzione."
+msgstr "It is not a production wallet."
+
+msgid "Non è certificabile."
+msgstr "It cannot be certified."
+
+msgid "Gli attestati ottenuti restano nella memoria di questa istanza."
+msgstr "Obtained attestations stay in the memory of this instance."
+
+msgid "Restano dopo il logout."
+msgstr "They remain after logout."
+
+msgid "Ogni accesso a questa istanza mostra gli stessi attestati."
+msgstr "Every access to this instance shows the same attestations."
+
+msgid "La rimozione di un attestato cancella quell'attestato."
+msgstr "Removing an attestation deletes that attestation."
+
+msgid "Reimposta demo cancella tutti gli attestati ottenuti."
+msgstr "Reset the demo deletes every obtained attestation."
+
+msgid "Il riavvio del processo cancella tutti gli attestati ottenuti."
+msgstr "Restarting the process deletes every obtained attestation."
 
 msgid "Versione"
 msgstr "Version"
@@ -561,6 +609,18 @@ msgstr "Credential Issuer Name"
 
 msgid "URI del credential issuer"
 msgstr "Credential Issuer URI"
+
+msgid "Numero di credenziali offerte"
+msgstr "Number of credentials offered"
+
+msgid "Credential offer"
+msgstr "Credential offer"
+
+msgid "QR code della credential offer"
+msgstr "Credential offer QR code"
+
+msgid "Credential offer non valida."
+msgstr "Invalid credential offer."
 
 msgid "Header"
 msgstr "Header"

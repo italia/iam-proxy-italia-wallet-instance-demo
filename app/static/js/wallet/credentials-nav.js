@@ -8,6 +8,11 @@ function markCurrentCredential() {
 
 markCurrentCredential();
 
+document.getElementById("credential-persistence-dismiss")?.addEventListener("click", () => {
+  localStorage.setItem("wallet-hide-credential-persistence", "1");
+  document.documentElement.classList.add("hide-credential-persistence");
+});
+
 document.querySelector("#credential-nav")?.addEventListener("click", (event) => {
   const link = event.target.closest("a");
   if (!link || !link.getAttribute("href")?.startsWith("#")) return;

@@ -33,6 +33,7 @@ wallet_instance:
   oauth_authorization_server: https://iam-proxy-italia.example.org/OpenID4VP
 
 credential_issuers: !ENV CREDENTIAL_ISSUER_URLS
+eudiw_lotl: !ENV EUDIW_LOTL_URL
 
 ms_trust_configuration:
   IT:
