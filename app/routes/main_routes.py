@@ -34,6 +34,8 @@ def devtools_config():
 
 @main_routes.route("/debug/session")
 def debug_session():
+    if not session.get("authenticated"):
+        return redirect(url_for("wallet_routes.wallet_access"))
     return dict(session)
 
 
