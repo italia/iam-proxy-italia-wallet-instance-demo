@@ -595,8 +595,8 @@ msgstr "Obtained attestations"
 msgid "Presentazione"
 msgstr "Presentation"
 
-msgid "Scambi HTTP"
-msgstr "HTTP exchanges"
+msgid "Storico Azioni HTTP"
+msgstr "HTTP action history"
 
 msgid "Sezioni del wallet"
 msgstr "Wallet sections"
@@ -664,8 +664,17 @@ msgstr "This attestation does not contain a status list."
 msgid "Questo issuer non pubblica l'endpoint di stato."
 msgstr "This issuer does not publish a status endpoint."
 
-msgid "Stato di revoca aggiornato."
-msgstr "Revocation status updated."
+msgid "La credenziale è valida e non risulta essere stata revocata."
+msgstr "The credential is valid and does not appear to have been revoked."
+
+msgid "La credenziale risulta revocata."
+msgstr "The credential is revoked."
+
+msgid "La credenziale risulta sospesa."
+msgstr "The credential is suspended."
+
+msgid "Lo stato della credenziale non è riconosciuto."
+msgstr "The credential status is not recognized."
 
 msgid "Impossibile verificare lo stato di revoca."
 msgstr "The revocation status could not be checked."

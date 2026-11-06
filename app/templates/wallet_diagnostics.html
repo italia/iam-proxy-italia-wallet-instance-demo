@@ -1,10 +1,10 @@
 {% extends "base.html" %}
-{% block title %}{{ _('Scambi HTTP') }}{% endblock %}
+{% block title %}{{ _('Storico Azioni HTTP') }}{% endblock %}
 {% block head %}
   <link rel="stylesheet" href="{{ url_for('static', filename='wallet.css') }}">
 {% endblock %}
 {% block content %}
-  <h1 class="h2" id="page-title">{{ _('Scambi HTTP') }}</h1>
+  <h1 class="h2" id="page-title">{{ _('Storico Azioni HTTP') }}</h1>
   <p>{{ _('Richieste e risposte verso i credential issuer e i verificatori.') }}</p>
   <div class="diagnostic-layout">
     <nav id="diagnostic-nav" class="diagnostic-nav" aria-label="{{ _('Elenco degli scambi') }}">

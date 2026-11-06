@@ -531,6 +531,20 @@ def _store_status_list(credential_id, status_uri, status_idx, jwks, service):
     status_list = _require_status_list(decode_and_verify_jwt(token, jwks), status_uri)
     code = _status_list_code(status_list["lst"], int(status_list.get("bits") or 1), status_idx)
     app_state.credential_store.update_status(credential_id, token, _STATUS_LIST_CODES.get(code, str(code)))
+    return code
+
+
+def _flash_status_result(code: int) -> None:
+    if code == 0:
+        flash(_("La credenziale è valida e non risulta essere stata revocata."), "success")
+        return
+    if code == 1:
+        flash(_("La credenziale risulta revocata."), "error")
+        return
+    if code == 2:
+        flash(_("La credenziale risulta sospesa."), "error")
+        return
+    flash(_("Lo stato della credenziale non è riconosciuto."), "error")
 
 
 def _flash_status_failure(exc):
@@ -569,8 +583,7 @@ def credential_status():
     service = ItWalletService(session)
     peer = peer_role.set("credential_issuer")
     try:
-        _store_status_list(credential_id, listed[0], listed[1], jwks, service)
-        flash(_("Stato di revoca aggiornato."), "success")
+        _flash_status_result(_store_status_list(credential_id, listed[0], listed[1], jwks, service))
     except Exception as exc:
         _flash_status_failure(exc)
     finally:
