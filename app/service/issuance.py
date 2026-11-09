@@ -63,6 +63,7 @@ from app.service.discovery import FederationDiscovery
 from app.service.itwallet_helpers import (
     apply_credential_issuer_overrides,
     apply_replace_values,
+    credential_configuration_scope,
     get_proxies_from_config,
     get_trust_root_and_eaa_provider_ec,
     parse_rp_authorization_request,
@@ -255,7 +256,7 @@ class IssuanceFlow:
             code_challenge_method=pkce["code_challenge_method"],
             response_type=initialize_flow_response_type,
             redirect_uri=initialize_flow_redirect_uri,
-            scope="eid",
+            scope=credential_configuration_scope(pid_provider_ec, cred_config_id),
             authorization_details=authorization_details,
         )
         if not request_object_jwt:
@@ -573,7 +574,7 @@ class IssuanceFlow:
             code_challenge_method=pkce["code_challenge_method"],
             response_type=credential_flow_response_type,
             redirect_uri=credential_flow_redirect_uri,
-            scope="mDL",  # todo check it
+            scope=credential_configuration_scope(eaa_provider_ec, credential_configuration_id),
             authorization_details=authorization_details,
         )
         if not request_object_jwt:

@@ -90,6 +90,18 @@ def get_trust_root_and_eaa_provider_ec(
     return trust_root_url, eaa_url, ec
 
 
+def credential_configuration_scope(entity_configuration: dict, credential_configuration_id: str) -> str:
+    """Scope dichiarato dalla Credential Configuration nell'Entity Configuration dell'issuer."""
+    query = (
+        f"metadata.{METADATA_TYPE_CREDENTIAL_ISSUER}.credential_configurations_supported."
+        f"{credential_configuration_id}.scope"
+    )
+    scope = extract_claim(entity_configuration, query)
+    if not isinstance(scope, str) or not scope:
+        raise ValueError("La configurazione dell'issuer non dichiara lo scope di questa attestazione.")
+    return scope
+
+
 def validate_credential_and_presentation_flow() -> None:
     """Validate credential_flow and presentation_flow response_mode/response_type from config."""
     logger.info("Entering method: validate_credential_and_presentation_flow. ")

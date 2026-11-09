@@ -589,6 +589,9 @@ msgstr "The demo trust anchor is not configured, so the wallet cannot request th
 msgid "Nessun issuer configurato rilascia l'attestazione selezionata. Ricarica la pagina e riprova."
 msgstr "No configured issuer issues the selected attestation. Reload the page and try again."
 
+msgid "La configurazione dell'issuer non dichiara lo scope di questa attestazione."
+msgstr "The issuer configuration does not declare the scope of this attestation."
+
 msgid "Descrizione"
 msgstr "Description"
 
