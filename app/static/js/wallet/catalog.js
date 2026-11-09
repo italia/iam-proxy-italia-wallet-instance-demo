@@ -280,7 +280,7 @@ function exchangeTabs(specs) {
   const block = document.createElement("div");
   block.className = "diagnostic-jwt mt-2";
   const tabs = document.createElement("ul");
-  tabs.className = "nav nav-tabs";
+  tabs.className = "nav nav-tabs nav-tabs-cards";
   tabs.setAttribute("role", "tablist");
   const panes = document.createElement("div");
   panes.className = "tab-content diagnostic-jwt-panes";

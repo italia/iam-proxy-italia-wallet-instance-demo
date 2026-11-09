@@ -469,13 +469,46 @@
   color: #5c6f82;
 }
 
-.diagnostic-exchange .nav-tabs {
+.diagnostic-exchange .nav-tabs.nav-tabs-cards {
   flex-wrap: wrap;
-  row-gap: 0.25rem;
+  gap: 0.25rem;
+  overflow: visible;
+  background: transparent;
+  border: 0;
 }
 
-.diagnostic-jwt .nav-tabs .nav-link {
+.diagnostic-exchange .nav-tabs.nav-tabs-cards::after {
+  display: none;
+}
+
+.diagnostic-exchange .nav-tabs.nav-tabs-cards .nav-item {
+  margin: 0;
+}
+
+.diagnostic-exchange .nav-tabs.nav-tabs-cards .nav-link {
+  margin: 0;
+  border: 1px solid hsl(210deg 4% 78%);
+  border-radius: 4px;
+  background-color: #fff;
   font-size: 0.875rem;
+}
+
+.diagnostic-exchange .nav-tabs.nav-tabs-cards .nav-link:hover {
+  border-color: #06c;
+}
+
+.diagnostic-exchange .nav-tabs.nav-tabs-cards .nav-link.active {
+  border-color: #06c;
+  border-bottom-color: #06c;
+  background-color: #f2f7fc;
+}
+
+.diagnostic-exchange .diagnostic-jwt-panes {
+  margin-top: 0.5rem;
+  border: 1px solid hsl(210deg 4% 78%);
+  border-radius: 4px;
+  background: #fff;
+  padding: 0.75rem 1rem;
 }
 
 .diagnostic-jwt-panes {
@@ -571,8 +604,13 @@ footer {
 }
 
 .issuer-load-row select.issuer-discovery-select {
-  padding-right: 0.5rem;
+  appearance: none;
+  padding-right: 2.25rem;
   padding-left: 0.5rem;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='hsl%280, 0%, 15%%29' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 16px 12px;
 }
 
 .issuer-load-row .form-control:focus,
