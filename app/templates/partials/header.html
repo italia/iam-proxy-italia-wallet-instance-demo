@@ -1,0 +1,57 @@
+<header class="it-header-wrapper">
+  <div class="it-header-slim-wrapper bg-primary">
+    <div class="container">
+      <div class="it-header-slim-wrapper-content d-flex justify-content-between align-items-center">
+        <span class="navbar-brand text-white"><strong>Iam Proxy Italia Wallet Instance Demo</strong></span>
+        <div class="it-header-slim-right-zone">
+          <div class="nav-item dropdown it-header-lang-dropdown">
+            <button type="button" id="languagesDropButton" class="nav-link dropdown-toggle"
+              aria-controls="language-menu"
+              aria-label="{% if current_lang == 'en' %}{{ _('Selezione lingua, English selezionata') }}{% else %}{{ _('Selezione lingua, Italiano selezionata') }}{% endif %}"
+              data-bs-toggle="dropdown" aria-haspopup="menu" aria-expanded="false">
+              <span id="header-lang-active-hint" class="visually-hidden">{{ _('lingua attiva:') }}</span>
+              <span class="it-header-lang-label" aria-hidden="true">{% if current_lang == 'en' %}EN{% else %}ITA{% endif %}</span>
+              <svg class="icon icon-sm ms-1" aria-hidden="true">
+                <use href="{{ url_for('static', filename='svg/sprites.svg') }}#it-expand"></use>
+              </svg>
+            </button>
+            <div id="language-menu" class="dropdown-menu dropdown-menu-end">
+              <div class="row">
+                <div class="col-12">
+                  <div class="link-list-wrapper">
+                    <ul class="link-list" role="menu" aria-labelledby="languagesDropButton">
+                      <li>
+                        <button type="button" class="dropdown-item list-item it-lang-option{% if current_lang != 'en' %} active{% endif %}" data-lang="it"
+                          role="menuitemradio" aria-checked="{{ 'true' if current_lang != 'en' else 'false' }}"{% if current_lang != 'en' %} aria-current="true"{% endif %}>
+                          <span lang="it">Italiano</span>
+                        </button>
+                      </li>
+                      <li>
+                        <button type="button" class="dropdown-item list-item it-lang-option{% if current_lang == 'en' %} active{% endif %}" data-lang="en"
+                          role="menuitemradio" aria-checked="{{ 'true' if current_lang == 'en' else 'false' }}"{% if current_lang == 'en' %} aria-current="true"{% endif %}>
+                          <span lang="en">English</span>
+                        </button>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          {% if session.get('authenticated') %}
+            <a href="{{ url_for('wallet_routes.logout') }}" class="it-header-slim-logout">{{ _('Esci') }}</a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="header-title-section">
+    <div class="container py-3">
+      <div class="d-flex align-items-center">
+        <img src="{{ url_for('static', filename='img/IT-Wallet-Logo-Primary-BlueItalia.svg') }}" alt="IT-Wallet" class="it-wallet-navbar-logo" height="32">
+        <span class="navbar-separator" aria-hidden="true"></span>
+        <span class="it-wallet-navbar-product">Instance Demo</span>
+      </div>
+    </div>
+  </div>
+</header>

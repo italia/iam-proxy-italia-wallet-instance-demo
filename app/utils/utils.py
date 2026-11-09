@@ -1,5 +1,4 @@
 import base64
-import binascii
 import hashlib
 import json
 import logging
@@ -10,7 +9,6 @@ from datetime import datetime, timezone
 from typing import Tuple, Union
 from urllib.parse import parse_qs, urlparse
 
-import fitz
 import jmespath
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
@@ -31,8 +29,6 @@ from cryptography.hazmat.primitives.serialization import (
     load_pem_public_key,
 )
 from jwcrypto import jwk
-
-from app.constants import CONTENT_PDF_BASE_64_PREFIX
 
 logger = logging.getLogger(__name__)
 
@@ -372,35 +368,6 @@ def extract_claim(entity: dict, jmes_query: str):
         return None
 
 
-def estrai_testo_from_pdf(path: str) -> str:
-    doc = fitz.open(path)
-    full_text = ""
-    for page in doc:
-        full_text += page.get_text()
-    return full_text
-
-
-def extract_text_from_base64_pdf(data_uri: str) -> list[str]:
-    if data_uri and data_uri.startswith(CONTENT_PDF_BASE_64_PREFIX):
-        b64_data = data_uri.split(",", 1)[1]
-    else:
-        raise ValueError(f"La stringa non contiene un prefisso valido ({CONTENT_PDF_BASE_64_PREFIX})")
-
-    # Correggi la lunghezza per il base64 (padding con '=')
-    missing_padding = len(b64_data) % 4
-    if missing_padding:
-        b64_data += "=" * (4 - missing_padding)
-
-    pdf_bytes = base64.b64decode(b64_data)
-
-    testi_per_pagina = []
-    with fitz.open(stream=pdf_bytes, filetype="pdf") as doc:
-        for page in doc:
-            testo_pagina = page.get_text()
-            testi_per_pagina.append(testo_pagina.strip())
-    return testi_per_pagina
-
-
 def check_required_claims(claims: dict, expected_claims: set) -> None:
     """
     Verifica che tutte le chiavi attese siano presenti nel dict claims.
@@ -414,15 +381,6 @@ def check_required_claims(claims: dict, expected_claims: set) -> None:
         raise ValueError(f"Mancano i seguenti claim obbligatori: {', '.join(sorted(missing))}")
 
 
-def is_hex(s: str) -> bool:
-    try:
-        int(s, 16)
-    except ValueError:
-        return False
-    # opzionale: controlla che abbia lunghezza pari, se rappresenta byte interi
-    return len(s) % 2 == 0
-
-
 def is_base64(s: str) -> bool:
     try:
         # rimuove eventuali newline/spazi
@@ -431,13 +389,6 @@ def is_base64(s: str) -> bool:
         return base64.b64encode(decoded).decode("ascii") == sb.rstrip("=")
     except Exception:
         return False
-
-
-def hex_to_base64(hex_str: str) -> str:
-    # rimuovi spazi/newline
-    h = hex_str.strip()
-    data = binascii.unhexlify(h)
-    return base64.b64encode(data).decode("ascii")
 
 
 def to_datetime(value):

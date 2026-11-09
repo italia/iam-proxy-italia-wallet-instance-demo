@@ -51,11 +51,13 @@ All `!ENV` references across the YAML files. These must be set before the applic
 | `FLASK_RUN_HOST` | `app_config.yaml` | Host the Flask server binds to (e.g. `0.0.0.0`) |
 | `FLASK_RUN_PORT` | `app_config.yaml` | Port the Flask server listens on (e.g. `8080`) |
 | `SECRET_KEY` | `app_config.yaml` | Flask session secret — **required in any non-local environment** |
+| `WALLET_INSTANCE_PASSWORD` | `app_config.yaml` | Password of the demo wallet UI |
 | `TRUST_ANCHOR_URL` | `app_config.yaml`, `wallet_provider.yaml` | Federation Entity ID of the Trust Anchor |
 | `WALLET_PROVIDER_URL` | `wallet_provider.yaml` | Public base URL of the Wallet Provider |
 | `OPENID_CIE_PROVIDER_URL` | `app_config.yaml` | URL of the CIE Level 2 Identity Provider |
 | `WALLET_INITIALIZE_REDIRECT_URI` | `app_config.yaml` | Redirect URI for the PID Issuance (initialization) flow |
 | `WALLET_CREDENTIAL_REDIRECT_URI` | `app_config.yaml` | Redirect URI for the EAA Credential Issuance flow |
+| `CREDENTIAL_ISSUER_URLS` | `app_config.yaml` | Comma-separated credential issuer URLs shown in the catalog |
 
 ---
 
@@ -77,9 +79,10 @@ Flask and application-level settings.
 | `host` | `!ENV FLASK_RUN_HOST` | Bind address |
 | `port` | `!ENV FLASK_RUN_PORT` | Bind port |
 | `debug_mode` | `false` | Enable Flask debug mode — **keep `false` in any non-local environment** |
-| `favicon_subpath` | `images/wallet_logo.svg` | Subpath (relative to `static/`) for the favicon |
+| `favicon_subpath` | `img/IT-Wallet-Symbol-Primary-BlueItalia.svg` | Official IT-Wallet symbol served as the favicon |
 | `static_folder` | `static` | Flask static files folder name |
 | `secret_key` | `!ENV SECRET_KEY` | Flask session secret — **must be set via env in any non-local environment** |
+| `password` | `!ENV WALLET_INSTANCE_PASSWORD` | Password requested on the demo access page |
 
 ### `app.logging`
 
@@ -103,6 +106,14 @@ Security capabilities declared in the wallet attestation.
 | `user_authentication` | `[iso_18045_basic]` | Supported user authentication mechanisms |
 | `certification` | URL | Registry URL for certification verification |
 | `oauth_authorization_server` | URL | Authorization server URL for OpenID4VP |
+
+### `credential_issuers`
+
+Comma-separated credential issuer URLs. The home page loads each one and lists its attestations.
+
+| Key | Value | Description |
+|---|---|---|
+| `credential_issuers` | `!ENV CREDENTIAL_ISSUER_URLS` | Issuers of the catalog. In the IAM Proxy Italia demo this is `https://<SATOSA_HOSTNAME>/OpenID4VCI` |
 
 ### `ms_trust_configuration`
 

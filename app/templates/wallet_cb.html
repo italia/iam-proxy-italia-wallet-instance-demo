@@ -1,20 +1,27 @@
-<!DOCTYPE html>
-<html lang="it">
-<head>
-  <meta charset="UTF-8">
-  <title>Completato</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='wallet.css') }}">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-</head>
-<body>
-  <p style="position: absolute; top: 20px; left: 20px;">Hai completato il processo di autenticazione. Questa finestra si chiuderà.</p>
+{% extends "base.html" %}
+{% block title %}{% if stale %}{{ _('Emissione') }}{% else %}{{ _('Completato') }}{% endif %}{% endblock %}
+{% block content %}
+  <div class="it-wallet-title-row">
+    <div class="it-wallet-title-slot it-wallet-title-slot-start"></div>
+    <h1 class="it-wallet-title-heading mb-0" id="page-title">{% if stale %}{{ _('Emissione') }}{% else %}{{ _('Completato') }}{% endif %}</h1>
+    <div class="it-wallet-title-slot it-wallet-title-slot-end"></div>
+  </div>
+  {% if stale %}
+  <div class="alert alert-warning" role="alert">
+    <p class="mb-0">{{ _('Questa risposta appartiene a una richiesta di rilascio precedente.') }}</p>
+  </div>
+  <p class="text-center">
+    <a class="btn btn-primary" href="{{ url_for('wallet_routes.wallet_home') }}">{{ _('Emissione') }}</a>
+  </p>
+  {% else %}
+  <p class="text-center it-wallet-subtitle">{{ _('Accesso completato. Torno al wallet per salvare l\'attestazione.') }}</p>
   <script>
-    // Manda un messaggio alla pagina principale
     if (window.opener) {
-      window.opener.postMessage({ event: "wallet_flow_complete" }, "*");
+      window.opener.postMessage({ event: "wallet_flow_complete" }, window.location.origin);
+      setTimeout(() => window.close(), 500);
+    } else {
+      window.location.replace("/wallet/home?issued=1&state=" + encodeURIComponent({{ state|tojson }}));
     }
-    // Chiudi il popup dopo 500ms per dare tempo al messaggio di arrivare
-    setTimeout(() => window.close(), 500);
   </script>
-</body>
-</html>
+  {% endif %}
+{% endblock %}

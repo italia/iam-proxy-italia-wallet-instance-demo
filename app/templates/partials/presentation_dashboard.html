@@ -1,0 +1,119 @@
+{% macro attestation_list(items) %}
+  <ul>
+    {% for item in items %}
+      <li>
+        {{ item.id }}{% if item.type %} ({{ item.type }}){% endif %}{% if item.format %} — {{ item.format }}{% endif %}
+        {% if item.claims %}
+          <ul>
+            {% for claim in item.claims %}
+              <li>{{ claim }}</li>
+            {% endfor %}
+          </ul>
+        {% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+{% endmacro %}
+
+<section aria-labelledby="page-title">
+  {% include "partials/flashes.html" %}
+
+  {% if confirm_ids %}
+    <div class="alert alert-warning" role="alert">
+      <p>{{ _('La cancellazione elimina solo la copia locale di questi record e non può essere annullata.') }}</p>
+      <p class="mb-0">{{ _("La cancellazione può incidere sui diritti dell'Utente in materia di protezione dei dati.") }}</p>
+    </div>
+    <ul>
+      {% for name in confirm_names %}
+        <li>{{ name }}</li>
+      {% endfor %}
+    </ul>
+    <form method="post" action="{{ url_for('wallet_routes.dashboard_delete_confirm') }}">
+      {% for identifier in confirm_ids %}
+        <input type="hidden" name="ids" value="{{ identifier }}">
+      {% endfor %}
+      <button class="btn btn-primary" type="submit">{{ _('Conferma cancellazione') }}</button>
+      <a class="btn btn-outline-primary" href="{{ url_for('wallet_routes.wallet_dashboard') }}">{{ _('Annulla') }}</a>
+    </form>
+  {% elif not records %}
+    <p class="text-center text-muted">{{ _('Nessuna interazione con Relying Party.') }}</p>
+  {% else %}
+    <form method="post">
+      <div class="diagnostic-layout">
+        <nav class="diagnostic-nav" aria-label="{{ _('Elenco delle interazioni') }}">
+          <h3 class="h6">{{ _('Interazioni') }}</h3>
+          <ul class="list-unstyled mb-0">
+            {% for row in records %}
+              <li class="mb-3">
+                <label>
+                  <input type="checkbox" name="ids" value="{{ row.id }}">
+                  <a href="{{ url_for('wallet_routes.wallet_dashboard', id=row.id) }}"{% if selected and selected.id == row.id %} aria-current="true"{% endif %}>{{ row.name }}</a>
+                </label>
+                <p class="mb-0 small">
+                  {% if row.created_label %}{{ row.created_label }}{% endif %}
+                  {{ row.outcome }}
+                </p>
+              </li>
+            {% endfor %}
+          </ul>
+        </nav>
+        <div>
+          <div class="d-flex flex-wrap gap-2 mb-4">
+            <button class="btn btn-primary btn-sm" type="submit" formaction="{{ url_for('wallet_routes.dashboard_export') }}">{{ _('Esporta JSON') }}</button>
+            <button class="btn btn-outline-primary btn-sm" type="submit" formaction="{{ url_for('wallet_routes.dashboard_delete') }}">{{ _('Cancella') }}</button>
+          </div>
+          {% if selected %}
+            {% set rp = selected.record.rp if selected.record.rp is mapping else {} %}
+            <h3 class="h5">{{ selected.name }}</h3>
+            {% if rp.logo_uri %}
+              <img src="{{ rp.logo_uri }}" alt="" height="32" class="mb-3">
+            {% endif %}
+            <dl>
+              <dt>{{ _('Esito') }}</dt>
+              <dd>{{ selected.outcome }}</dd>
+              {% if rp.client_name %}
+                <dt>{{ _('Nome') }}</dt>
+                <dd>{{ rp.client_name }}</dd>
+              {% endif %}
+              {% if rp.client_id %}
+                <dt>{{ _('Identificativo') }}</dt>
+                <dd>{{ rp.client_id }}</dd>
+              {% endif %}
+              {% if rp.homepage_uri %}
+                <dt>{{ _('Sito') }}</dt>
+                <dd><a href="{{ rp.homepage_uri }}">{{ rp.homepage_uri }}</a></dd>
+              {% endif %}
+              {% if rp.policy_uri %}
+                <dt>{{ _('Informativa') }}</dt>
+                <dd><a href="{{ rp.policy_uri }}">{{ rp.policy_uri }}</a></dd>
+              {% endif %}
+              {% if rp.tos_uri %}
+                <dt>{{ _('Termini') }}</dt>
+                <dd><a href="{{ rp.tos_uri }}">{{ rp.tos_uri }}</a></dd>
+              {% endif %}
+              {% if rp.contacts %}
+                <dt>{{ _('Contatti') }}</dt>
+                <dd>{{ rp.contacts|join(', ') }}</dd>
+              {% endif %}
+            </dl>
+            {% if selected.record.requested %}
+              <h4 class="h6">{{ _('Attestazioni richieste') }}</h4>
+              {{ attestation_list(selected.record.requested) }}
+            {% endif %}
+            {% if selected.record.presented %}
+              <h4 class="h6">{{ _('Attestazioni presentate') }}</h4>
+              {{ attestation_list(selected.record.presented) }}
+            {% endif %}
+            {% if rp.erasure_endpoint %}
+              <p class="mt-3">
+                <a class="btn btn-outline-primary btn-sm" href="{{ rp.erasure_endpoint }}">{{ _('Richiedi la cancellazione dei dati') }}</a>
+              </p>
+            {% endif %}
+          {% else %}
+            <p>{{ _('Apri un record per vederne il dettaglio.') }}</p>
+          {% endif %}
+        </div>
+      </div>
+    </form>
+  {% endif %}
+</section>

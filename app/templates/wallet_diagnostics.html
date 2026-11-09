@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Storico Azioni HTTP') }}{% endblock %}
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='wallet.css') }}">
+{% endblock %}
+{% block content %}
+  <div class="it-wallet-title-row it-wallet-title-centered">
+    <div class="it-wallet-title-slot it-wallet-title-slot-start"></div>
+    <h1 class="it-wallet-title-heading mb-0" id="page-title">{{ _('Storico Azioni HTTP') }}</h1>
+    <div class="it-wallet-title-slot it-wallet-title-slot-end"></div>
+  </div>
+  <p class="text-center mb-4">{{ _('Richieste e risposte verso i credential issuer e i verificatori.') }}</p>
+  <div class="diagnostic-layout">
+    <nav id="diagnostic-nav" class="diagnostic-nav" aria-label="{{ _('Elenco degli scambi') }}">
+      <h2 class="h6" id="diagnostic-nav-title">{{ _('Azioni') }}</h2>
+      <div id="diagnostic-nav-list">
+        <p class="mb-0">{{ _('Nessuno scambio registrato.') }}</p>
+      </div>
+    </nav>
+    <div class="diagnostic-log-column">
+      <div class="diagnostic-toolbar">
+        <label class="diagnostic-select-all">
+          <input type="checkbox" id="diagnostic-select-all">
+          <span>{{ _('Seleziona tutti') }}</span>
+        </label>
+        <button type="button" id="diagnostic-remove" class="btn btn-outline-primary btn-sm" disabled>{{ _('Rimuovi selezionati') }}</button>
+        <button type="button" id="diagnostic-export-text" class="btn btn-primary btn-sm" disabled>{{ _('Esporta testo') }}</button>
+        <button type="button" id="diagnostic-export-json" class="btn btn-primary btn-sm" disabled>{{ _('Esporta JSON') }}</button>
+      </div>
+      <div id="diagnostic-log">
+        <p class="mb-0">{{ _('Nessuno scambio registrato.') }}</p>
+      </div>
+    </div>
+  </div>
+{% endblock %}
+{% block scripts %}
+  <script src="{{ url_for('static', filename='js/wallet/catalog.js') }}"></script>
+{% endblock %}

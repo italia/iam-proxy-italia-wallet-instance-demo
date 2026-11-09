@@ -6,9 +6,10 @@ app:
   host: !ENV FLASK_RUN_HOST
   port: !ENV FLASK_RUN_PORT
   debug_mode: false
-  favicon_subpath: images/wallet_logo.svg
+  favicon_subpath: img/IT-Wallet-Symbol-Primary-BlueItalia.svg
   static_folder: static
   secret_key: !ENV SECRET_KEY
+  password: !ENV WALLET_INSTANCE_PASSWORD
   http_params:
     proxy:
       use_proxy: false
@@ -30,6 +31,9 @@ wallet_instance:
     - iso_18045_basic
   certification: https://registry.example.org
   oauth_authorization_server: https://iam-proxy-italia.example.org/OpenID4VP
+
+credential_issuers: !ENV CREDENTIAL_ISSUER_URLS
+eudiw_lotl: !ENV EUDIW_LOTL_URL
 
 ms_trust_configuration:
   IT:

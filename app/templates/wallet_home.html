@@ -1,108 +1,100 @@
-<!DOCTYPE html>
-<html lang="it">
-<head>
-  <meta charset="UTF-8" />
-  <title>EU Digital Wallet - Home</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap-italia.min.css') }}" />
-  <link rel="stylesheet" href="{{ url_for('static', filename='wallet.css') }}" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-</head>
-<body>
-  <!-- Popup piccolo sotto il cestino -->
-  <div id="trash-popup" class="popup-hidden">
-    <div class="trash-popup-content">
-      <p>Vuoi resettare il wallet?</p>
-      <div class="trash-popup-buttons">
-        <button id="trash-popup-confirm-btn" class="btn btn-danger">Conferma</button>
-        <button id="trash-popup-cancel-btn" class="btn btn-secondary">Annulla</button>
-      </div>
-    </div>
+{% extends "base.html" %}
+{% block title %}{{ _('Emissione') }}{% endblock %}
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='wallet.css') }}">
+{% endblock %}
+{% block content %}
+  <div class="it-wallet-title-row">
+    <div class="it-wallet-title-slot it-wallet-title-slot-start"></div>
+    <h1 class="it-wallet-title-heading mb-0" id="page-title">{{ _('Emissione') }}</h1>
+    <div class="it-wallet-title-slot it-wallet-title-slot-end"></div>
   </div>
-  <div class="container" style="position: relative;">
-    <div class="icon-bar">
-      <img src="{{ url_for('static', filename='images/memory.svg') }}" alt="Memoria" class="memory-icon" {% if not session.get('pin_authenticated') %}style="display:none;"{% endif %}/>
-      <img src="{{ url_for('static', filename='images/trash-delete-icon.svg') }}" alt="Cestino" class="trash-icon" {% if not wallet_initialized %}style="display:none;"{% endif %}/>
+  <p class="text-center mb-4">{{ _('Configura un Credential Issuer da ispezionare, seleziona un\'attestazione e richiedine l\'emissione.') }}</p>
+
+  <section class="mb-5" aria-label="{{ _('Attestazioni ottenibili') }}">
+    <div id="result"></div>
+    {% include 'message/message_template.html' %}
+    {% if catalog_error %}
+      <div class="alert alert-danger" role="alert"><p>{{ catalog_error }}</p></div>
+    {% endif %}
+    <div id="overlay" style="display:none;" role="status" aria-live="polite">
+      <div class="loader"></div>
+      <span class="visually-hidden">{{ _('Caricamento') }}</span>
     </div>
-    <header>
-        <div class="it-header-center-wrapper">
-          <div class="container-xl">
-            <div class="row">
-              <div class="col-12">
-                <div class="it-header-center-content-wrapper">
-                  <div class="it-brand-wrapper">
-                    <a href="#">
-                      <svg class="icon" aria-hidden="true">
-                        <use href="/static/svg/sprites.svg#it-card"></use>
-                      </svg>
-                      <div class="it-brand-text">
-                        <div class="it-brand-title">IT-Wallet</div>
-                        <div class="it-brand-tagline d-none d-md-block">Portafoglio digitale</div>
-                      </div>
-                      <div id="state-selected" class="flag-container">
-                          <img
-                            id="flagImage"
-                            class="state-flag"
-                            src="{{ url_for('static', filename='images/flags/4x3/' + (selected_country|lower if selected_country else 'eu') + '.svg') }}"
-                            alt="{{ selected_country or 'European Union' }}" />
-                      </div>
-                    </a>
-                  </div>
-                  <div class="">
-                          <!-- Popup per importazione QR -->
-                        <img src="/static/images/qr-code-icon.svg" alt="Importa QR" id="qr-icon" onclick="openQrPopup()" />
-                        <!-- fine Popup per importazione QR -->
-                  </div>
-                </div>
-              </div>
+
+    <form id="issuer-catalog-form" class="mb-4" novalidate>
+      <div class="issuer-load-row">
+        <div class="issuer-url-field">
+          <label for="issuer-url">{{ _('URL del credential issuer') }}</label>
+          <input type="url" class="form-control long-text" id="issuer-url" name="issuerUrl" autocomplete="url" aria-describedby="issuer-url-error" value="{{ default_issuer_url }}" data-copy-ignore="true">
+        </div>
+        <div class="issuer-trust-field">
+          <label for="trust-anchor">{{ _('Trust Anchor') }}</label>
+          <input type="url" class="form-control long-text" id="trust-anchor" name="trustAnchor" autocomplete="url" value="{{ default_trust_anchor }}" data-copy-ignore="true" data-compose-trust-anchor="{{ default_trust_anchor }}" data-eudiw-lotl="{{ eudiw_lotl_url }}">
+        </div>
+        <div class="issuer-discovery-field">
+          <label for="issuer-discovery">{{ _('Modalità di discovery') }}</label>
+          <select id="issuer-discovery" class="form-control issuer-discovery-select" name="discovery" aria-describedby="issuer-discovery-error">
+            <option value="openid">{{ _('openid (direct)') }}</option>
+            <option value="openid-federation" selected>{{ _('openid federation') }}</option>
+            <option value="eudiw-lotl" class="discovery-pending">{{ _('eudiw lotl (not implemented yet)') }}</option>
+          </select>
+        </div>
+        <button type="submit" class="btn btn-primary">{{ _('Carica attestazioni') }}</button>
+      </div>
+      <p id="issuer-url-error" class="field-error" hidden></p>
+      <p id="issuer-discovery-error" class="field-error" hidden></p>
+    </form>
+
+    <div id="issuer-catalog">
+      {% for section in catalog_sections %}
+        {% set section_index = loop.index0 %}
+        <article class="it-card rounded border shadow-sm catalog-section mb-4" data-issuer="{{ section.issuer }}">
+          <div class="catalog-issuer-heading">
+            <h2 class="it-card-title h5">{{ section.name or section.uri }}</h2>
+            {% set offered = section.attestations|length %}
+            <div class="chip chip-simple chip-primary" aria-label="{{ _('Numero di credenziali offerte') }}">
+              <span class="chip-label">{% if offered == 1 %}{{ _('1 attestazione disponibile') }}{% else %}{{ _('{count} attestazioni disponibili').format(count=offered) }}{% endif %}</span>
             </div>
           </div>
-        </div>
-        <p class="h3 my-4">Benvenuto nel tuo Digital Wallet</p>
-    </header>
-    <main>
-      <div id="result"></div>
-      <!-- Message Tempplate -->
-      {% include 'message/message_template.html' %}
-      <!-- Message Template -->
-      <div id="overlay" style="display:none;">
-        <div class="loader"></div>
-      </div>
-      <!-- State Member Selection -->
-      {% include 'core/member_state/member_selection.html' %}
-      <!-- End State Member Selection -->
-      <!-- Carousel section -->
-      <form action="/wallet/v1/search" method="post">
-          {% include 'core/carousel/carousel_container.html' %}
-      </form>
-      <!-- Carousel section -->
-      <!-- Button section -->
-      {% include 'core/buttons/button_section.html' %}
-      <!-- End Button Section -->
-    </main>
+          <div class="it-card-body">
+            <div class="form-group mb-0">
+              <div class="catalog-obtain">
+                <div class="select-wrapper">
+                  <select id="issuer-select-{{ section_index }}" data-source="{{ section.source }}" aria-label="{{ _('Seleziona una Attestazione disponibile') }}" aria-describedby="issuer-select-{{ section_index }}-detail issuer-select-{{ section_index }}-error">
+                    <option value="" selected>{{ _("Seleziona una Attestazione disponibile") }}</option>
+                    {% for item in section.attestations %}
+                      <option value="{{ item.id }}" data-description="{{ item.description }}" data-claims='{{ item.claims | tojson }}' data-format="{{ item.format }}" data-offer-uri="{{ item.offer_uri }}"{% if item.obtained %} disabled{% endif %}>{{ item.name }}{% if item.format_label %} — {{ item.format_label }}{% endif %}{% if item.disambiguator %} — {{ item.disambiguator }}{% endif %}{% if item.obtained %} — {{ _('Già ottenuta') }}{% endif %}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+                <button type="button" class="btn btn-primary obtain-one">{{ _('Ottieni') }}</button>
+              </div>
+              <p id="issuer-select-{{ section_index }}-error" class="field-error" hidden></p>
+              <div id="issuer-select-{{ section_index }}-detail" class="attestation-detail mt-3"></div>
+            </div>
+          </div>
+        </article>
+      {% endfor %}
+    </div>
+  </section>
 
+  <div id="cred-popup" class="modal" role="dialog" aria-modal="true" aria-labelledby="cred-popup-title" aria-hidden="true">
+    <div class="cred-popup-content">
+      <button type="button" id="cred-popup-close" class="cred-popup-close-btn" aria-label="{{ _('Chiudi') }}" onclick="closeCredPopup()">×</button>
+      <h2 id="cred-popup-title" class="h5"></h2>
+      <div id="cred-popup-body"></div>
+    </div>
   </div>
-
-  {% include 'template.html' %}
-  <!-- Include for QRCode -->
-  {% include 'core/qrcode/qrcode.html' %}
-  <!-- End Include for QRCode -->
-  <!-- Include for presentation phase -->
-  {% include 'core/presentation/presentation_phase.html' %}
-  <!-- End Include for presentation phase -->
-
-  <script src="{{ url_for('static', filename='js/jsQR.min.js') }}"></script>
-  <script src="/static/js/wallet-utils.js"></script>
-  <script src="{{ url_for('static', filename='js/bootstrap-italia.bundle.min.js') }}"></script>
+{% endblock %}
+{% block scripts %}
+  <script src="{{ url_for('static', filename='js/wallet-utils.js') }}"></script>
   <script src="{{ url_for('static', filename='js/wallet/state.js') }}"></script>
   <script src="{{ url_for('static', filename='js/wallet/init-ui.js') }}"></script>
-  <script src="{{ url_for('static', filename='js/wallet/rp-scanner.js') }}"></script>
-  <script src="{{ url_for('static', filename='js/wallet/credentials.js') }}"></script>
   <script src="{{ url_for('static', filename='js/wallet/lifecycle.js') }}"></script>
   <script src="{{ url_for('static', filename='js/wallet/components.js') }}"></script>
-  <script src="{{ url_for('static', filename='js/wallet/presentation.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/wallet/catalog.js') }}"></script>
   <script>
     const SESSION_ID = "{{ session_id }}";
-    const INIT_ERROR_MESSAGE = "{{ init_error_message|escape }}";
   </script>
-</body>
-</html>
+{% endblock %}

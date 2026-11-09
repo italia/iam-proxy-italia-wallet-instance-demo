@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Dashboard Presentazioni') }}{% endblock %}
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='wallet.css') }}">
+{% endblock %}
+{% block content %}
+  <div class="it-wallet-title-row it-wallet-title-wide">
+    <div class="it-wallet-title-slot it-wallet-title-slot-start"></div>
+    <h1 class="it-wallet-title-heading mb-0" id="page-title">{{ _('Dashboard Presentazioni') }}</h1>
+    <div class="it-wallet-title-slot it-wallet-title-slot-end">
+      <div class="it-wallet-title-actions">
+        <button type="button" class="it-wallet-icon-btn" id="presentation-reset" aria-label="{{ _('Reimposta lo storico') }}"{% if not records %} hidden{% endif %}>
+          <svg class="icon" aria-hidden="true"><use href="{{ url_for('static', filename='svg/sprites.svg') }}#it-delete"></use></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+  <dialog id="presentation-reset-dialog" aria-labelledby="presentation-reset-title">
+    <p id="presentation-reset-title">{{ _('Vuoi cancellare lo storico delle presentazioni?') }}</p>
+    <p>{{ _('La cancellazione elimina solo la copia locale di questi record e non può essere annullata.') }}</p>
+    <p>{{ _("La cancellazione può incidere sui diritti dell'Utente in materia di protezione dei dati.") }}</p>
+    <form method="post" action="{{ url_for('wallet_routes.dashboard_reset') }}">
+      <div class="d-flex flex-wrap gap-2">
+        <button class="btn btn-primary" type="submit">{{ _('Conferma') }}</button>
+        <button class="btn btn-outline-primary" type="button" id="presentation-reset-cancel">{{ _('Annulla') }}</button>
+      </div>
+    </form>
+  </dialog>
+  <p class="text-center mb-4">{{ _('Storico delle presentazioni alle Relying Party.') }}</p>
+  {% include 'partials/presentation_dashboard.html' %}
+{% endblock %}
+{% block scripts %}
+  <script>
+    const presentationReset = document.getElementById("presentation-reset");
+    const presentationResetDialog = document.getElementById("presentation-reset-dialog");
+    presentationReset?.addEventListener("click", () => {
+      if (!presentationResetDialog) return;
+      if (presentationResetDialog.open) presentationResetDialog.close();
+      else presentationResetDialog.showModal();
+    });
+    document.getElementById("presentation-reset-cancel")?.addEventListener("click", () => {
+      presentationResetDialog?.close();
+    });
+    presentationResetDialog?.addEventListener("click", (event) => {
+      if (event.target === presentationResetDialog) presentationResetDialog.close();
+    });
+  </script>
+{% endblock %}

@@ -48,7 +48,7 @@ METADATA_TYPE_FEDERATION_ENTITY: str = "federation_entity"
 METADATA_TYPE_AUTHORIZATION_SERVER: str = "oauth_authorization_server"
 METADATA_TYPE_CREDENTIAL_ISSUER: str = "openid_credential_issuer"
 METADATA_TYPE_CREDENTIAL_VERIFIER: str = "openid_credential_verifier"
-METADATA_TYPE_WALLET_PROVIDER: str = "wallet_solution"
+METADATA_TYPE_WALLET_PROVIDER: str = "openid_wallet_provider"
 
 # EU member state ISO-3166-1 alpha-2 codes
 EU_COUNTRIES: set[str] = {

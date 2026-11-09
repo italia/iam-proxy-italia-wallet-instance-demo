@@ -1,6 +1,5 @@
 import logging
 
-from app.constants import METADATA_TYPE_FEDERATION_ENTITY
 from app.store import AppState
 from app.utils.http_utils import http_request_with_retry
 
@@ -46,45 +45,3 @@ class BaseService:
 
     def _create_header(self, params: dict):
         pass
-
-    def validate_entity_configuration(
-        self, payload: dict, expected_url: str, metadata_types: list, hint: any = None
-    ) -> None:
-        logger.debug(
-            f"Entering method: validate_entity_configuration. Params [payload: {payload}, expected_url: {expected_url}, metadata_types: {metadata_types}, hint:{hint}]"
-        )
-        if not payload:
-            raise ValueError("Entity Configuration empty")
-        self._validate_iss_sub(payload, expected_url)
-        if hint is not None:
-            self._validate_authority_hints(payload, hint)
-        self._validate_metadata_and_jwks(payload, metadata_types)
-
-    def _validate_iss_sub(self, payload: dict, expected: str) -> None:
-        logger.debug(f"Entering method: _validate_ec_iss_sub. Params [payload: {payload}, expected: {expected}]")
-        if payload.get("iss") != expected or payload.get("sub") != expected:
-            raise ValueError(f"iss/sub expected: '{expected}'")
-
-    def _validate_authority_hints(self, payload: dict, expected_hint: any) -> None:
-        logger.debug(
-            f"Entering method: _validate_authority_hints. Params [payload: {payload}, expected_hint: {expected_hint}]"
-        )
-        hints = payload.get("authority_hints", [])
-        if not isinstance(hints, list) or not hints or expected_hint not in hints:
-            raise ValueError(f"Authority expected: '{expected_hint}'")
-
-    def _validate_metadata_and_jwks(self, payload: dict, expected_metadata_types: list) -> None:
-        logger.debug(
-            f"Entering method: _validate_metadata_and_jwks. Params [payload: {payload}, expected_metadata_types: {expected_metadata_types}]"
-        )
-        actual = payload.get("metadata", {})
-        missing = [type for type in expected_metadata_types if type not in actual]
-        if missing:
-            raise ValueError(f"Metadata missing: {missing}")
-        for mtype in expected_metadata_types:
-            if mtype == METADATA_TYPE_FEDERATION_ENTITY:
-                continue
-            try:
-                _ = payload["metadata"][mtype]["jwks"]
-            except KeyError:
-                raise ValueError(f"metadata.{mtype}.jwks missing")

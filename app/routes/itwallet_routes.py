@@ -1,19 +1,66 @@
+import io
 import json
 import logging
-from urllib.parse import urlparse
+from urllib.parse import quote, urlparse
 
-from flask import Blueprint, current_app, g, jsonify, request, session
+import pyqrcode
+from flask import Blueprint, Response, current_app, g, jsonify, redirect, request, session, url_for
+from flask_babel import gettext as _
 
 from app.constants import (
+    APP_SETTINGS_KEY,
     DEFAULT_CORRELATION_ID,
-    EU_COUNTRIES,
-    IDP_VALID,
+    METADATA_TYPE_CREDENTIAL_ISSUER,
+    OID_FED_WELL_KNOWN_PATH,
+)
+from app.i18n import get_locale
+from app.service.catalog import (
+    _as_dict,
+    _as_list,
+    _attach_offer_uris,
+    _attestation_name,
+    _attestation_record,
+    _attestations_from_ec,
+    _catalog_section,
+    _catalog_sections,
+    _chosen_display,
+    _claim_labels,
+    _credential_issuer_metadata,
+    _credential_offer_uri,
+    _direct_issuer_payload,
+    _discovery_rejection,
+    _ensure_member_state,
+    _federation_source,
+    _fetch_issuer_payload,
+    _format_label,
+    _held_credential_ids,
+    _issuer_catalog_post,
+    _italian_display,
+    _localized_display,
+    _mark_ambiguous,
+    _metadata_source,
+    _offer_authorization_server,
+    _offer_qr_svg,
+    _parse_direct_metadata,
+    _require_param,
+    _store_discovered_issuer,
+    _stored_discovery,
+    _supported_configurations,
+    _validate_login_to_rp_request,
+    _with_credential_view_url,
+    configured_eudiw_lotl,
+    configured_issuer_urls,
+    configured_trust_anchor,
+    display_index,
+    load_configured_issuers,
+    lookup_attestation,
 )
 from app.service.itwallet_service import ItWalletService
-from app.store import app_state
+from app.store import app_state, transaction_log
+from app.utils.diagnostic_log import list_entries, peer_role, remove_entries
+from app.utils.http_utils import http_request_with_retry
 from app.utils.utils import (
     estrai_parametro_query_string,
-    extract_claim,
     guess_credential_configuration_icon,
     sanitize_for_logging,
 )
@@ -21,6 +68,18 @@ from app.utils.utils import (
 logger = logging.getLogger(__name__)
 
 wallet_api_bp = Blueprint("wallet_api_bp", __name__, url_prefix="/itwallet")
+
+_DISCOVERY_DIRECT = "openid"
+_DISCOVERY_FEDERATION = "openid-federation"
+_DISCOVERY_LOTL = "eudiw-lotl"
+_DIRECT_WELL_KNOWN = "/.well-known/openid-credential-issuer"
+
+
+@wallet_api_bp.before_request
+def require_wallet_session():
+    if session.get("authenticated"):
+        return None
+    return redirect(url_for("wallet_routes.wallet_access"))
 
 
 @wallet_api_bp.before_request
@@ -56,67 +115,36 @@ def wallet_reset():
         return jsonify({"success": True}), 200
     except Exception as e:
         logger.error("❌ %s", sanitize_for_logging(str(e)))
-        return jsonify({"success": False, "data": {"error": str(e)}}), 500
+        return jsonify({"success": False, "data": {"error": _(str(e))}}), 500
 
 
-@wallet_api_bp.route("/init", methods=["GET"])
-def init_wallet():
-    """Endpoint for Wallet initialization via required query parameters (e.g., country, idp)."""
-    logger.info("Entering method: init_wallet.")
-    _clear_session()
+@wallet_api_bp.route("/diagnostics", methods=["GET", "DELETE"])
+def diagnostics():
+    """Return the recent outbound request and response log, or remove selected exchanges."""
+    if request.method == "DELETE":
+        body = request.get_json(silent=True) or {}
+        ids = body.get("ids")
+        if not isinstance(ids, list):
+            return jsonify({"success": False, "message": _("Seleziona gli scambi da rimuovere.")}), 400
+        remove_entries([str(item) for item in ids])
+    return jsonify({"success": True, "data": list_entries()}), 200
+
+
+@wallet_api_bp.route("/credential-offer.svg", methods=["GET"])
+def credential_offer_qr():
     try:
-        country = request.args.get("country")
-        if not country:
-            raise ValueError("Parametro 'country' mancante")
-
-        country = country.upper()
-        if country not in EU_COUNTRIES:
-            raise ValueError(
-                f"Parametro 'country' valorizzato con il paese '{country}' non riconosciuto come membro UE"
-            )
-
-        idp = request.args.get("idp")
-        if not idp:
-            raise ValueError("Parametro 'idp' mancante")
-
-        idp = idp.upper()
-        if idp not in IDP_VALID:
-            raise ValueError(f"Parametro 'idp' valorizzato con il valore '{idp}' non riconosciuto")
-
-        # Salvataggio in memoria del country e dell'idp selezionato
-        app_state.selected_country = country
-        app_state.selected_idp = idp
-
-        service = ItWalletService(session)
-        result = service.initialize_wallet(idp=idp, country=country)
-
-        status_code = 200 if result["success"] else 500
-        return jsonify(result), status_code
-
-    except ValueError as ve:
-        logger.error("❌ %s", sanitize_for_logging(str(ve)))
-        return jsonify({"success": False, "data": {"error": str(ve)}}), 400
-    except Exception as e:
-        logger.error("❌ %s", sanitize_for_logging(str(e)))
-        return jsonify({"success": False, "data": {"error": str(e)}}), 500
+        svg = _offer_qr_svg(request.args.get("offer") or "")
+    except ValueError:
+        return jsonify({"success": False, "message": _("Credential offer non valida.")}), 400
+    return Response(svg, mimetype="image/svg+xml")
 
 
-@wallet_api_bp.route("/init/complete", methods=["GET"])
-def completedInitItWallet():
-    """Endpoint to complete the Wallet initialization process."""
-    try:
-        service = ItWalletService(session)
-        result = service.complete_initialize_wallet()
-
-        status_code = 200 if result["success"] else 500
-        return jsonify(result), status_code
-
-    except ValueError as ve:
-        logger.error("❌ %s", sanitize_for_logging(str(ve)))
-        return jsonify({"success": False, "data": {"error": str(ve)}}), 400
-    except Exception as e:
-        logger.error("❌ %s", sanitize_for_logging(str(e)))
-        return jsonify({"success": False, "data": {"error": str(e)}}), 500
+@wallet_api_bp.route("/issuerCatalog", methods=["GET", "POST"])
+def issuer_catalog():
+    """List attestations from credential issuer metadata, or load another issuer URL."""
+    if request.method == "GET":
+        return jsonify({"success": True, "data": _catalog_sections()}), 200
+    return _issuer_catalog_post()
 
 
 @wallet_api_bp.route("/credentialSupported", methods=["GET"])
@@ -124,58 +152,35 @@ def credentialSupported():
     """Endpoint to fetch supported Wallet credential types."""
     logger.debug("Entering method: credentialSupported.")
     try:
-        # @Todo remove static name "credential_issuer_list" and define a constant for it
-        credential_issuer_list = app_state.ec_store.get("credential_issuer_list", [])
-
-        issuer_existing = app_state.ec_store.get("user_credential", {})
-
+        held = _held_credential_ids()
         output = [
-            {"id": key, "label": key, "icon": guess_credential_configuration_icon(key)}
-            for cred_issuer in credential_issuer_list
-            for key, value in app_state.ec_store.get(cred_issuer, {}).items()
-            if key not in issuer_existing.get(cred_issuer, {})
+            {"id": item["id"], "label": item["name"], "icon": guess_credential_configuration_icon(item["id"])}
+            for section in _catalog_sections()
+            for item in section["attestations"]
+            if item["id"] not in held
         ]
-
-        # @todo Deprecated, remove this code
-        # supported_creds = extract_claim(
-        #     current_app.config, "metadata.credential_flow.credential_configurations_supported"
-        # )
-        # if not supported_creds:
-        #     raise ValueError("Nessuna tipologia credenziale configurata")
-
-        # logger.info("Tipologie di credenziali supportate dal wallet:")
-        # result = []
-        # for c in list(supported_creds):
-        #     logger.info(" - %s", sanitize_for_logging(c))
-        #     cred = dict(id=c, label=c, icon=guess_credential_configuration_icon(c))
-        #     result.append(cred)
-        #
-        # logger.info(
-        #     "ℹ️  Nel wallet hai al momento: %s", sanitize_for_logging(app_state.credential_store.keys_with_vct())
-        # )
         return jsonify({"success": True, "data": output}), 200
-
     except ValueError as ve:
         logger.error("❌ %s", sanitize_for_logging(str(ve)))
-        return jsonify({"success": False, "data": {"error": str(ve)}}), 400
+        return jsonify({"success": False, "data": {"error": _(str(ve))}}), 400
     except Exception as e:
         logger.error("❌ %s", sanitize_for_logging(str(e)))
-        return jsonify({"success": False, "data": {"error": str(e)}}), 500
+        return jsonify({"success": False, "data": {"error": _(str(e))}}), 500
 
 
 @wallet_api_bp.route("/objectTypesInMemory", methods=["GET"])
-def objectTypesInMemory():
+def stored_object_types():
     """Endpoint to fetch all object types currently in memory."""
     try:
-        objectTypesInMemory = app_state.get_store_types()
+        stored_types = app_state.get_store_types()
         logger.info(
-            "✅ Tipologie di oggetti presenti nella memoria del Wallet:  %s", sanitize_for_logging(objectTypesInMemory)
+            "✅ Tipologie di oggetti presenti nella memoria del Wallet:  %s", sanitize_for_logging(stored_types)
         )
-        return jsonify({"success": True, "data": objectTypesInMemory}), 200
+        return jsonify({"success": True, "data": stored_types}), 200
 
     except Exception as e:
         logger.error("❌ %s", sanitize_for_logging(str(e)))
-        return jsonify({"success": False, "data": {"error": str(e)}}), 500
+        return jsonify({"success": False, "data": {"error": _(str(e))}}), 500
 
 
 @wallet_api_bp.route("/viewObjectTypeInMemory", methods=["POST"])
@@ -189,7 +194,7 @@ def viewObjectTypeInMemory():
 
         object_type_value = data.get("objectType")  # Check if objectType key is present
         if not object_type_value:
-            return jsonify({"success": False, "data": {"error": "Missing request parameter 'objectType'"}}), 400
+            return jsonify({"success": False, "data": {"error": _("Indica il tipo di elemento da mostrare.")}}), 400
 
         logger.info("Recuperato oggetto di tipo %s dalla memoria del Wallet", sanitize_for_logging(object_type_value))
 
@@ -200,34 +205,7 @@ def viewObjectTypeInMemory():
 
     except Exception as e:
         logger.error("❌ %s", sanitize_for_logging(str(e)))
-        return jsonify({"success": False, "data": {"error": str(e)}}), 500
-
-
-#
-# @wallet_api_bp.route("/onboardedRelyingParties", methods=["GET"])
-# def onboardedRelyingParties():
-#     """Endpoint to fetch the list of onboarded Relying Parties."""
-#     try:
-#         service = ItWalletService(session)
-#         result = service.getOnboardedRelyingParties()
-#
-#         if not result.get("success"):
-#             return jsonify(result), 500
-#
-#         logger.info("Onboarded Relying Parties:")
-#         data = []
-#         for rp in list(result["data"]):
-#             logger.info(" - %s", sanitize_for_logging(rp))
-#             data.append({"id": rp, "label": rp, "icon": "🏛️"})
-#
-#         return jsonify({"success": True, "data": data}), 200
-#
-#     except ValueError as ve:
-#         logger.error("❌ %s", sanitize_for_logging(str(ve)))
-#         return jsonify({"success": False, "data": {"error": str(ve)}}), 400
-#     except Exception as e:
-#         logger.error("❌ %s", sanitize_for_logging(str(e)))
-#         return jsonify({"success": False, "data": {"error": str(e)}}), 500
+        return jsonify({"success": False, "data": {"error": _(str(e))}}), 500
 
 
 @wallet_api_bp.route("/deleteCredential", methods=["POST"])
@@ -241,7 +219,7 @@ def deleteCredentialItWallet():
 
         credential_id = data.get("credentialId")
         if not credential_id:
-            return jsonify({"success": False, "data": {"error": "Missing request parameter 'credentialId'"}}), 400
+            return jsonify({"success": False, "data": {"error": _("Seleziona l'attestazione da ottenere.")}}), 400
 
         service = ItWalletService(session)
         result = service.delete_credential_wallet(credential_id)
@@ -251,10 +229,10 @@ def deleteCredentialItWallet():
 
     except ValueError as ve:
         logger.error("❌ %s", sanitize_for_logging(str(ve)))
-        return jsonify({"success": False, "data": {"error": str(ve)}}), 400
+        return jsonify({"success": False, "data": {"error": _(str(ve))}}), 400
     except Exception as e:
         logger.error("❌ %s", sanitize_for_logging(str(e)))
-        return jsonify({"success": False, "data": {"error": str(e)}}), 500
+        return jsonify({"success": False, "data": {"error": _(str(e))}}), 500
 
 
 @wallet_api_bp.route("/addCredential", methods=["POST"])
@@ -268,8 +246,9 @@ def addCredentialItWallet():
 
         credential_id = data.get("credentialId")
         if not credential_id:
-            return jsonify({"success": False, "data": {"error": "Missing request parameter 'credentialId'"}}), 400
+            return jsonify({"success": False, "data": {"error": _("Seleziona l'attestazione da ottenere.")}}), 400
 
+        _ensure_member_state()
         service = ItWalletService(session)
         result = service.add_credential_wallet(credential_id)
 
@@ -278,10 +257,37 @@ def addCredentialItWallet():
 
     except ValueError as ve:
         logger.error("❌ %s", sanitize_for_logging(str(ve)))
-        return jsonify({"success": False, "data": {"error": str(ve)}}), 400
+        return jsonify({"success": False, "data": {"error": _(str(ve))}}), 400
     except Exception as e:
         logger.error("❌ %s", sanitize_for_logging(str(e)))
-        return jsonify({"success": False, "data": {"error": str(e)}}), 500
+        return jsonify({"success": False, "data": {"error": _(str(e))}}), 500
+
+
+def _issuance_state_from(data):
+    issuance_state = data.get("issuanceState") if isinstance(data, dict) else None
+    if isinstance(issuance_state, str) and issuance_state:
+        return issuance_state
+    return None
+
+
+def _json_result(result):
+    status_code = 200 if result["success"] else 500
+    return jsonify(result), status_code
+
+
+def _complete_from_browser(data):
+    service = ItWalletService(session)
+    result = _with_credential_view_url(service.complete_add_credential_from_browser(_issuance_state_from(data)))
+    return _json_result(result)
+
+
+def _complete_with_shared_data(credentials_presenting):
+    if not isinstance(credentials_presenting, list):
+        raise ValueError(_("I dati da condividere con l'issuer non sono nel formato atteso."))
+    _ensure_member_state()
+    service = ItWalletService(session)
+    result = _with_credential_view_url(service.complete_add_credential_wallet(credentials_presenting))
+    return _json_result(result)
 
 
 @wallet_api_bp.route("/addCredential/complete", methods=["POST"])
@@ -291,26 +297,17 @@ def completedAddCredentialItWallet():
     try:
         data = request.get_json()
         logger.info("%s", sanitize_for_logging(data))
-
-        credentials_presenting = data.get("credentialsPresenting")
-        if not credentials_presenting:
-            raise ValueError("La richiesta non presenta il parametro 'credentialsPresenting'")
-
-        if not isinstance(credentials_presenting, list):
-            raise ValueError("Il parametro 'credentialsPresenting' ha un formato non valido")
-
-        service = ItWalletService(session)
-        result = service.complete_add_credential_wallet(credentials_presenting)
-
-        status_code = 200 if result["success"] else 500
-        return jsonify(result), status_code
+        credentials_presenting = data.get("credentialsPresenting") if data else None
+        if credentials_presenting:
+            return _complete_with_shared_data(credentials_presenting)
+        return _complete_from_browser(data)
 
     except ValueError as ve:
         logger.error("❌ %s", sanitize_for_logging(str(ve)))
-        return jsonify({"success": False, "data": {"error": str(ve)}}), 400
+        return jsonify({"success": False, "data": {"error": _(str(ve))}}), 400
     except Exception as e:
         logger.error("❌ %s", sanitize_for_logging(str(e)))
-        return jsonify({"success": False, "data": {"error": str(e)}}), 500
+        return jsonify({"success": False, "data": {"error": _(str(e))}}), 500
 
 
 @wallet_api_bp.route("/loginToRelyingParty", methods=["POST"])
@@ -328,16 +325,16 @@ def loginToRelyingParty():
         logger.info("Il contenuto del QR Code è un URL valido: %s", sanitize_for_logging(data.get("qrCodeContent")))
 
         service = ItWalletService(session)
-        result = service.loginToVerifier(client_id, request_uri, request_uri_method, state)
+        result = service.present_to_verifier(client_id, request_uri, request_uri_method, state)
 
         status_code = 200 if result["success"] else 500
         return jsonify(result), status_code
     except ValueError as ve:
         logger.error("Errore: %s", sanitize_for_logging(str(ve)))
-        return jsonify({"success": False, "data": {"error": str(ve)}}), 400
+        return jsonify({"success": False, "data": {"error": _(str(ve))}}), 400
     except Exception as e:
         logger.error("Errore: %s", sanitize_for_logging(str(e)))
-        return jsonify({"success": False, "data": {"error": str(e)}}), 500
+        return jsonify({"success": False, "data": {"error": _(str(e))}}), 500
 
 
 @wallet_api_bp.route("/loginToVerifier/complete", methods=["POST"])
@@ -349,63 +346,33 @@ def completedLoginToVerifier():
 
         credentials_presenting = data.get("credentialsPresenting")
         if not credentials_presenting:
-            raise ValueError("Il parametro 'credentialsPresenting' non è presente nel corpo della richiesta")
+            raise ValueError(_("Manca l'elenco dei dati da presentare al verificatore."))
 
         if not isinstance(credentials_presenting, list):
-            raise ValueError("Il parametro 'credentialsPresenting' ha un formato non valido.")
+            raise ValueError(_("I dati da presentare al verificatore non sono nel formato atteso."))
 
         service = ItWalletService(session)
-        result = service.complete_loginToVerifier(credentials_presenting)
+        result = service.complete_presentation(credentials_presenting)
 
         status_code = 200 if result["success"] else 500
         return jsonify(result), status_code
 
     except ValueError as ve:
         logger.error("Errore: %s", sanitize_for_logging(str(ve)))
-        return jsonify({"success": False, "data": {"error": str(ve)}}), 400
+        return jsonify({"success": False, "data": {"error": _(str(ve))}}), 400
     except Exception as e:
         logger.error("Errore: %s", sanitize_for_logging(str(e)))
-        return jsonify({"success": False, "data": {"error": str(e)}}), 500
-
-
-def _require_param(value: str | None, msg: str) -> str:
-    """Return value or raise ValueError with msg."""
-    if not value:
-        raise ValueError(msg)
-    return value
-
-
-def _validate_login_to_rp_request(data: dict) -> tuple[str, str, str, str]:
-    """Validate request data and extract clientId, requestUri, requestUriMethod, state. Raises ValueError on error."""
-    rp_id = data.get("relyingPartyId") or ""
-    qr_content = data.get("qrCodeContent") or ""
-    rp_parsed = urlparse(rp_id)
-    if not (rp_parsed.scheme and rp_parsed.netloc):
-        raise ValueError(f"L'ID del Relying Party selezionato non è un URL valido: {rp_id}")
-    qr_parsed = urlparse(qr_content)
-    if not (qr_parsed.scheme and qr_parsed.netloc):
-        raise ValueError(f"Il contenuto del QR Code non è un URL valido: {qr_content}")
-    client_id = _require_param(
-        estrai_parametro_query_string(qr_content, "client_id"),
-        "L'URL specificata nel QR Code non presenta il parametro 'client_id' in query string",
-    )
-    if client_id != rp_id:
-        raise ValueError("client_id nel QR Code non corrisponde al Relying Party")
-    request_uri = _require_param(
-        estrai_parametro_query_string(qr_content, "request_uri"),
-        "L'URL specificata nel QR Code non presenta il parametro 'request_uri' in query string",
-    )
-    request_uri_method = estrai_parametro_query_string(qr_content, "request_uri_method") or "get"
-    state = _require_param(
-        estrai_parametro_query_string(qr_content, "state"),
-        "L'URL specificata nel QR Code non presenta il parametro 'state' in query string",
-    )
-    return client_id, request_uri, request_uri_method, state
+        return jsonify({"success": False, "data": {"error": _(str(e))}}), 500
 
 
 def _clear_session():
+    transaction_log.abandon_open_presentation(session)
     # Salva le chiavi da preservare
-    preserved = {"session_id": session.get("session_id"), "pin_authenticated": session.get("pin_authenticated")}
+    preserved = {
+        "session_id": session.get("session_id"),
+        "authenticated": session.get("authenticated"),
+        "issuance_requests": session.get("issuance_requests"),
+    }
 
     # Pulisce la sessione
     session.clear()

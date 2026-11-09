@@ -70,7 +70,7 @@ def get_trust_root_and_eaa_provider_ec(
     trust_root_url = extract_claim(current_app.config, f"ms_trust_configuration.{country}.trust_root")
 
     if not trust_root_url:
-        raise ValueError(f"Nessun Trust root per il paese {country}")
+        raise ValueError("Non è configurato il trust anchor della demo, quindi non posso chiedere l'attestazione.")
     query = (
         f"metadata.{METADATA_TYPE_CREDENTIAL_ISSUER}.credential_configurations_supported.{credential_configuration_id}"
     )
@@ -78,9 +78,7 @@ def get_trust_root_and_eaa_provider_ec(
     ec_list = app_state.ec_store.all_values(query)
 
     if not ec_list:
-        raise ValueError(
-            f"Nessun {METADATA_TYPE_CREDENTIAL_ISSUER} trovato che supporti credenziali di tipo {credential_configuration_id}"
-        )
+        raise ValueError("Nessun issuer configurato rilascia l'attestazione selezionata. Ricarica la pagina e riprova.")
 
     ec = ec_list[0]
 
@@ -90,6 +88,60 @@ def get_trust_root_and_eaa_provider_ec(
         raise ValueError(f"EC dell'entità che rilascia {credential_configuration_id} non presenta il claim 'iss'")
 
     return trust_root_url, eaa_url, ec
+
+
+def credential_configuration_scope(entity_configuration: dict, credential_configuration_id: str) -> str:
+    """Scope dichiarato dalla Credential Configuration nell'Entity Configuration dell'issuer."""
+    query = (
+        f"metadata.{METADATA_TYPE_CREDENTIAL_ISSUER}.credential_configurations_supported."
+        f"{credential_configuration_id}.scope"
+    )
+    scope = extract_claim(entity_configuration, query)
+    if not isinstance(scope, str) or not scope:
+        raise ValueError("La configurazione dell'issuer non dichiara lo scope di questa attestazione.")
+    return scope
+
+
+def credential_configuration_format(entity_configuration: dict, credential_configuration_id: str) -> str:
+    """Formato dichiarato dalla Credential Configuration nell'Entity Configuration dell'issuer."""
+    query = (
+        f"metadata.{METADATA_TYPE_CREDENTIAL_ISSUER}.credential_configurations_supported."
+        f"{credential_configuration_id}.format"
+    )
+    credential_format = extract_claim(entity_configuration, query)
+    if not isinstance(credential_format, str) or not credential_format:
+        raise ValueError("La configurazione dell'issuer non dichiara il formato di questa attestazione.")
+    return credential_format
+
+
+def credential_configuration_doctype(entity_configuration: dict, credential_configuration_id: str) -> str:
+    """Doctype dichiarato dalla Credential Configuration nell'Entity Configuration dell'issuer."""
+    query = (
+        f"metadata.{METADATA_TYPE_CREDENTIAL_ISSUER}.credential_configurations_supported."
+        f"{credential_configuration_id}.doctype"
+    )
+    doctype = extract_claim(entity_configuration, query)
+    if not isinstance(doctype, str) or not doctype:
+        raise ValueError("La configurazione dell'issuer non dichiara il doctype di questa attestazione.")
+    return doctype
+
+
+def credential_configuration_namespaces(entity_configuration: dict, credential_configuration_id: str) -> list[str]:
+    """Namespace distinti, primo elemento di credential_metadata.claims[].path."""
+    query = (
+        f"metadata.{METADATA_TYPE_CREDENTIAL_ISSUER}.credential_configurations_supported."
+        f"{credential_configuration_id}.credential_metadata.claims"
+    )
+    claims = extract_claim(entity_configuration, query)
+    namespaces = []
+    if isinstance(claims, list):
+        for claim in claims:
+            path = claim.get("path") if isinstance(claim, dict) else None
+            if isinstance(path, list) and path and isinstance(path[0], str) and path[0] not in namespaces:
+                namespaces.append(path[0])
+    if not namespaces:
+        raise ValueError("La configurazione dell'issuer non dichiara i namespace di questa attestazione.")
+    return namespaces
 
 
 def validate_credential_and_presentation_flow() -> None:
