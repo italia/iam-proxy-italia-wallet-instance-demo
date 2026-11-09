@@ -5,7 +5,7 @@ Demo wallet instance for Relying Party and Credential Issuer assessment and deve
 ## Table of Contents
 
 ## 1. Overview
-This is a Web application that acts as a Wallet Instance, in full compliance with the [IT Wallet specifications 1.4.1](https://italia.github.io/eid-wallet-it-docs/releases/v1.4.1/en/).
+This is a Web application that acts as a Wallet Instance, aligned with the [IT-Wallet specifications 1.4.7](https://italia.github.io/eid-wallet-it-docs/releases/1.4.7/en/).
 
 The application enables users to:
 
@@ -23,15 +23,15 @@ The application is written in **Python** and built with the **Flask** framework.
 
 It complies with the following specifications:
 
-- [IT Wallet Technical Documentation v1.0](https://italia.github.io/eid-wallet-it-docs/releases/v1.0.0/en)
+- [IT-Wallet Technical Documentation 1.4.7](https://italia.github.io/eid-wallet-it-docs/releases/1.4.7/en/)
  
 - [OpenID4VCI v1.0](https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html)
  
 - [OpenID4VP v1.0](https://openid.net/specs/openid-4-verifiable-presentations-1_0.html)
 
-- [OpenID.Federation v1.0 - draft 43](https://openid.net/specs/openid-federation-1_0.html)
+- [OpenID.Federation v1.0](https://openid.net/specs/openid-federation-1_0.html)
 
-- [OpenID.Federation Wallet v1.0 - draft 03](https://openid.net/specs/openid-federation-wallet-1_0.html)
+- [OpenID.Federation Wallet](https://openid.net/specs/openid-federation-wallet-1_0.html)
 
 
 <br/>
