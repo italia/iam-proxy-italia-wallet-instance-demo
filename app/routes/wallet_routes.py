@@ -175,16 +175,35 @@ def credential_tag(value):
     return val[:3].upper()
 
 
+def _is_local_path(candidate: str) -> bool:
+    parsed = urlparse(candidate)
+    return (
+        not parsed.scheme
+        and candidate.startswith("/")
+        and not candidate.startswith("//")
+        and parsed.path not in ("/wallet/access", "/wallet/activate")
+    )
+
+
 def safe_next_path(raw: str | None) -> str | None:
     """Accept only a same-app relative path. Reject external and protocol-relative URLs."""
     if not raw:
         return None
+    candidate = raw.strip().replace("\\", "/")
+    if not urlparse(candidate).netloc and _is_local_path(candidate):
+        return candidate
+    return None
+
+
+def redirect_same_app(raw: str | None):
+    """Redirect only when the target is a same-app relative path."""
+    if not raw:
+        return None
     # Browsers treat "\" as "/". urlparse does not, so normalize before the netloc check.
     candidate = raw.strip().replace("\\", "/")
-    if not urlparse(candidate).netloc and not urlparse(candidate).scheme:
-        if candidate.startswith("/") and not candidate.startswith("//"):
-            if urlparse(candidate).path not in ("/wallet/access", "/wallet/activate"):
-                return candidate
+    if not urlparse(candidate).netloc:
+        if _is_local_path(candidate):
+            return redirect(candidate)
     return None
 
 
@@ -199,9 +218,9 @@ def set_language(lang_code: str):
     if lang_code not in ("it", "en"):
         lang_code = "it"
     session["lang"] = lang_code
-    destination = safe_next_path(request.args.get("next"))
-    if destination:
-        return redirect(destination)
+    response = redirect_same_app(request.args.get("next"))
+    if response:
+        return response
     return redirect(url_for("wallet_routes.wallet_access"))
 
 
@@ -228,9 +247,9 @@ def wallet_access():
                 session["session_id"] = session_id
 
             logger.info(f"session_id: {session_id} authenticated successfully.")
-            destination = safe_next_path(request.form.get("next") or request.args.get("next"))
-            if destination:
-                return redirect(destination)
+            response = redirect_same_app(request.form.get("next") or request.args.get("next"))
+            if response:
+                return response
             return redirect(url_for("wallet_routes.wallet_home", session_id=session_id))
         else:
             logger.error("Error: Wrong password attempt for wallet access.")
