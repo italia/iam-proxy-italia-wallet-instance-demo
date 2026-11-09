@@ -56,12 +56,13 @@ from app.constants import (
     WALLET_UNIT_ATTESTATION_NAME,
 )
 from app.models.config.app_config import AppSettings
-from app.models.config.credentials_config import Credential, CredentialsConfig
 from app.service.discovery import FederationDiscovery
 from app.service.itwallet_helpers import (
     apply_credential_issuer_overrides,
     apply_replace_values,
+    credential_configuration_doctype,
     credential_configuration_format,
+    credential_configuration_namespaces,
     credential_configuration_scope,
     get_proxies_from_config,
     get_trust_root_and_eaa_provider_ec,
@@ -498,7 +499,7 @@ class IssuanceFlow:
 
         logger.info(f"credential_store: {sanitize_for_logging(app_state.credential_store.keys_with_vct())}")
 
-        if app_state.credential_store.find_by_prefix_with_key(credential_configuration_id):
+        if app_state.credential_store.find_by_configuration_id(credential_configuration_id):
             raise ValueError("Questa attestazione è già nel wallet.")
 
         validate_credential_and_presentation_flow()
@@ -992,9 +993,6 @@ class IssuanceFlow:
             logger.info("Content of credential #%d is missing or invalid.", index)
             return None
 
-        credential_config: Credential = self._app_config.credentials_config.supported_credentials.get(
-            credential_configuration_id
-        )
         credential_format = credential_configuration_format(entity_configuration, credential_configuration_id).lower()
 
         if credential_format in {"dc+sd-jwt", "vc+sd-jwt"}:
@@ -1002,18 +1000,13 @@ class IssuanceFlow:
             logger.info("Valid credential #%d SD-JWT)", index)
             return credential, claims.get("vct", ""), claims
         if credential_format == "mso_mdoc":
-            if not credential_config.document_format.specs:
-                raise ValueError(
-                    "Format specifications not found for credential configuration: {}".format(
-                        credential_configuration_id
-                    )
-                )
-
-            expected_doc = credential_config.document_identifier.value
+            expected_doc = credential_configuration_doctype(entity_configuration, credential_configuration_id)
             result_json = decode_and_verify_issuer_signed(
                 issuer_signed_base64_url=credential,
-                expected_namespaces=credential_config.document_format.specs.get("namespaces", []),
-                expected_version=credential_config.document_format.specs.get("version"),
+                expected_namespaces=credential_configuration_namespaces(
+                    entity_configuration, credential_configuration_id
+                ),
+                expected_version="1.0",
                 expected_doc_type=expected_doc,
             )
             logger.info("Valid credential #%d (mdoc)", index)
@@ -1113,6 +1106,7 @@ class IssuanceFlow:
             last_valid_credential,
             last_valid_credential_vct,
             last_valid_credential_claims,
+            configuration_id=credential_configuration_id,
         )
 
         # app_state.credential_store.add(

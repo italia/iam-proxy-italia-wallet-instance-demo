@@ -598,6 +598,12 @@ msgstr "The issuer configuration does not declare the scope of this attestation.
 msgid "La configurazione dell'issuer non dichiara il formato di questa attestazione."
 msgstr "The issuer configuration does not declare the format of this attestation."
 
+msgid "La configurazione dell'issuer non dichiara il doctype di questa attestazione."
+msgstr "The issuer configuration does not declare the doctype of this attestation."
+
+msgid "La configurazione dell'issuer non dichiara i namespace di questa attestazione."
+msgstr "The issuer configuration does not declare the namespaces of this attestation."
+
 msgid "Descrizione"
 msgstr "Description"
 
@@ -639,6 +645,9 @@ msgstr "Disclosure"
 
 msgid "Payload"
 msgstr "Payload"
+
+msgid "Notazione diagnostica"
+msgstr "Diagnostic notation"
 
 msgid "Payload cifrato: serve la chiave del destinatario per leggerlo."
 msgstr "Encrypted payload: the recipient key is required to read it."

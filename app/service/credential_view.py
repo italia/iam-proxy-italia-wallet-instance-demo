@@ -126,6 +126,102 @@ def _decoded_cbor(value):
     except Exception:
         return value
 
+def _preserve_cbor_tag(decoder, tag, shareable_index=None):
+    return tag
+
+def _load_preserved(data: bytes):
+    return cbor2.loads(data, tag_hook=_preserve_cbor_tag)
+
+def _iso_pad(indent: int) -> str:
+    return "  " * indent
+
+def _iso_bytes(value: bytes) -> str:
+    return "h'" + value.hex().upper() + "'"
+
+def _indent_block(text: str, indent: int) -> str:
+    pad = _iso_pad(indent)
+    return "\n".join(pad + line for line in text.split("\n"))
+
+def _iso_embedded(data: bytes, indent: int) -> str:
+    try:
+        decoded = _load_preserved(data)
+    except Exception:
+        return _iso_bytes(data)
+    body = _indent_block(_iso_diag(decoded), indent + 1)
+    return f"<<\n{body}\n{_iso_pad(indent)}>>"
+
+def _iso_tag(value: cbor2.CBORTag, indent: int) -> str:
+    if value.tag == 24 and isinstance(value.value, (bytes, bytearray)):
+        return f"24({_iso_embedded(bytes(value.value), indent)})"
+    return f"{value.tag}({_iso_diag(value.value, indent)})"
+
+def _iso_issuer_auth(value, indent: int) -> str:
+    if isinstance(value, cbor2.CBORTag) and value.tag == 18:
+        return f"18({_iso_issuer_auth(value.value, indent)})"
+    if isinstance(value, (list, tuple)) and len(value) >= 4:
+        return _iso_array(value, indent, embedded_indexes={0, 2})
+    return _iso_diag(value, indent)
+
+def _iso_map(value: dict, indent: int) -> str:
+    if not value:
+        return "{}"
+    lines = ["{"]
+    items = list(value.items())
+    inner = _iso_pad(indent + 1)
+    for index, (key, item) in enumerate(items):
+        comma = "," if index < len(items) - 1 else ""
+        rendered = _iso_issuer_auth(item, indent + 1) if key == "issuerAuth" else _iso_diag(item, indent + 1)
+        lines.append(f"{inner}{_iso_diag(key, indent + 1)}: {rendered}{comma}")
+    lines.append(_iso_pad(indent) + "}")
+    return "\n".join(lines)
+
+def _iso_array(value, indent: int, embedded_indexes=()) -> str:
+    if not value:
+        return "[]"
+    lines = ["["]
+    inner = _iso_pad(indent + 1)
+    last = len(value) - 1
+    for index, item in enumerate(value):
+        comma = "," if index < last else ""
+        if index in embedded_indexes and isinstance(item, (bytes, bytearray)):
+            rendered = _iso_embedded(bytes(item), indent + 1)
+        else:
+            rendered = _iso_diag(item, indent + 1)
+        lines.append(f"{inner}{rendered}{comma}")
+    lines.append(_iso_pad(indent) + "]")
+    return "\n".join(lines)
+
+def _iso_diag(value, indent: int = 0) -> str:
+    if isinstance(value, cbor2.CBORTag):
+        return _iso_tag(value, indent)
+    if isinstance(value, dict):
+        return _iso_map(value, indent)
+    if isinstance(value, (list, tuple)):
+        return _iso_array(value, indent)
+    if isinstance(value, (bytes, bytearray)):
+        return _iso_bytes(bytes(value))
+    if isinstance(value, str):
+        return json.dumps(value, ensure_ascii=False)
+    if isinstance(value, datetime):
+        text = value.isoformat()
+        if text.endswith("+00:00"):
+            text = text[:-6] + "Z"
+        return f'0("{text}")'
+    if isinstance(value, date):
+        return f'1004("{value.isoformat()}")'
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if value is None:
+        return "null"
+    if isinstance(value, int):
+        return str(value)
+    if isinstance(value, float):
+        return json.dumps(value)
+    return json.dumps(value, ensure_ascii=False, default=str)
+
+def _iso_mdoc_diag(raw: bytes) -> str:
+    return _iso_diag(_load_preserved(raw))
+
 def _cose_headers_text(protected, unprotected) -> str:
     unprotected_map = {} if unprotected is None else unprotected
     return _cbor_diag(_decoded_cbor(protected)) + "\n" + _cbor_diag(unprotected_map)
@@ -143,7 +239,8 @@ def _mdoc_cleartext(token: str) -> dict | None:
     if not isinstance(token, str) or not token.strip():
         return None
     try:
-        issuer_signed = cbor2.loads(_b64url(token.strip()))
+        raw = _b64url(token.strip())
+        issuer_signed = cbor2.loads(raw)
     except Exception:
         return None
     if not isinstance(issuer_signed, dict):
@@ -153,6 +250,10 @@ def _mdoc_cleartext(token: str) -> dict | None:
         return None
     namespaces = issuer_signed.get("nameSpaces") or {}
     signed["disclosures"] = _json_text(_jsonable(namespaces))
+    try:
+        signed["diagnostic"] = _iso_mdoc_diag(raw)
+    except Exception:
+        logger.debug("Notazione diagnostica mdoc non disponibile", exc_info=True)
     return signed
 
 def _credential_cleartext(token, credential_format: str) -> dict | None:
@@ -175,7 +276,7 @@ def _is_held_entry(entry) -> bool:
     return isinstance(entry, dict) and "data_row" in entry
 
 def _held_view(issuer, group, credential_id, entry, index) -> dict:
-    meta = lookup_attestation(str(credential_id), index)
+    meta = lookup_attestation(str(entry.get("configuration_id") or ""), index)
     status = str(_or_text(entry.get("status"))).strip()
     credential_format = _or_text(meta.get("format"))
     return {

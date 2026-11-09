@@ -30,41 +30,47 @@ class CredentialStore:
                     count += 1
         return count
 
-    def add_credential(self, issuer: str, key, data_row, vct, claims=None, status_assertion=None, status=None):
+    def add_credential(
+        self, issuer: str, key, data_row, vct, claims=None, status_assertion=None, status=None, configuration_id=None
+    ):
         logger.debug(
-            f"Entering method: add_credential_from_issuer. Params [issuer: {issuer}, key: {key}, data_row: {data_row}, vct: {vct}, claims: {claims}, status_assertion: {status_assertion}, status: {status}]"
+            f"Entering method: add_credential_from_issuer. Params [issuer: {issuer}, key: {key}, data_row: {data_row}, vct: {vct}, claims: {claims}, status_assertion: {status_assertion}, status: {status}, configuration_id: {configuration_id}]"
         )
         if not self._store.get(issuer):
             # Issuer is not present, i can add the credential directly
-            self.__add_credential_into_store(issuer, key, data_row, vct, claims, status_assertion, status)
+            self.__add_credential_into_store(
+                issuer, key, data_row, vct, claims, status_assertion, status, configuration_id
+            )
         else:
             # Issuer is already present, i need to check if the credential is already present or not
             if key not in self._store[issuer]:
                 # Credential is not present, i need to update it
-                self.__update_credential_into_store(issuer, key, data_row, vct, claims, status_assertion, status)
+                self.__update_credential_into_store(
+                    issuer, key, data_row, vct, claims, status_assertion, status, configuration_id
+                )
             else:
                 # The credential is already present, @TODO to decide if update it or not, need to talking with Giuseppe
                 logger.debug(f"Credential with key {key} already present for issuer {issuer}! Update not performed.")
 
     def __add_credential_into_store(
-        self, issuer: str, key, data_row, vct, claims=None, status_assertion=None, status=None
+        self, issuer: str, key, data_row, vct, claims=None, status_assertion=None, status=None, configuration_id=None
     ):
         logger.debug(
-            f"Entering method: add_credential_into_store. Params [issuer: {issuer}, key: {key}, data_row: {data_row}, vct: {vct}, claims: {claims}, status_assertion: {status_assertion}, status: {status}]"
+            f"Entering method: add_credential_into_store. Params [issuer: {issuer}, key: {key}, data_row: {data_row}, vct: {vct}, claims: {claims}, status_assertion: {status_assertion}, status: {status}, configuration_id: {configuration_id}]"
         )
 
-        entry = self.__get_entity_store(data_row, vct, claims, status_assertion, status)
+        entry = self.__get_entity_store(data_row, vct, claims, status_assertion, status, configuration_id)
 
         self._store[issuer] = {key: entry}
 
     def __update_credential_into_store(
-        self, issuer: str, key, data_row, vct, claims=None, status_assertion=None, status=None
+        self, issuer: str, key, data_row, vct, claims=None, status_assertion=None, status=None, configuration_id=None
     ):
         logger.debug(
-            f"Entering method: __update_credential_into_store. Params [issuer: {issuer}, key: {key}, data_row: {data_row}, vct: {vct}, claims: {claims}, status_assertion: {status_assertion}, status: {status}]"
+            f"Entering method: __update_credential_into_store. Params [issuer: {issuer}, key: {key}, data_row: {data_row}, vct: {vct}, claims: {claims}, status_assertion: {status_assertion}, status: {status}, configuration_id: {configuration_id}]"
         )
 
-        entry = self.__get_entity_store(data_row, vct, claims, status_assertion, status)
+        entry = self.__get_entity_store(data_row, vct, claims, status_assertion, status, configuration_id)
 
         self._store[issuer][key] = entry
 
@@ -75,15 +81,20 @@ class CredentialStore:
         logger.debug(f"Entering method: _get_credential_into_store. Params [issuer: {issuer}, key: {key}]")
         return self._store.get(issuer, {}).get(key)
 
-    def __get_entity_store(self, data_row, vct, claims=None, status_assertion=None, status=None) -> dict:
+    def __get_entity_store(
+        self, data_row, vct, claims=None, status_assertion=None, status=None, configuration_id=None
+    ) -> dict:
         """
         Return the credential entry
         """
         logger.debug(
-            f"Entering method: __get_entity_store. Params [data_row: {data_row}, vct: {vct}, claims: {claims}, status_assertion: {status_assertion}, status: {status}]"
+            f"Entering method: __get_entity_store. Params [data_row: {data_row}, vct: {vct}, claims: {claims}, status_assertion: {status_assertion}, status: {status}, configuration_id: {configuration_id}]"
         )
 
         entry = {"data_row": data_row, "vct": vct}
+
+        if configuration_id:
+            entry["configuration_id"] = configuration_id
 
         if claims is not None:
             entry["claims"] = claims
@@ -227,6 +238,22 @@ class CredentialStore:
                     return (k, v)
         return None
 
+    def _held_entries(self):
+        for key, value in self._store.items():
+            if isinstance(value, dict) and "data_row" in value:
+                yield key, value
+                continue
+            if isinstance(value, dict):
+                for credential_key, entry in value.items():
+                    if isinstance(entry, dict) and "data_row" in entry:
+                        yield credential_key, entry
+
+    def find_by_configuration_id(self, configuration_id: str) -> Optional[Tuple[str, dict]]:
+        for key, entry in self._held_entries():
+            if entry.get("configuration_id") == configuration_id:
+                return (key, entry)
+        return None
+
     def find_by_vct(self, vct: str) -> Optional[Tuple[str, dict]]:
         """
         Cerca una credenziale per vct (restituisce la prima che trova)
@@ -235,9 +262,9 @@ class CredentialStore:
         """
         # codeql[py/log-injection]
         logger.debug("🔍 Ricerca nel wallet crededenziale il cui vct è: %s", sanitize_for_logging(vct))
-        for k, entry in self._store.items():
+        for key, entry in self._held_entries():
             if entry.get("vct") == vct:
-                return (k, entry)
+                return (key, entry)
         return None
 
     def update_status(self, key: str, new_status_assertion: str, new_status: str) -> bool:

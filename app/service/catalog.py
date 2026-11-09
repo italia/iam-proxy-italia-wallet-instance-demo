@@ -141,14 +141,7 @@ def lookup_attestation(credential_key: str, index: dict | None = None) -> dict:
     catalog = index if index is not None else display_index()
     if not catalog or not credential_key:
         return {}
-    if credential_key in catalog:
-        return catalog[credential_key]
-    key_lower = str(credential_key).lower()
-    for config_id, item in catalog.items():
-        cid = str(config_id).lower()
-        if key_lower.startswith(cid) or cid.startswith(key_lower):
-            return item
-    return {}
+    return catalog.get(credential_key) or {}
 
 def _held_credential_ids() -> set[str]:
     held = set()
@@ -198,7 +191,7 @@ def _attestation_record(config_id, config: dict) -> dict:
         "claims": _claim_labels(config),
         "format": credential_format,
         "format_label": _format_label(credential_format),
-        "obtained": bool(app_state.credential_store.find_by_prefix_with_key(str(config_id))),
+        "obtained": bool(app_state.credential_store.find_by_configuration_id(str(config_id))),
     }
 
 def _mark_ambiguous(attestations: list[dict]) -> None:

@@ -20,54 +20,47 @@ from app.constants import (
 from app.routes.itwallet_routes import (
     _catalog_sections,
     _ensure_member_state,
-    _format_label,
     configured_eudiw_lotl,
     configured_issuer_urls,
     configured_trust_anchor,
     display_index,
     load_configured_issuers,
-    lookup_attestation,
+)
+from app.service.credential_view import (
+    _b64url,
+    _cbor_diag,
+    _cbor_diag_items,
+    _cose_headers_text,
+    _cose_key,
+    _cose_sign1,
+    _credential_cleartext,
+    _decoded_cbor,
+    _find_held_credential,
+    _held_credential_views,
+    _held_entries,
+    _held_view,
+    _is_held_entry,
+    _json_text,
+    _jsonable,
+    _jsonable_items,
+    _jsonable_tag,
+    _jwt_cleartext,
+    _jwt_part_json,
+    _mdoc_cleartext,
+    _or_text,
+    _sd_jwt_cleartext,
 )
 from app.service.itwallet_service import ItWalletService
 from app.store import app_state
 from app.utils.diagnostic_log import peer_role
 from app.utils.itwalletUtils import request_status_list
 from app.utils.jwtUtils import decode_and_verify_jwt
-from app.utils.parsers import parser_credential_format_to_internal
 from app.utils.utils import (
     extract_claim,
     generate_nonce,
     parse_url_to_dict,
     remove_str_prefix,
     sanitize_for_logging,
-    unescape_json,
-)
-
-from ..utils.type_utils import get_type_from_key
-
-from app.service.credential_view import (
-    _b64url,
-    _json_text,
-    _jwt_part_json,
-    _jwt_cleartext,
-    _sd_jwt_cleartext,
-    _jsonable_tag,
-    _jsonable_items,
-    _jsonable,
-    _cose_key,
-    _cbor_diag_items,
-    _cbor_diag,
-    _decoded_cbor,
-    _cose_headers_text,
-    _cose_sign1,
-    _mdoc_cleartext,
-    _credential_cleartext,
-    _or_text,
-    _held_entries,
-    _is_held_entry,
-    _held_view,
-    _held_credential_views,
-    _find_held_credential,
 )
 
 logger = logging.getLogger(__name__)
@@ -534,84 +527,6 @@ def wallet_callback():
 
     session["query_params"] = dict(params_list)
     return render_template("wallet_cb.html")
-
-
-@wallet_routes.route("/detail", methods=["POST"], strict_slashes=False)
-def credential_detail():
-    denied = _require_session()
-    if denied:
-        return denied
-
-    logger.debug("Entering method: credential_detail.")
-    body = request.get_json()
-    issuer = body["issuer"]
-    key = body["key"]
-    _clear_session()  # todo can remove it?
-    # if not (result := app_state.credential_store.find_by_prefix_with_key(credential_type)):
-
-    if not (response := app_state.credential_store._get_credential_into_store(issuer, key)):
-        logger.error(f"CredentialTypeTemplate: issuer or key not found in credentialStore for key: {key}")
-        return (
-            "Nessuna credenziale di tipo richiesto trovata nel wallet",
-            400,
-        )  # i18n? @Todo Talking with Giuseppe for i18n implementation
-
-    logger.info(f"credential_detail: result: {response}")
-
-    # key, value = result
-    # logger.info("Recuperata dalla memoria credenziale con chiave %s", sanitize_for_logging(key))
-
-    # vct = value.get("vct", "")
-    # logger.info("Il vct della credenziale %s è: %s", sanitize_for_logging(key), sanitize_for_logging(vct))
-
-    # @TODO Talking with Giuseppe for Status list
-
-    # status = value.get("status", "")
-    # status_descr = get_status_description(status)
-    # logger.info(
-    #     "La credenziale %s è in stato: %s %s",
-    #     sanitize_for_logging(key),
-    #     sanitize_for_logging(status),
-    #     sanitize_for_logging(status_descr),
-    # )
-
-    claims = response.get("claims", {})
-    claims = unescape_json(claims)
-
-    status = "0x01"
-    status_descr = "VALIDO"
-
-    data_row = response.get("data_row", {})
-    internal_claims = parser_credential_format_to_internal(
-        current_app.config[APP_SETTINGS_KEY].credentials_config, key.rsplit("_", 1)[0], claims
-    )
-
-    # @TODO Decprecated
-    content_list = []
-    # if content and content.startswith(CONTENT_PDF_BASE_64_PREFIX):
-    #     logger.debug("La credenziale presenta un claim 'content' contenente dati pdf_base64")
-    #     content_list = extract_text_from_base64_pdf(content)
-    #
-    #     if content_list and len(content_list) > 0:
-    #         logger.debug("Il PDF contiene almeno una pagina con contenuto.")
-    #         for i, pagina in enumerate(content_list, start=1):
-    #             logger.debug("Pagina %d:\n%s\n%s", i, sanitize_for_logging(pagina), "-" * 40)
-
-    try:
-        return render_template(
-            "template_detail.html",
-            data_row=data_row,
-            internal_claims=internal_claims,
-            claims=claims,
-            metadata=internal_claims.get("metadata"),
-            status=status,
-            statusDecr=status_descr,
-            contentList=content_list,
-            type=get_type_from_key(key),
-        )
-    except Exception as e:
-        logger.error("%s", sanitize_for_logging(str(e)))
-        return "Nessun template trovato per la credenziale nel wallet", 500
 
 
 @wallet_routes.route("/presentation", methods=["POST"], strict_slashes=False)

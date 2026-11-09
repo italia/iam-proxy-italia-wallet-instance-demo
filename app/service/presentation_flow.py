@@ -25,7 +25,6 @@ import base64
 import json
 import logging
 import os
-import re
 from typing import Optional, Tuple
 from urllib.parse import parse_qs, urlencode, urlparse
 
@@ -603,62 +602,37 @@ class PresentationFlow:
 
 
     def _find_credential_by_dcql_item(self, item: dict) -> dict | None:
-        """Find credential matching DCQL item (by format+id or vct). Returns (key, value) or None."""
+        """Find a held credential by DCQL meta.vct_values or meta.doctype_value."""
         logger.debug(f"Entering method: _find_credential_by_dcql_item. Params [item: {item}]")
-        if not item["id"]:
-            logger.info("❌ Il DCQL non presenta il claim 'id'")
-            return None
-
-        if not item["format"]:
+        if not item.get("format"):
             logger.info("❌ Il DCQL non presenta il claim 'format'")
             return None
-        # Costruisci l'ID
-        raw_id = item["format"] + "_" + item["id"]
-        credential_presenting_id = re.sub(r"[+\-\s]", "_", raw_id)
-        logger.debug(f"credential_presenting_id: {credential_presenting_id}")
 
-        result = app_state.credential_store.find_by_prefix_with_key(credential_presenting_id)
-        if not result:
-            logger.info(
-                "❌ La chiave '%s' non ha individuato alcuna credenziale nel wallet",
-                sanitize_for_logging(credential_presenting_id),
-            )
+        meta = item.get("meta")
+        if not isinstance(meta, dict):
+            logger.info("❌ Il DCQL non presenta il claim 'meta'")
+            return None
 
-            # Tento la ricerca con vct
-            credential_presenting_vct = None
-            meta = item["meta"]
-            if not meta:
-                logger.info("❌ Il DCQL non presenta il claim 'meta'")
+        if item.get("format") == "mso_mdoc":
+            doctype = meta.get("doctype_value")
+            if not isinstance(doctype, str) or not doctype:
+                logger.info("❌ Il DCQL non presenta il claim 'meta.doctype_value'")
                 return None
-
-            logger.info("ℹ️  Il DCQL presenta il claims 'meta': %s", sanitize_for_logging(meta))
-
-            if not isinstance(meta, dict):
-                logger.info("❌ Il DCQL presenta il claim 'meta' che non è di tipo JSON Object")
-                return None
-
-            vct_values = meta.get("vct_values")
-
-            if not vct_values:
-                logger.info("❌ Il DCQL non presenta il claim 'meta.vct_values' né 'meta.vctValues'")
-                return None
-
-            if not isinstance(vct_values, list):
-                logger.info("❌ Il DCQL presenta il claim 'meta.vct_values' che non è di tipo JSON Array")
-                return None
-
-            credential_presenting_vct = vct_values[0]
-
-            logger.info(
-                f"ℹ️  Uso del vct '{credential_presenting_vct}' estratto dal DCQL per cercare nel wallet la credenziale da presentare"
-            )
-
-            result = app_state.credential_store.find_by_vct(credential_presenting_vct)
-
+            result = app_state.credential_store.find_by_vct(doctype)
             if not result:
                 logger.info(
-                    "❌ Il vct '%s' non ha individuato alcuna credenziale nel wallet",
-                    sanitize_for_logging(credential_presenting_vct),
+                    "❌ Il doctype '%s' non ha individuato alcuna credenziale nel wallet",
+                    sanitize_for_logging(doctype),
                 )
+            return result
 
-        return result
+        vct_values = meta.get("vct_values")
+        if not isinstance(vct_values, list) or not vct_values:
+            logger.info("❌ Il DCQL non presenta il claim 'meta.vct_values'")
+            return None
+        for vct in vct_values:
+            result = app_state.credential_store.find_by_vct(vct)
+            if result:
+                return result
+        logger.info("❌ Nessun vct del DCQL ha individuato una credenziale nel wallet")
+        return None

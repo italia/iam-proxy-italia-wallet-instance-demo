@@ -114,6 +114,36 @@ def credential_configuration_format(entity_configuration: dict, credential_confi
     return credential_format
 
 
+def credential_configuration_doctype(entity_configuration: dict, credential_configuration_id: str) -> str:
+    """Doctype dichiarato dalla Credential Configuration nell'Entity Configuration dell'issuer."""
+    query = (
+        f"metadata.{METADATA_TYPE_CREDENTIAL_ISSUER}.credential_configurations_supported."
+        f"{credential_configuration_id}.doctype"
+    )
+    doctype = extract_claim(entity_configuration, query)
+    if not isinstance(doctype, str) or not doctype:
+        raise ValueError("La configurazione dell'issuer non dichiara il doctype di questa attestazione.")
+    return doctype
+
+
+def credential_configuration_namespaces(entity_configuration: dict, credential_configuration_id: str) -> list[str]:
+    """Namespace distinti, primo elemento di credential_metadata.claims[].path."""
+    query = (
+        f"metadata.{METADATA_TYPE_CREDENTIAL_ISSUER}.credential_configurations_supported."
+        f"{credential_configuration_id}.credential_metadata.claims"
+    )
+    claims = extract_claim(entity_configuration, query)
+    namespaces = []
+    if isinstance(claims, list):
+        for claim in claims:
+            path = claim.get("path") if isinstance(claim, dict) else None
+            if isinstance(path, list) and path and isinstance(path[0], str) and path[0] not in namespaces:
+                namespaces.append(path[0])
+    if not namespaces:
+        raise ValueError("La configurazione dell'issuer non dichiara i namespace di questa attestazione.")
+    return namespaces
+
+
 def validate_credential_and_presentation_flow() -> None:
     """Validate credential_flow and presentation_flow response_mode/response_type from config."""
     logger.info("Entering method: validate_credential_and_presentation_flow. ")
