@@ -393,7 +393,7 @@
 .credential-nav-remove .icon {
   width: 1.125rem;
   height: 1.125rem;
-  fill: currentColor;
+  fill: currentcolor;
 }
 
 .credential-nav-remove:hover,
@@ -878,6 +878,22 @@ html.it-wallet-html body.it-wallet-body {
   max-width: 100%;
 }
 
+.it-wallet-title-wide .it-wallet-title-slot {
+  flex: 0 0 2.75rem;
+  max-width: none;
+}
+
+.it-wallet-title-wide .it-wallet-title-heading {
+  position: static;
+  left: auto;
+  top: auto;
+  transform: none;
+  flex: 1 1 auto;
+  width: auto;
+  max-width: none;
+  white-space: nowrap;
+}
+
 .it-wallet-icon-btn {
   width: 40px;
   height: 40px;
@@ -1103,6 +1119,10 @@ html.it-wallet-html body.it-wallet-body {
     font-size: 28px !important;
     line-height: 120% !important;
     text-align: center !important;
+  }
+
+  .it-wallet-title-wide .it-wallet-title-heading {
+    font-size: clamp(1.25rem, 5.5vw, 1.75rem) !important;
   }
 
   .it-wallet-subtitle {

@@ -115,6 +115,18 @@ from app.utils.utils import (
 logger = logging.getLogger(__name__)
 
 
+def _require_issuance_fields(
+    credential_configuration_id, pkce_code_verifier, oauth_state, authorization_response, eaa_provider_url
+) -> None:
+    if not credential_configuration_id:
+        raise ValueError("Non trovo più l'attestazione richiesta. Premi di nuovo Ottieni.")
+    if not pkce_code_verifier or not oauth_state:
+        raise ValueError("Non trovo più la verifica della richiesta. Premi di nuovo Ottieni.")
+    if not authorization_response:
+        raise ValueError("L'issuer non ha ancora restituito l'autorizzazione. Completa l'accesso e riprova.")
+    if not eaa_provider_url:
+        raise ValueError("Non trovo più l'issuer di questa richiesta. Premi di nuovo Ottieni.")
+
 
 class IssuanceFlow:
     """Credential issuance for the wallet demo."""
@@ -142,7 +154,6 @@ class IssuanceFlow:
                 apply_replace_values(entity_id, "credential_flow")
                 apply_credential_issuer_overrides(entity_id, "credential_flow")
         return pid_provider_ec
-
 
     def _get_pid_provider_url(self, pid_provider_ec, cred_config_id: str) -> str:
         """Extract iss from pid provider EC. Raises ValueError if EC or iss missing."""
@@ -193,6 +204,26 @@ class IssuanceFlow:
             "authorization_response": entry["authorization_response"],
         }
 
+    def _issuance_material(self, issuance_state: str | None):
+        context = self._issuance_context(issuance_state)
+        if issuance_state and not context:
+            raise ValueError("Non trovo più la verifica della richiesta. Premi di nuovo Ottieni.")
+        if context:
+            return (
+                context["credential_configuration_id"],
+                context["code_verifier"],
+                context["state"],
+                context["authorization_response"],
+                context["issuer_url"],
+            )
+        return (
+            self.session.get("credential_configuration_id"),
+            self.session.get("code_verifier"),
+            self.session.get("oauth_state"),
+            self.session.get("query_params"),
+            self.session.get("eaa_provider_url"),
+        )
+
     def _forget_issuance(self, state: str) -> None:
         remembered = self.session.get("issuance_requests")
         if not isinstance(remembered, dict) or state not in remembered:
@@ -200,7 +231,6 @@ class IssuanceFlow:
         remembered = dict(remembered)
         remembered.pop(state, None)
         self.session["issuance_requests"] = remembered
-
 
     def initialize_wallet(self, idp: str, country: str):
         """
@@ -363,7 +393,6 @@ class IssuanceFlow:
 
         return {"success": True, "data": {"redirect_url": authorization_url}}
 
-
     def _get_pid_provider_authorization_url(self, pid_provider_ec: dict, trust_root_url: str) -> str:
         oauth_authorization_server_url = extract_claim(current_app.config, "wallet_instance.oauth_authorization_server")
         if oauth_authorization_server_url:
@@ -375,13 +404,11 @@ class IssuanceFlow:
         app_state.ec_store.add(oauth_authorization_server_url, oauth_authorization_server)
         return oauth_authorization_server_url
 
-
     def _maybe_add_initialize_idphint(self, params: dict, idp: str) -> None:
         if self.external_discovery:
             return
         initialize_flow_idphint = extract_claim(current_app.config, f"metadata.initialize_flow.idphints.{idp}")
         params["idphint"] = initialize_flow_idphint
-
 
     def complete_initialize_wallet(self):
         """
@@ -498,7 +525,6 @@ class IssuanceFlow:
 
         return {"success": True, "data": {"credential_id": credential_id}}
 
-
     def delete_credential_wallet(self, credential_id: str):
         """
         Metodo pubblico per rimuovere una credenziale dal proprio wallet.
@@ -539,7 +565,6 @@ class IssuanceFlow:
                 "wallet_initialized": app_state.wallet_initialized,
             },
         }
-
 
     def add_credential_wallet(self, credential_configuration_id: str):
         """
@@ -668,7 +693,6 @@ class IssuanceFlow:
         logger.info("Apro l'accesso dell'issuer: %s", sanitize_for_logging(authorization_url))
         return {"success": True, "data": {"redirect_url": authorization_url}}
 
-
     def complete_add_credential_from_browser(self, issuance_state: str | None = None):
         """Completa il rilascio dopo che il browser torna dall'issuer con il codice di autorizzazione."""
         logger.info("Entering method: complete_add_credential_from_browser")
@@ -682,29 +706,12 @@ class IssuanceFlow:
         if not session_id:
             raise ValueError("La sessione della demo non è più valida. Esci e accedi di nuovo.")
 
-        context = self._issuance_context(issuance_state)
-        if issuance_state and not context:
-            raise ValueError("Non trovo più la verifica della richiesta. Premi di nuovo Ottieni.")
-        if context:
-            credential_configuration_id = context["credential_configuration_id"]
-            pkce_code_verifier = context["code_verifier"]
-            oauth_state = context["state"]
-            authorization_response = context["authorization_response"]
-            eaa_provider_url = context["issuer_url"]
-        else:
-            credential_configuration_id = self.session.get("credential_configuration_id")
-            pkce_code_verifier = self.session.get("code_verifier")
-            oauth_state = self.session.get("oauth_state")
-            authorization_response = self.session.get("query_params")
-            eaa_provider_url = self.session.get("eaa_provider_url")
-        if not credential_configuration_id:
-            raise ValueError("Non trovo più l'attestazione richiesta. Premi di nuovo Ottieni.")
-        if not pkce_code_verifier or not oauth_state:
-            raise ValueError("Non trovo più la verifica della richiesta. Premi di nuovo Ottieni.")
-        if not authorization_response:
-            raise ValueError("L'issuer non ha ancora restituito l'autorizzazione. Completa l'accesso e riprova.")
-        if not eaa_provider_url:
-            raise ValueError("Non trovo più l'issuer di questa richiesta. Premi di nuovo Ottieni.")
+        credential_configuration_id, pkce_code_verifier, oauth_state, authorization_response, eaa_provider_url = (
+            self._issuance_material(issuance_state)
+        )
+        _require_issuance_fields(
+            credential_configuration_id, pkce_code_verifier, oauth_state, authorization_response, eaa_provider_url
+        )
 
         eaa_provider_ec = app_state.ec_store.get(eaa_provider_url)
         if not eaa_provider_ec:
@@ -757,7 +764,6 @@ class IssuanceFlow:
             self.session.pop("query_params", None)
         return {"success": True, "data": {"credential_id": credential_id}}
 
-
     def _get_eaa_par_url(self, eaa_provider_ec: dict) -> str:
         query_filter = f"metadata.{METADATA_TYPE_AUTHORIZATION_SERVER}.pushed_authorization_request_endpoint"
         logger.info(f"query_filter: {query_filter}")
@@ -765,11 +771,9 @@ class IssuanceFlow:
         logger.info(f"sanitize_for_logging(eaa_provider_as_par_url): {sanitize_for_logging(eaa_provider_as_par_url)}")
         return eaa_provider_as_par_url
 
-
     def _get_eaa_authorization_url(self, eaa_provider_ec: dict) -> str:
         query_filter = f"metadata.{METADATA_TYPE_AUTHORIZATION_SERVER}.authorization_endpoint"
         return extract_claim(eaa_provider_ec, query_filter)
-
 
     def complete_add_credential_wallet(self, credentials_presenting: list[dict]):
         """
@@ -917,7 +921,6 @@ class IssuanceFlow:
 
         return {"success": True, "data": {"credential_id": credential_id}}
 
-
     def _token_issuing_management(
         self,
         authorization_server_url: str,
@@ -1018,7 +1021,6 @@ class IssuanceFlow:
 
         return dpop_bound_access_token, matching_identifiers
 
-
     def _get_or_create_wallet_attestations(self, provider_url: str, provider_jwks: list[dict]) -> tuple[str, str]:
         """Get wallet attestation JWT from store, or create if missing/expired. Returns JWT string."""
         logger.debug(f"Entering method: _get_or_create_wallet_attestation. Params [provider_url: {provider_url}]")
@@ -1049,7 +1051,6 @@ class IssuanceFlow:
                 app_state.ec_store.add(w_unit_att_is, jwt_unit_attestation)
 
         return jwt_app_attestation, jwt_unit_attestation
-
 
     def _decode_and_validate_single_credential(
         self,
@@ -1084,7 +1085,6 @@ class IssuanceFlow:
             logger.info("Valid credential #%d (mdoc)", index)
             return credential, expected_doc, result_json
         return None
-
 
     def _fetch_credentials_for_id(
         self,
@@ -1129,7 +1129,6 @@ class IssuanceFlow:
         if not credentials:
             raise ValueError("L'issuer non ha restituito l'attestazione.")
         return credentials
-
 
     def _credential_issuing_management_v1_3(
         self,
@@ -1187,7 +1186,6 @@ class IssuanceFlow:
 
         return credential_id
 
-
     def _collect_last_valid_issued_credential(
         self,
         credential_identifiers: list,
@@ -1219,7 +1217,6 @@ class IssuanceFlow:
                 if result:
                     last_valid = (credential_id, *result)
         return last_valid
-
 
     def _retrieve_attestations_jws(self, provider_url: str) -> dict[str, str]:
         """This method retrieve a wallet app attestation and a wallet unit attestation from wallet provider endpoint.

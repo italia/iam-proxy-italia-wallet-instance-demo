@@ -289,50 +289,6 @@ def wallet_home():
 _STATUS_LIST_CODES = {0: "valid", 1: "revoked", 2: "suspended"}
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 def _require_session():
     if session.get("authenticated"):
         return None
@@ -663,6 +619,30 @@ def dashboard_delete_confirm():
     return redirect(url_for("wallet_routes.wallet_dashboard"))
 
 
+def _rome_moment(created):
+    if not isinstance(created, str) or not created:
+        return None
+    try:
+        parsed = datetime.fromisoformat(created)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(ZoneInfo("Europe/Rome")).replace(tzinfo=None)
+
+
+def _dashboard_row(record: dict, labels: dict) -> dict:
+    relying_party = record.get("rp") if isinstance(record.get("rp"), dict) else {}
+    moment = _rome_moment(record.get("created"))
+    return {
+        "id": record.get("id"),
+        "name": relying_party.get("name") or relying_party.get("client_id") or "",
+        "outcome": labels.get(record.get("outcome"), record.get("outcome") or ""),
+        "created_label": format_datetime(moment, "d MMMM yyyy, HH:mm") if moment else "",
+        "record": record,
+    }
+
+
 def _dashboard_rows() -> list[dict]:
     labels = {
         "in_corso": _("In corso"),
@@ -670,32 +650,11 @@ def _dashboard_rows() -> list[dict]:
         "fallita": _("Fallita"),
         "interrotta": _("Interrotta"),
     }
-    rows = []
-    for record in transaction_log.list_records():
-        if record.get("category") != "presentation":
-            continue
-        relying_party = record.get("rp") if isinstance(record.get("rp"), dict) else {}
-        created = record.get("created")
-        moment = None
-        if isinstance(created, str) and created:
-            try:
-                parsed = datetime.fromisoformat(created)
-            except ValueError:
-                parsed = None
-            if parsed is not None:
-                if parsed.tzinfo is None:
-                    parsed = parsed.replace(tzinfo=timezone.utc)
-                moment = parsed.astimezone(ZoneInfo("Europe/Rome")).replace(tzinfo=None)
-        rows.append(
-            {
-                "id": record.get("id"),
-                "name": relying_party.get("name") or relying_party.get("client_id") or "",
-                "outcome": labels.get(record.get("outcome"), record.get("outcome") or ""),
-                "created_label": format_datetime(moment, "d MMMM yyyy, HH:mm") if moment else "",
-                "record": record,
-            }
-        )
-    return rows
+    return [
+        _dashboard_row(record, labels)
+        for record in transaction_log.list_records()
+        if record.get("category") == "presentation"
+    ]
 
 
 @wallet_routes.route("/diagnostics", methods=["GET"])
@@ -719,28 +678,24 @@ def logout():
     return redirect(url_for("wallet_routes.wallet_access"))
 
 
-@wallet_routes.route("/cb", methods=["GET"])
-def wallet_callback():
-    params_list = list(request.args.items())  # Convert query parameters into a list of tuples
-    current_path = request.path
-
-    if params_list:
-        logger.info("Ricevuta request GET %s con query string:", sanitize_for_logging(current_path))
-        for k, v in params_list:
-            logger.info("   %s = %s", sanitize_for_logging(k), sanitize_for_logging(v))
-    else:
+def _log_callback(params_list, current_path) -> None:
+    if not params_list:
         logger.info("Ricevuta request GET %s senza query string", sanitize_for_logging(current_path))
+        return
+    logger.info("Ricevuta request GET %s con query string:", sanitize_for_logging(current_path))
+    for key, value in params_list:
+        logger.info("   %s = %s", sanitize_for_logging(key), sanitize_for_logging(value))
 
-    params = dict(params_list)
-    state = params.get("state")
+
+def _remembered_issuance(state):
     remembered = session.get("issuance_requests")
     if not isinstance(remembered, dict):
         remembered = {}
     entry = remembered.get(state) if isinstance(state, str) else None
-    current = session.get("oauth_state")
-    if not isinstance(entry, dict) and current and state != current:
-        logger.info("Risposta di autorizzazione di una richiesta di rilascio precedente.")
-        return render_template("wallet_cb.html", stale=True, state="")
+    return remembered, entry
+
+
+def _store_authorization_response(remembered, entry, state, params, current) -> None:
     if isinstance(entry, dict):
         updated = dict(entry)
         updated["authorization_response"] = params
@@ -751,6 +706,20 @@ def wallet_callback():
             logger.info("Risposta associata alla richiesta di rilascio ricordata.")
     if not isinstance(entry, dict) or state == current:
         session["query_params"] = params
+
+
+@wallet_routes.route("/cb", methods=["GET"])
+def wallet_callback():
+    params_list = list(request.args.items())
+    _log_callback(params_list, request.path)
+    params = dict(params_list)
+    state = params.get("state")
+    remembered, entry = _remembered_issuance(state)
+    current = session.get("oauth_state")
+    if not isinstance(entry, dict) and current and state != current:
+        logger.info("Risposta di autorizzazione di una richiesta di rilascio precedente.")
+        return render_template("wallet_cb.html", stale=True, state="")
+    _store_authorization_response(remembered, entry, state, params, current)
     return render_template("wallet_cb.html", stale=False, state=state or "")
 
 

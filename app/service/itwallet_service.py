@@ -60,6 +60,7 @@ from app.constants import (
 from app.models.config.app_config import AppSettings
 from app.models.config.credentials_config import Credential, CredentialsConfig
 from app.service.discovery import FederationDiscovery
+from app.service.issuance import IssuanceFlow
 from app.service.itwallet_helpers import (
     apply_credential_issuer_overrides,
     apply_replace_values,
@@ -74,6 +75,7 @@ from app.service.itwallet_helpers import (
     validate_response_mode,
     validate_response_type,
 )
+from app.service.presentation_flow import PresentationFlow
 from app.store import app_state
 from app.utils.cborUtils import decode_and_verify_issuer_signed
 from app.utils.diagnostic_log import diagnostic_peer
@@ -112,9 +114,6 @@ from app.utils.utils import (
 
 logger = logging.getLogger(__name__)
 
-
-from app.service.issuance import IssuanceFlow
-from app.service.presentation_flow import PresentationFlow
 
 class ItWalletService(IssuanceFlow, PresentationFlow):
     """Service for IT Wallet credential issuance and presentation flows."""
@@ -378,4 +377,3 @@ class ItWalletService(IssuanceFlow, PresentationFlow):
             return None
         app_state.ec_store.add(wallet_provider_url, ec_payload)
         return wallet_provider_url
-

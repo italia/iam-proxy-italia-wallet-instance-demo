@@ -139,7 +139,6 @@ class PresentationFlow:
             raise ValueError(error_message)
         return request_uri
 
-
     def _decode_rp_authorization_response(
         self,
         authorize_response: str,
@@ -157,7 +156,6 @@ class PresentationFlow:
         logger.info("📄 Request_uri response JWT payload:")
         logger.info(f"jwt_payload {json.dumps(jwt_payload, indent=2, ensure_ascii=False)}")
         return credentials_requested, rp_state, rp_nonce, rp_response_uri
-
 
     def present_to_verifier(self, clientId: str, requestUri: str, requestUriMethod: str, state: str):
         """
@@ -250,13 +248,15 @@ class PresentationFlow:
         except ValueError as ve:
             raise ValueError(f"Exception during JWT validation: {str(ve)}")
 
-        response_jwks = (request_uri_response_jwt_payload.get("client_metadata") or {}).get("jwks")
-        if not isinstance(response_jwks, dict) or not response_jwks.get("keys"):
-            raise ValueError(gettext("La richiesta del Relying Party non contiene la chiave per cifrare la risposta."))
+        response_jwks = _require_encryption_jwks(
+            (request_uri_response_jwt_payload.get("client_metadata") or {}).get("jwks")
+        )
 
         display = _relying_party_display(external_verifier_ec, clientId, request_uri_response_jwt_payload)
         try:
-            transaction_id = transaction_log.start_presentation(display, _attestation_descriptors(credentials_requested))
+            transaction_id = transaction_log.start_presentation(
+                display, _attestation_descriptors(credentials_requested)
+            )
         except OSError:
             logger.error("Registro delle transazioni non aggiornato.")
             transaction_id = ""
@@ -270,7 +270,6 @@ class PresentationFlow:
         self.session["rp_transaction_id"] = transaction_id
 
         return credentials_requested
-
 
     def complete_presentation(self, credentials_presenting: list[dict]):
         """
@@ -321,9 +320,7 @@ class PresentationFlow:
 
         logger.debug(f"rp_jwks: {rp_jwks}")
 
-        response_enc_jwks = self.session.get("rp_response_jwks")
-        if not isinstance(response_enc_jwks, dict) or not response_enc_jwks.get("keys"):
-            raise ValueError(gettext("La richiesta del Relying Party non contiene la chiave per cifrare la risposta."))
+        response_enc_jwks = _require_encryption_jwks(self.session.get("rp_response_jwks"))
 
         # recupero del response_mode relativo al credentialflow dalla configurazione
         credential_flow_response_mode = extract_claim(current_app.config, "metadata.credential_flow.response_mode")
@@ -365,7 +362,6 @@ class PresentationFlow:
         except OSError:
             logger.error("Registro delle transazioni non aggiornato.")
 
-
     def _add_credential_presentation_to_vp(
         self,
         item: dict,
@@ -404,7 +400,6 @@ class PresentationFlow:
         if presentation:
             vp_token_claims[item["id"]] = presentation
 
-
     def _build_response_uri_request(
         self, enc: bool, vp_token_claims: dict, rp_state: str, rp_jwks: dict, wallet_private_key
     ) -> str:
@@ -424,7 +419,6 @@ class PresentationFlow:
         if not jwt:
             raise ValueError("Exception generation Response_uri request JWE/JWS")
         return jwt
-
 
     def _presentation_management_v133(
         self,
@@ -507,7 +501,6 @@ class PresentationFlow:
 
             return response_uri_response
 
-
     def _parse_presentation_callback(
         self, callback_response: str, response_mode: str, redirect_uri: str, rp_jwks: dict
     ) -> dict:
@@ -524,7 +517,6 @@ class PresentationFlow:
         parsed = urlparse(callback_response)
         return {k: (v[0] if v else "") for k, v in parse_qs(parsed.query).items()}
 
-
     def __parse_presentation_callback_v133(
         self, callback_response: str, response_mode: str, redirect_uri: str, rp_jwks: dict
     ) -> dict:
@@ -538,7 +530,6 @@ class PresentationFlow:
             return self.__parse_direct_post_jwt_response(callback_response, redirect_uri, rp_jwks)
         else:
             return self.__parse_query_string_response(callback_response, redirect_uri)
-
 
     def __parse_form_post_jwt_response(self, callback_response: str, redirect_uri: str, rp_jwks: dict) -> dict:
         logger.debug(
@@ -559,7 +550,6 @@ class PresentationFlow:
 
         return self.__validate_authentication_response(jwt_val, rp_jwks, redirect_uri)
 
-
     def __parse_direct_post_jwt_response(self, callback_response: str, redirect_uri: str, rp_jwks: dict) -> dict:
         logger.debug(
             f"Entering method: __parse_direct_post_jwt_response. Params [callback_response: {callback_response}]"
@@ -571,7 +561,6 @@ class PresentationFlow:
             raise ValueError("JWT not valid")
 
         return self.__validate_authentication_response(response_str, rp_jwks, redirect_uri)
-
 
     def __parse_query_string_response(self, callback_response: str, redirect_uri: str) -> dict:
         logger.debug(
@@ -585,7 +574,6 @@ class PresentationFlow:
         logger.info(f"list(result.keys(): {list(result.keys())}")
 
         return result
-
 
     def __validate_authentication_response(self, jwt_response: str, rp_jwks: dict, redirect_uri: str) -> dict:
 
@@ -606,7 +594,6 @@ class PresentationFlow:
         logger.info(f"auth_response_payload: {json.dumps(auth_response_payload, indent=2, ensure_ascii=False)}")
 
         return auth_response_payload
-
 
     def __validate_auth_response_claims(self, payload: dict, redirect_uri: str) -> None:
         logger.debug(
@@ -652,7 +639,6 @@ class PresentationFlow:
         if state != rp_state:
             raise ValueError(f"Exception: {rp_state} != {state}")
 
-
     def __check_auth_response_errors(self, payload: dict, redirect_uri: str) -> None:
         logger.debug(
             f"Entering method: __check_auth_response_errors. Params: [payload: {payload}, redirect_uri: {redirect_uri}]"
@@ -661,7 +647,6 @@ class PresentationFlow:
         error = payload.get("error")
         if error:
             raise ValueError(f"Exception {redirect_uri}: {error}")
-
 
     def _find_credential_by_dcql_item(self, item: dict) -> dict | None:
         """Find a held credential by DCQL meta.vct_values or meta.doctype_value."""
@@ -674,41 +659,42 @@ class PresentationFlow:
         if not isinstance(meta, dict):
             logger.info("❌ Il DCQL non presenta il claim 'meta'")
             return None
-
         if item.get("format") == "mso_mdoc":
-            doctype = meta.get("doctype_value")
-            if not isinstance(doctype, str) or not doctype:
-                logger.info("❌ Il DCQL non presenta il claim 'meta.doctype_value'")
-                return None
-            result = app_state.credential_store.find_by_vct(doctype)
-            if not result:
-                logger.info(
-                    "❌ Il doctype '%s' non ha individuato alcuna credenziale nel wallet",
-                    sanitize_for_logging(doctype),
-                )
-            return result
+            return _held_by_doctype(meta)
+        return _held_by_vct(meta)
 
-        vct_values = meta.get("vct_values")
-        if not isinstance(vct_values, list) or not vct_values:
-            logger.info("❌ Il DCQL non presenta il claim 'meta.vct_values'")
-            return None
-        for vct in vct_values:
-            result = app_state.credential_store.find_by_vct(vct)
-            if result:
-                return result
-        logger.info("❌ Nessun vct del DCQL ha individuato una credenziale nel wallet")
+
+def _held_by_doctype(meta: dict):
+    doctype = meta.get("doctype_value")
+    if not isinstance(doctype, str) or not doctype:
+        logger.info("❌ Il DCQL non presenta il claim 'meta.doctype_value'")
         return None
+    result = app_state.credential_store.find_by_vct(doctype)
+    if not result:
+        logger.info(
+            "❌ Il doctype '%s' non ha individuato alcuna credenziale nel wallet",
+            sanitize_for_logging(doctype),
+        )
+    return result
+
+
+def _held_by_vct(meta: dict):
+    vct_values = meta.get("vct_values")
+    if not isinstance(vct_values, list) or not vct_values:
+        logger.info("❌ Il DCQL non presenta il claim 'meta.vct_values'")
+        return None
+    for vct in vct_values:
+        result = app_state.credential_store.find_by_vct(vct)
+        if result:
+            return result
+    logger.info("❌ Nessun vct del DCQL ha individuato una credenziale nel wallet")
+    return None
 
 
 def _requested_attestation(item: dict) -> str:
     name = str(item.get("id") or "").strip()
     meta = item.get("meta") if isinstance(item.get("meta"), dict) else {}
-    if item.get("format") == "mso_mdoc":
-        kind = meta.get("doctype_value") if isinstance(meta.get("doctype_value"), str) else ""
-    else:
-        values = meta.get("vct_values")
-        kinds = [value for value in values if isinstance(value, str) and value] if isinstance(values, list) else []
-        kind = ", ".join(kinds)
+    kind = _dcql_kind(item, meta)
     if name and kind:
         return f"{name} ({kind})"
     return name or kind or "un'attestazione"
@@ -732,68 +718,107 @@ def _https(value) -> str:
     return text if text.startswith("https://") else ""
 
 
-def _relying_party_display(entity_configuration: dict, client_id: str, request_payload: dict) -> dict:
-    metadata = entity_configuration.get("metadata") if isinstance(entity_configuration.get("metadata"), dict) else {}
-    federation = metadata.get(METADATA_TYPE_FEDERATION_ENTITY)
-    verifier = metadata.get(METADATA_TYPE_CREDENTIAL_VERIFIER)
-    federation = federation if isinstance(federation, dict) else {}
-    verifier = verifier if isinstance(verifier, dict) else {}
-    request_metadata = request_payload.get("client_metadata")
-    request_metadata = request_metadata if isinstance(request_metadata, dict) else {}
-    organization_name = _text(federation.get("organization_name"))
+def _dict_or_empty(value):
+    return value if isinstance(value, dict) else {}
+
+
+def _require_encryption_jwks(jwks):
+    if not isinstance(jwks, dict) or not jwks.get("keys"):
+        raise ValueError(gettext("La richiesta del Relying Party non contiene la chiave per cifrare la risposta."))
+    return jwks
+
+
+def _rp_names(organization_name: str, verifier: dict, request_metadata: dict, client_id: str):
     client_name = _text(verifier.get("client_name"))
     if not organization_name and not client_name:
         client_name = _text(request_metadata.get("client_name"))
     name = organization_name or client_name or client_id
+    shown = client_name if client_name and client_name != name else ""
+    return name, shown
+
+
+def _rp_logo(federation: dict, verifier: dict, request_metadata: dict, organization_name: str) -> str:
     logo = _https(federation.get("logo_uri")) or _https(verifier.get("logo_uri"))
     if not logo and not organization_name:
-        logo = _https(request_metadata.get("logo_uri"))
+        return _https(request_metadata.get("logo_uri"))
+    return logo
+
+
+def _string_list(value) -> list:
+    if not isinstance(value, list):
+        return []
+    return [item.strip() for item in value if isinstance(item, str) and item.strip()]
+
+
+def _rp_contacts(verifier: dict, federation: dict) -> list:
     contacts = verifier.get("contacts")
-    if not isinstance(contacts, list):
-        contacts = federation.get("contacts") if isinstance(federation.get("contacts"), list) else []
-    display = {
-        "name": name,
-        "client_id": client_id,
-        "client_name": client_name if client_name and client_name != name else "",
-        "logo_uri": logo,
-        "homepage_uri": _https(federation.get("homepage_uri")),
-        "policy_uri": _https(federation.get("policy_uri")),
-        "tos_uri": _https(federation.get("tos_uri")),
-        "contacts": [item.strip() for item in contacts if isinstance(item, str) and item.strip()],
-        "erasure_endpoint": _https(verifier.get("erasure_endpoint")),
-    }
+    if isinstance(contacts, list):
+        return _string_list(contacts)
+    return _string_list(federation.get("contacts"))
+
+
+def _omit_empty(display: dict) -> dict:
     return {key: value for key, value in display.items() if value}
 
 
+def _relying_party_display(entity_configuration: dict, client_id: str, request_payload: dict) -> dict:
+    metadata = _dict_or_empty(entity_configuration.get("metadata"))
+    federation = _dict_or_empty(metadata.get(METADATA_TYPE_FEDERATION_ENTITY))
+    verifier = _dict_or_empty(metadata.get(METADATA_TYPE_CREDENTIAL_VERIFIER))
+    request_metadata = _dict_or_empty(request_payload.get("client_metadata"))
+    organization_name = _text(federation.get("organization_name"))
+    name, client_name = _rp_names(organization_name, verifier, request_metadata, client_id)
+    return _omit_empty(
+        {
+            "name": name,
+            "client_id": client_id,
+            "client_name": client_name,
+            "logo_uri": _rp_logo(federation, verifier, request_metadata, organization_name),
+            "homepage_uri": _https(federation.get("homepage_uri")),
+            "policy_uri": _https(federation.get("policy_uri")),
+            "tos_uri": _https(federation.get("tos_uri")),
+            "contacts": _rp_contacts(verifier, federation),
+            "erasure_endpoint": _https(verifier.get("erasure_endpoint")),
+        }
+    )
+
+
+def _dcql_kind(item: dict, meta: dict) -> str:
+    if item.get("format") == "mso_mdoc":
+        kind = meta.get("doctype_value")
+        return kind if isinstance(kind, str) else ""
+    values = meta.get("vct_values")
+    if not isinstance(values, list):
+        return ""
+    return ", ".join(value for value in values if isinstance(value, str) and value)
+
+
+def _claim_paths(item: dict) -> list:
+    claims = item.get("claims")
+    if not isinstance(claims, list):
+        return []
+    paths = []
+    for claim in claims:
+        path = claim.get("path") if isinstance(claim, dict) else None
+        if isinstance(path, list) and path:
+            paths.append(".".join(str(part) for part in path))
+    return paths
+
+
+def _descriptor(item: dict) -> dict:
+    meta = item.get("meta") if isinstance(item.get("meta"), dict) else {}
+    return {
+        "id": item.get("id") if isinstance(item.get("id"), str) else "",
+        "format": item.get("format") if isinstance(item.get("format"), str) else "",
+        "type": _dcql_kind(item, meta),
+        "claims": _claim_paths(item),
+    }
+
+
 def _attestation_descriptors(items: list) -> list:
-    descriptors = []
     if not isinstance(items, list):
-        return descriptors
-    for item in items:
-        if not isinstance(item, dict):
-            continue
-        meta = item.get("meta") if isinstance(item.get("meta"), dict) else {}
-        if item.get("format") == "mso_mdoc":
-            kind = meta.get("doctype_value") if isinstance(meta.get("doctype_value"), str) else ""
-        else:
-            values = meta.get("vct_values")
-            kinds = [value for value in values if isinstance(value, str) and value] if isinstance(values, list) else []
-            kind = ", ".join(kinds)
-        paths = []
-        claims = item.get("claims") if isinstance(item.get("claims"), list) else []
-        for claim in claims:
-            path = claim.get("path") if isinstance(claim, dict) else None
-            if isinstance(path, list) and path:
-                paths.append(".".join(str(part) for part in path))
-        descriptors.append(
-            {
-                "id": item.get("id") if isinstance(item.get("id"), str) else "",
-                "format": item.get("format") if isinstance(item.get("format"), str) else "",
-                "type": kind,
-                "claims": paths,
-            }
-        )
-    return descriptors
+        return []
+    return [_descriptor(item) for item in items if isinstance(item, dict)]
 
 
 def _missing_presentation_message(items: list[dict]) -> str:

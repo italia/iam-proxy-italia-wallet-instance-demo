@@ -100,16 +100,14 @@ class MdocDiagnosticTests(unittest.TestCase):
             "issuerAuth": [
                 cbor2.dumps({1: -7}),
                 {33: b"\x01\x02"},
-                cbor2.dumps(
-                    cbor2.CBORTag(24, cbor2.dumps({"docType": "org.iso.18013.5.1.mDL", "version": "1.0"}))
-                ),
+                cbor2.dumps(cbor2.CBORTag(24, cbor2.dumps({"docType": "org.iso.18013.5.1.mDL", "version": "1.0"}))),
                 b"\x03\x04",
             ],
         }
         text = _iso_mdoc_diag(cbor2.dumps(issuer_signed))
-        self.assertIn('24(<<', text)
+        self.assertIn("24(<<", text)
         self.assertIn('"family_name"', text)
-        self.assertIn("1004(\"2024-02-22\")", text)
+        self.assertIn('1004("2024-02-22")', text)
         self.assertIn("h'AA'", text)
         self.assertIn("<<\n", text)
         self.assertIn("1: -7", text)
@@ -208,11 +206,7 @@ class IssuerConfigurationTests(unittest.TestCase):
 
     def test_missing_doctype_stops_the_read(self):
         configuration = {
-            "metadata": {
-                METADATA_TYPE_CREDENTIAL_ISSUER: {
-                    "credential_configurations_supported": {"mso_mdoc_mDL": {}}
-                }
-            }
+            "metadata": {METADATA_TYPE_CREDENTIAL_ISSUER: {"credential_configurations_supported": {"mso_mdoc_mDL": {}}}}
         }
         with self.assertRaises(ValueError):
             credential_configuration_doctype(configuration, "mso_mdoc_mDL")

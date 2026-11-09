@@ -14,6 +14,47 @@ from app.constants import (
     OID_FED_WELL_KNOWN_PATH,
 )
 from app.i18n import get_locale
+from app.service.catalog import (
+    _as_dict,
+    _as_list,
+    _attach_offer_uris,
+    _attestation_name,
+    _attestation_record,
+    _attestations_from_ec,
+    _catalog_section,
+    _catalog_sections,
+    _chosen_display,
+    _claim_labels,
+    _credential_issuer_metadata,
+    _credential_offer_uri,
+    _direct_issuer_payload,
+    _discovery_rejection,
+    _ensure_member_state,
+    _federation_source,
+    _fetch_issuer_payload,
+    _format_label,
+    _held_credential_ids,
+    _issuer_catalog_post,
+    _italian_display,
+    _localized_display,
+    _mark_ambiguous,
+    _metadata_source,
+    _offer_authorization_server,
+    _offer_qr_svg,
+    _parse_direct_metadata,
+    _require_param,
+    _store_discovered_issuer,
+    _stored_discovery,
+    _supported_configurations,
+    _validate_login_to_rp_request,
+    _with_credential_view_url,
+    configured_eudiw_lotl,
+    configured_issuer_urls,
+    configured_trust_anchor,
+    display_index,
+    load_configured_issuers,
+    lookup_attestation,
+)
 from app.service.itwallet_service import ItWalletService
 from app.store import app_state, transaction_log
 from app.utils.diagnostic_log import list_entries, peer_role, remove_entries
@@ -34,48 +75,6 @@ _DISCOVERY_LOTL = "eudiw-lotl"
 _DIRECT_WELL_KNOWN = "/.well-known/openid-credential-issuer"
 
 
-from app.service.catalog import (
-    _with_credential_view_url,
-    _ensure_member_state,
-    configured_trust_anchor,
-    configured_eudiw_lotl,
-    configured_issuer_urls,
-    _localized_display,
-    _italian_display,
-    _claim_labels,
-    load_configured_issuers,
-    display_index,
-    lookup_attestation,
-    _held_credential_ids,
-    _format_label,
-    _as_dict,
-    _as_list,
-    _chosen_display,
-    _attestation_name,
-    _attestation_record,
-    _mark_ambiguous,
-    _supported_configurations,
-    _attestations_from_ec,
-    _federation_source,
-    _metadata_source,
-    _stored_discovery,
-    _credential_issuer_metadata,
-    _offer_authorization_server,
-    _credential_offer_uri,
-    _attach_offer_uris,
-    _catalog_section,
-    _catalog_sections,
-    _offer_qr_svg,
-    _parse_direct_metadata,
-    _direct_issuer_payload,
-    _fetch_issuer_payload,
-    _discovery_rejection,
-    _store_discovered_issuer,
-    _issuer_catalog_post,
-    _require_param,
-    _validate_login_to_rp_request,
-)
-
 @wallet_api_bp.before_request
 def require_wallet_session():
     if session.get("authenticated"):
@@ -89,15 +88,18 @@ def log_request_info():
     path = request.path
     logger.info(f"Ricevuta richiesta: {method} {path}")
 
+
 @wallet_api_bp.before_request
 def set_correlation_id():
     g.correlation_id = request.headers.get("X-Correlation-ID", DEFAULT_CORRELATION_ID)
+
 
 @wallet_api_bp.after_request
 def add_charset_to_json(response):
     if response.content_type.startswith("application/json"):
         response.headers["Content-Type"] = "application/json; charset=utf-8"
     return response
+
 
 @wallet_api_bp.route("/reset", methods=["GET"])
 def wallet_reset():
@@ -115,6 +117,7 @@ def wallet_reset():
         logger.error("❌ %s", sanitize_for_logging(str(e)))
         return jsonify({"success": False, "data": {"error": _(str(e))}}), 500
 
+
 @wallet_api_bp.route("/diagnostics", methods=["GET", "DELETE"])
 def diagnostics():
     """Return the recent outbound request and response log, or remove selected exchanges."""
@@ -126,6 +129,7 @@ def diagnostics():
         remove_entries([str(item) for item in ids])
     return jsonify({"success": True, "data": list_entries()}), 200
 
+
 @wallet_api_bp.route("/credential-offer.svg", methods=["GET"])
 def credential_offer_qr():
     try:
@@ -134,12 +138,14 @@ def credential_offer_qr():
         return jsonify({"success": False, "message": _("Credential offer non valida.")}), 400
     return Response(svg, mimetype="image/svg+xml")
 
+
 @wallet_api_bp.route("/issuerCatalog", methods=["GET", "POST"])
 def issuer_catalog():
     """List attestations from credential issuer metadata, or load another issuer URL."""
     if request.method == "GET":
         return jsonify({"success": True, "data": _catalog_sections()}), 200
     return _issuer_catalog_post()
+
 
 @wallet_api_bp.route("/credentialSupported", methods=["GET"])
 def credentialSupported():
@@ -161,6 +167,7 @@ def credentialSupported():
         logger.error("❌ %s", sanitize_for_logging(str(e)))
         return jsonify({"success": False, "data": {"error": _(str(e))}}), 500
 
+
 @wallet_api_bp.route("/objectTypesInMemory", methods=["GET"])
 def stored_object_types():
     """Endpoint to fetch all object types currently in memory."""
@@ -174,6 +181,7 @@ def stored_object_types():
     except Exception as e:
         logger.error("❌ %s", sanitize_for_logging(str(e)))
         return jsonify({"success": False, "data": {"error": _(str(e))}}), 500
+
 
 @wallet_api_bp.route("/viewObjectTypeInMemory", methods=["POST"])
 def viewObjectTypeInMemory():
@@ -198,6 +206,7 @@ def viewObjectTypeInMemory():
     except Exception as e:
         logger.error("❌ %s", sanitize_for_logging(str(e)))
         return jsonify({"success": False, "data": {"error": _(str(e))}}), 500
+
 
 @wallet_api_bp.route("/deleteCredential", methods=["POST"])
 def deleteCredentialItWallet():
@@ -224,6 +233,7 @@ def deleteCredentialItWallet():
     except Exception as e:
         logger.error("❌ %s", sanitize_for_logging(str(e)))
         return jsonify({"success": False, "data": {"error": _(str(e))}}), 500
+
 
 @wallet_api_bp.route("/addCredential", methods=["POST"])
 def addCredentialItWallet():
@@ -252,6 +262,34 @@ def addCredentialItWallet():
         logger.error("❌ %s", sanitize_for_logging(str(e)))
         return jsonify({"success": False, "data": {"error": _(str(e))}}), 500
 
+
+def _issuance_state_from(data):
+    issuance_state = data.get("issuanceState") if isinstance(data, dict) else None
+    if isinstance(issuance_state, str) and issuance_state:
+        return issuance_state
+    return None
+
+
+def _json_result(result):
+    status_code = 200 if result["success"] else 500
+    return jsonify(result), status_code
+
+
+def _complete_from_browser(data):
+    service = ItWalletService(session)
+    result = _with_credential_view_url(service.complete_add_credential_from_browser(_issuance_state_from(data)))
+    return _json_result(result)
+
+
+def _complete_with_shared_data(credentials_presenting):
+    if not isinstance(credentials_presenting, list):
+        raise ValueError(_("I dati da condividere con l'issuer non sono nel formato atteso."))
+    _ensure_member_state()
+    service = ItWalletService(session)
+    result = _with_credential_view_url(service.complete_add_credential_wallet(credentials_presenting))
+    return _json_result(result)
+
+
 @wallet_api_bp.route("/addCredential/complete", methods=["POST"])
 def completedAddCredentialItWallet():
     """Route to complete adding a credential to the Wallet."""
@@ -259,26 +297,10 @@ def completedAddCredentialItWallet():
     try:
         data = request.get_json()
         logger.info("%s", sanitize_for_logging(data))
-
         credentials_presenting = data.get("credentialsPresenting") if data else None
-        service = ItWalletService(session)
-        if not credentials_presenting:
-            issuance_state = data.get("issuanceState") if isinstance(data, dict) else None
-            if not isinstance(issuance_state, str) or not issuance_state:
-                issuance_state = None
-            result = _with_credential_view_url(service.complete_add_credential_from_browser(issuance_state))
-            status_code = 200 if result["success"] else 500
-            return jsonify(result), status_code
-
-        if not isinstance(credentials_presenting, list):
-            raise ValueError(_("I dati da condividere con l'issuer non sono nel formato atteso."))
-
-        _ensure_member_state()
-        service = ItWalletService(session)
-        result = _with_credential_view_url(service.complete_add_credential_wallet(credentials_presenting))
-
-        status_code = 200 if result["success"] else 500
-        return jsonify(result), status_code
+        if credentials_presenting:
+            return _complete_with_shared_data(credentials_presenting)
+        return _complete_from_browser(data)
 
     except ValueError as ve:
         logger.error("❌ %s", sanitize_for_logging(str(ve)))
@@ -286,6 +308,7 @@ def completedAddCredentialItWallet():
     except Exception as e:
         logger.error("❌ %s", sanitize_for_logging(str(e)))
         return jsonify({"success": False, "data": {"error": _(str(e))}}), 500
+
 
 @wallet_api_bp.route("/loginToRelyingParty", methods=["POST"])
 def loginToRelyingParty():
@@ -312,6 +335,7 @@ def loginToRelyingParty():
     except Exception as e:
         logger.error("Errore: %s", sanitize_for_logging(str(e)))
         return jsonify({"success": False, "data": {"error": _(str(e))}}), 500
+
 
 @wallet_api_bp.route("/loginToVerifier/complete", methods=["POST"])
 def completedLoginToVerifier():
@@ -340,6 +364,7 @@ def completedLoginToVerifier():
         logger.error("Errore: %s", sanitize_for_logging(str(e)))
         return jsonify({"success": False, "data": {"error": _(str(e))}}), 500
 
+
 def _clear_session():
     transaction_log.abandon_open_presentation(session)
     # Salva le chiavi da preservare
@@ -354,4 +379,3 @@ def _clear_session():
 
     # Ripristina le chiavi
     session.update({k: v for k, v in preserved.items() if v is not None})
-
