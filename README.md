@@ -1,235 +1,82 @@
 # iam-proxy-italia-wallet-instance-demo
 
-Demo wallet instance for Relying Party and Credential Issuer assessment and developer debugging — IAM Proxy Italia ecosystem.
-<br/>
-## Table of Contents
+Demo wallet instance for the [IAM Proxy Italia](https://github.com/italia/iam-proxy-italia) ecosystem. It obtains attestations from a Credential Issuer and presents them to a Relying Party. The application is aligned with the [IT-Wallet specifications 1.4.7](https://italia.github.io/eid-wallet-it-docs/releases/1.4.7/en/).
 
-## 1. Overview
-This is a Web application that acts as a Wallet Instance, aligned with the [IT-Wallet specifications 1.4.7](https://italia.github.io/eid-wallet-it-docs/releases/1.4.7/en/).
+This product is for testing and learning. Do not use it in production.
 
-The application enables users to:
+## What it does
 
-- Obtain, store, and present PID, mDL and more digital credentials.
-- Regularly verify the status of the digital credentials stored in the Wallet.
+- Obtain and hold the attestations published by the configured issuer, including PID and mDL.
+- Present a held attestation to a Relying Party.
+- Read revocation from the Status List carried in the attestation.
+- Keep a local history of presentations on the Presentations Dashboard.
 
-The main purpose of this project is to test whether Credential Issuers and Relying Parties follow the rules, and shows how they share and use credentials.
+Held attestations stay in memory. Restarting the process clears them.
 
-<br/>
+## Specifications
 
-
-## 2. Specifications Employed
-
-The application is written in **Python** and built with the **Flask** framework. It uses [sd-jwt-python](https://github.com/openwallet-foundation-labs/sd-jwt-python) library from the **OpenWallet Foundation Labs** to handle SD-JWT.
-
-It complies with the following specifications:
+The application is Python 3.12 and Flask. Credential handling uses [pyeudiw](https://github.com/italia/eudi-wallet-it-python).
 
 - [IT-Wallet Technical Documentation 1.4.7](https://italia.github.io/eid-wallet-it-docs/releases/1.4.7/en/)
- 
-- [OpenID4VCI v1.0](https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html)
- 
-- [OpenID4VP v1.0](https://openid.net/specs/openid-4-verifiable-presentations-1_0.html)
+- [OpenID4VCI 1.0](https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html)
+- [OpenID4VP 1.0](https://openid.net/specs/openid-4-verifiable-presentations-1_0.html)
+- [OpenID Federation 1.0](https://openid.net/specs/openid-federation-1_0.html)
 
-- [OpenID.Federation v1.0](https://openid.net/specs/openid-federation-1_0.html)
+## Configuration
 
-- [OpenID.Federation Wallet](https://openid.net/specs/openid-federation-wallet-1_0.html)
+Runtime settings are the YAML files in `config/`. That directory is local and is not stored in this repository. Keys and environment variables are described in [docs/CONFIGURATION.md](docs/CONFIGURATION.md).
 
+The access password is `WALLET_INSTANCE_PASSWORD`.
 
-<br/>
+## Run with IAM Proxy Italia
 
-## 3. Important things to know
+The full demo is the `wallet-instance-demo` service of IAM Proxy Italia. It is available at `https://demo-wi.example.org:8080`. The image is `ghcr.io/italia/iam-proxy-italia-wallet-instance-demo:v1.0`. Compose builds this Dockerfile when that tag is absent. In that compose file the password defaults to `wallet`.
 
-This project is meant **only for testing and learning purposes** and SHOULD NOT be used in production environments.
+## Run this repository
 
-
-## 4. Application configuration
-
-All deployment-specific and runtime configuration lives in the **`config/` YAML files** (host, port, keys, trust anchors, credential types, etc.).
-
-For the full reference — file structure, all keys, environment variables, and how to extend credentials — see [docs/CONFIGURATION.md](docs/CONFIGURATION.md).
-
-
-<br/>
-
-## 5. How to build and run application
-
-### 5.1. Standalone Mode
-
-#### 5.1.1. Prerequisites
-
-* Python 3.12+
-
-#### 5.1.2. Instructions
-
-🗂️ Step 0 — Move to the project root directory
-
-Before running any command, make sure you are located in the root directory of the project, where the <code>pyproject.toml</code> and <code>run.py</code> files are placed.
-
-```
-cd path/to/your/project
-```
-
-1️⃣ Setup a virtual environment
-
-```
-python -m venv venv
-
-source venv/Scripts/activate
-```
-
-2️⃣ Install dependencies
-
-```
-pip install .
-```
-
-3️⃣ Build and run 
-
-```
-python run.py
-```
-
-4️⃣ Open your browser at: https://localhost:8080/
-
-#### 5.1.3. Local checks (before pushing / PR)
-
-Run quality and security checks locally before opening a PR:
+### Poetry
 
 ```bash
-make install-check-deps   # one-time: install ruff, radon, bandit
-make check               # run ruff (lint+format), radon (complexity), bandit (security)
+poetry install
 ```
 
-### 5.2. Container Mode
+Point `CONFIG_DIR` at a directory that contains `app_config.yaml`, export the variables listed in the configuration guide, then start the application.
 
-#### 5.2.1. Prerequisites
-
-* Docker or other container platform
-
-#### 5.2.2. Instructions
-🗂️ Step 0 — Move to the project root directory
-
-Before running any command, make sure you are located in the root directory of the project, where the <code>Dockerfile</code> and <code>docker-compose.yml</code> files are placed.
-
-```
-cd path/to/your/project
+```bash
+poetry run python run.py
 ```
 
-1️⃣ Build a new image and run 
+Without `WALLET_TLS_CERT` and `WALLET_TLS_KEY` the server speaks HTTP on port 8080.
 
-```
-docker compose --profile build up --build
-```
+### Docker Compose
 
-2️⃣ Check image inside the PC
-```
-docker images
-
-REPOSITORY          TAG       IMAGE ID       SIZE
-my-wallet:1.0.0     latest    abc123def456   250MB
-```
-3️⃣ Check container running inside the PC
-```
-docker ps -a
-
-CONTAINER ID   IMAGE             COMMAND           CREATED        STATUS              PORTS                                         NAMES
-44de42677c00   my-wallet:1.0.0   "python app.py"   35 hours ago   Up About a minute   0.0.0.0:8080->8080/tcp, [::]:8080->8080/tcp   my-wallet
+```bash
+docker compose up --build
 ```
 
-4️⃣ Open your browser at: https://localhost:8080/
+The service reads `./config` and publishes port 8080.
 
-#### 5.2.3. Export image from one PC to another
+Publishing a GitHub Release builds this Dockerfile and pushes `ghcr.io/italia/iam-proxy-italia-wallet-instance-demo` with the release tag.
 
-1️⃣ Check image inside the PC 1
-```
-docker images
+## Use
 
-REPOSITORY          TAG       IMAGE ID       SIZE
-my-wallet:1.0.0     latest    abc123def456   250MB
+1. Open the wallet and enter the demo password.
+2. On Emissione, choose an attestation and obtain it.
+3. On Presentazione, scan the Relying Party QR code.
+4. On Dashboard Presentazioni, read the outcome and the Relying Party metadata of each presentation.
 
-```
-2️⃣ Export image from PC 1
+## Checks
 
-```
-docker save my-wallet:1.0.0 | gzip > my-wallet.tar.gz
-```
-
-3️⃣ Import image to PC 2
-
-```
-gzip -dc my-wallet.tar.gz | docker load
+```bash
+make install-check-deps
+npm ci
+make check
 ```
 
-4️⃣ Check image inside the PC 2
-```
-docker images
+`make check` runs the same lint, complexity, security, and frontend checks as CI.
 
-REPOSITORY          TAG       IMAGE ID       SIZE
-my-wallet:1.0.0     latest    abc123def456   250MB
-```
+## License
 
-<br/>
+This project is licensed under the Apache License, Version 2.0. See [LICENSE](LICENSE).
 
-## 6. How to use the application
-
-1️⃣ Launch the application
-
-2️⃣ Open your browser at: https://localhost:8080/
-
-3️⃣ Enter the demo password (`WALLET_INSTANCE_PASSWORD`).
-
-
-### 6.1 Use Case: PID Issuance flow (Wallet initiated)
-
-1. In the Wallet home page, select an attestation from the configured issuer catalog and tap "Ottieni", then "Continua".
-2. The Wallet Instance discovers the trusted PID Provider using the Federation Services of the Trust Annchor, establishing the trust to the PID Provider according to the Trust Model and obtaining its metadata that discloses the formats of the PID, the algorithms supported, and any other parameter required for interoperability needs.
-3.  Using the Authorization Code Flow defined in [OpenID4VCI](https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html), the Wallet Instance requests the PID to the PID Provider.
-4. The PID Provider checks the authenticity and validity of the Wallet Instance, establishing the trust to the Wallet Provider and obtaining Wallet metadata with the parameters required for interoperability needs, according to the Trust Model.
-5. The PID Provider authenticates the user through the National eID system corresponding to the identification method chosen in step 1. For this reason, the Wallet Instance is redirected to the login page of the National eID system.
-6. Once the user has been successfully authenticated, the National eID system redirects the Wallet Instance back to the PID Provider. The PID Provider then extracts the authenticated user’s data from the received request and fetch of PID data from National Public Registry (ANPR) which acts as Authentic Source.
-7. The PID Provider releases a PID bound to the key material held by the requesting Wallet Instance
-8. Upon receiving the PID, the Wallet Instance verifies its authenticity and integrity by checking the digital signature. Only after successful verification is the PID securely stored within the Wallet
-9. You will be redirected back to the Wallet home page, which displays the PID card. The flow is now complete.
-
-### 6.2 Use Case: EAA Issuance flow (Wallet initiated)
-
-1. The Wallet Instance obtains the list of the trusted Credential Providers using the Federation Services of the Trust Anchor, then inspects the metadata looking for the Digital Credential capabilities of each Provider.
-2. On the Wallet home page, load the credential issuer catalog, select a Digital Credential and tap "Ottieni", then "Continua".
-3. Using the Authorization Code Flow defined in [OpenID4VCI](https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html), the Wallet Instance requests the selected Digital Credential to the right Provider.
-4. The Credential Provider checks the authenticity and validity of the Wallet Instance, establishing the trust to the Wallet Provider and obtaining Wallet metadata with the parameters required for interoperability needs, according to the Trust Model.
-5. The Credential Provider, acting as a Relying Party Instance, authenticates the User evaluating the presentation of the PID.
-6. Once the user has been successfully authenticated, the PID Provider fetch of Digital Credential data from the relevant Authentic Source.
-7.  The Credential Provider releases a Digital Credential bound to the key material held by the requesting Wallet Instance
-8.  Upon receiving the Digital Credential, the Wallet Instance verifies its authenticity and integrity by checking the digital signature. Only after successful verification is the Credential securely stored within the Wallet
-9.  You will be redirected back to the Wallet home page, which displays the Digital Credential card. The flow is now complete.
-
-### 6.3 Use Case: Presentation Remote flow
-
-1. On the Wallet home page, tap "Presenta" and scan the verifier QR code.
-2. In another browser tab, navigate to the homepage of the selected Relying Party... 
-3. TO-DO
-
-<br/>
-
-## 7. Disclaimer
-
-The released software is an initial development release version: 
--  The initial development release is an early endeavor reflecting the efforts of a short time-boxed period, and by no means can it be considered the final product.  
--  The initial development release may be changed substantially over time and might introduce new features, but also may change or remove existing ones, potentially breaking compatibility with your existing code.
--  The initial development release is limited in functional scope.
--  The initial development release may contain errors or design flaws and other problems that could cause system or other failures and data loss.
--  The initial development release has reduced security, privacy, availability, and reliability standards relative to future releases. This could make the software slower, less reliable, or more vulnerable to attacks than mature software.
--  The initial development release is not yet comprehensively documented. 
--  Users of the software must perform sufficient engineering and additional testing to properly evaluate their application and determine whether any of the open-sourced components are suitable for use in that application.
--  We strongly recommend not putting this version of the software into production use.
--  Only the latest version of the software will be supported.
-
-<br/>
-
-## 8. License
-
-This project is licensed under the Apache License, Version 2.0.
-For more details, see the [LICENSE](LICENSE) file.
-
-**Icons and images:** UI icons (trash, memory, card, PDF, QR code) are from [Bootstrap Icons](https://icons.getbootstrap.com/) (MIT), in line with the [Bootstrap Italia](https://italia.github.io/bootstrap-italia/) design system. For a full list of assets and their licenses, see [docs/ASSETS.md](docs/ASSETS.md).
-
-<br/>
+UI icons come from [Bootstrap Icons](https://icons.getbootstrap.com/) (MIT), in line with [Bootstrap Italia](https://italia.github.io/bootstrap-italia/). Asset licenses are listed in [docs/ASSETS.md](docs/ASSETS.md).
