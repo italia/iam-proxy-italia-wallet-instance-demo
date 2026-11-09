@@ -347,7 +347,6 @@ const DIAGNOSTIC_PURPOSES = [
   ["token", "Token"],
   ["nonce", "Nonce"],
   ["credential", "Rilascio dell'attestazione"],
-  ["status", "Stato di revoca"],
   ["request_uri", "Request URI"],
   ["request-uri", "Request URI"],
   ["direct_post", "Risposta di presentazione"],
@@ -362,6 +361,7 @@ function diagnosticPurpose(url) {
   } catch (error) {
     segments = String(url || "").toLowerCase().split("?")[0].split("/").filter(Boolean);
   }
+  if (segments.includes("status")) return "Status List";
   const last = segments.at(-1) || "";
   const match = DIAGNOSTIC_PURPOSES.find(([segment]) => segment === last);
   return match ? match[1] : "Altro";

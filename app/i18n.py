@@ -29,7 +29,7 @@ JS_MESSAGES = (
     "Token",
     "Nonce",
     "Rilascio dell'attestazione",
-    "Stato di revoca",
+    "Status List",
     "Request URI",
     "Risposta di presentazione",
     "Autorizzazione",

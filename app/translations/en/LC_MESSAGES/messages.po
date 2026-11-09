@@ -202,6 +202,9 @@ msgstr "Nonce"
 msgid "Rilascio dell'attestazione"
 msgstr "Attestation issuance"
 
+msgid "Status List"
+msgstr "Status List"
+
 msgid "Request URI"
 msgstr "Request URI"
 
