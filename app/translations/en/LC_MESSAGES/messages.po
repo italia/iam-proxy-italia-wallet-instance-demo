@@ -28,6 +28,9 @@ msgstr "Skip to main content"
 msgid "Vai al piè di pagina"
 msgstr "Skip to footer"
 
+msgid "Torna su"
+msgstr "Back to top"
+
 msgid "Wallet demo"
 msgstr "Wallet demo"
 

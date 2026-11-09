@@ -20,6 +20,9 @@
     {% block content %}{% endblock %}
   </main>
   {% include "partials/footer.html" %}
+  <a href="#" class="back-to-top" data-bs-toggle="backtotop" aria-label="{{ _('Torna su') }}">
+    <svg class="icon icon-light" aria-hidden="true"><use href="{{ url_for('static', filename='svg/sprites.svg') }}#it-arrow-up"></use></svg>
+  </a>
   <script>
     window.WALLET_I18N = {{ i18n_catalog|tojson }};
     function t(message, vars) {
