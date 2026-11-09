@@ -179,15 +179,13 @@ def safe_next_path(raw: str | None) -> str | None:
     """Accept only a same-app relative path. Reject external and protocol-relative URLs."""
     if not raw:
         return None
-    candidate = raw.strip()
-    if not candidate.startswith("/") or candidate.startswith("//") or "\\" in candidate or "://" in candidate:
-        return None
-    parsed = urlparse(candidate)
-    if parsed.scheme or parsed.netloc:
-        return None
-    if parsed.path in ("/wallet/access", "/wallet/activate"):
-        return None
-    return candidate
+    # Browsers treat "\" as "/". urlparse does not, so normalize before the netloc check.
+    candidate = raw.strip().replace("\\", "/")
+    if not urlparse(candidate).netloc and not urlparse(candidate).scheme:
+        if candidate.startswith("/") and not candidate.startswith("//"):
+            if urlparse(candidate).path not in ("/wallet/access", "/wallet/activate"):
+                return candidate
+    return None
 
 
 def redirect_to_login(target: str):
@@ -201,9 +199,8 @@ def set_language(lang_code: str):
     if lang_code not in ("it", "en"):
         lang_code = "it"
     session["lang"] = lang_code
-    destination = (request.args.get("next") or "").strip()
-    parsed = urlparse(destination)
-    if destination.startswith("/") and not destination.startswith("//") and not parsed.scheme and not parsed.netloc:
+    destination = safe_next_path(request.args.get("next"))
+    if destination:
         return redirect(destination)
     return redirect(url_for("wallet_routes.wallet_access"))
 
