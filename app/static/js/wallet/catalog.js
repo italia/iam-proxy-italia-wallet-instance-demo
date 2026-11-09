@@ -275,68 +275,62 @@ function pretty(value) {
 
 let diagnosticJwtSeq = 0;
 
-function jwtTabs(found) {
-  const wrapper = document.createDocumentFragment();
-  found.forEach((item) => {
-    const { header, payload } = jwtCleartext(item.token);
-    const seq = diagnosticJwtSeq++;
-    const headerId = `diagnostic-jwt-${seq}-header`;
-    const payloadId = `diagnostic-jwt-${seq}-payload`;
-    const block = document.createElement("div");
-    block.className = "diagnostic-jwt mt-2";
-    const where = document.createElement("p");
-    where.className = "diagnostic-jwt-path mb-1";
-    where.textContent = item.path || "JWT";
-    const tabs = document.createElement("ul");
-    tabs.className = "nav nav-tabs";
-    tabs.setAttribute("role", "tablist");
-    tabs.innerHTML = `
-      <li class="nav-item" role="presentation">
-        <button class="nav-link active" id="${headerId}-tab" type="button" role="tab" data-bs-toggle="tab" data-bs-target="#${headerId}" aria-controls="${headerId}" aria-selected="true">${t("Header")}</button>
-      </li>
-      <li class="nav-item" role="presentation">
-        <button class="nav-link" id="${payloadId}-tab" type="button" role="tab" data-bs-toggle="tab" data-bs-target="#${payloadId}" aria-controls="${payloadId}" aria-selected="false">${t("Payload")}</button>
-      </li>`;
-    const panes = document.createElement("div");
-    panes.className = "tab-content diagnostic-jwt-panes";
-    const headerPane = document.createElement("div");
-    headerPane.className = "tab-pane fade show active";
-    headerPane.id = headerId;
-    headerPane.setAttribute("role", "tabpanel");
-    headerPane.setAttribute("aria-labelledby", `${headerId}-tab`);
-    const headerPre = document.createElement("pre");
-    headerPre.className = "mb-0";
-    headerPre.textContent = pretty(header);
-    headerPane.append(headerPre);
-    const payloadPane = document.createElement("div");
-    payloadPane.className = "tab-pane fade";
-    payloadPane.id = payloadId;
-    payloadPane.setAttribute("role", "tabpanel");
-    payloadPane.setAttribute("aria-labelledby", `${payloadId}-tab`);
-    const payloadPre = document.createElement("pre");
-    payloadPre.className = "mb-0";
-    payloadPre.textContent = pretty(payload);
-    payloadPane.append(payloadPre);
-    panes.append(headerPane, payloadPane);
-    block.append(where, tabs, panes);
-    wrapper.append(block);
+function exchangeTabs(specs) {
+  const seq = diagnosticJwtSeq++;
+  const block = document.createElement("div");
+  block.className = "diagnostic-jwt mt-2";
+  const tabs = document.createElement("ul");
+  tabs.className = "nav nav-tabs";
+  tabs.setAttribute("role", "tablist");
+  const panes = document.createElement("div");
+  panes.className = "tab-content diagnostic-jwt-panes";
+  specs.forEach((spec, index) => {
+    const id = `diagnostic-exchange-${seq}-${index}`;
+    const item = document.createElement("li");
+    item.className = "nav-item";
+    item.setAttribute("role", "presentation");
+    const button = document.createElement("button");
+    button.className = index === 0 ? "nav-link active" : "nav-link";
+    button.id = `${id}-tab`;
+    button.type = "button";
+    button.setAttribute("role", "tab");
+    button.dataset.bsToggle = "tab";
+    button.dataset.bsTarget = `#${id}`;
+    button.setAttribute("aria-controls", id);
+    button.setAttribute("aria-selected", index === 0 ? "true" : "false");
+    button.textContent = spec.label;
+    item.append(button);
+    const pane = document.createElement("div");
+    pane.className = index === 0 ? "tab-pane fade show active" : "tab-pane fade";
+    pane.id = id;
+    pane.setAttribute("role", "tabpanel");
+    pane.setAttribute("aria-labelledby", `${id}-tab`);
+    const pre = document.createElement("pre");
+    pre.className = "mb-0";
+    pre.textContent = spec.text;
+    pane.append(pre);
+    tabs.append(item);
+    panes.append(pane);
   });
-  return wrapper;
+  block.append(tabs, panes);
+  return block;
 }
 
-function diagnosticBlock(label, value) {
-  const fragment = document.createDocumentFragment();
-  const title = document.createElement("p");
-  title.className = "mb-1";
-  title.textContent = label;
-  const raw = document.createElement("pre");
-  raw.className = "border rounded p-2 bg-light";
-  raw.textContent = JSON.stringify(value, null, 2);
-  fragment.append(title, raw);
+function exchangeArtifacts(entry) {
+  const specs = [
+    { label: t("Richiesta HTTP"), text: entry.request_http || "" },
+    { label: t("Risposta HTTP"), text: entry.response_http || "" },
+  ];
   const found = [];
-  collectJwts(value, "", found);
-  if (found.length) fragment.append(jwtTabs(found));
-  return fragment;
+  collectJwts(entry.request, t("Richiesta"), found);
+  collectJwts(entry.response, t("Risposta"), found);
+  found.forEach((item) => {
+    const decoded = jwtCleartext(item.token);
+    const where = item.path || "JWT";
+    specs.push({ label: `${where} · ${t("Header")}`, text: pretty(decoded.header) });
+    specs.push({ label: `${where} · ${t("Payload")}`, text: pretty(decoded.payload) });
+  });
+  return exchangeTabs(specs);
 }
 
 const DIAGNOSTIC_PURPOSES = [
@@ -463,11 +457,11 @@ function diagnosticText(entries) {
       diagnosticPeerName(entry.peer),
       entry.url || "",
       "",
-      t("Richiesta"),
-      JSON.stringify(entry.request, null, 2),
+      t("Richiesta HTTP"),
+      entry.request_http || "",
       "",
-      t("Risposta"),
-      JSON.stringify(entry.response, null, 2),
+      t("Risposta HTTP"),
+      entry.response_http || "",
     ].join("\n");
   }).join("\n\n---\n\n");
 }
@@ -524,7 +518,7 @@ function renderDiagnostics(entries) {
     const url = document.createElement("p");
     url.className = "mb-2 long-text";
     url.textContent = entry.url || "";
-    article.append(headingRow, peer, url, diagnosticBlock(t("Richiesta"), entry.request), diagnosticBlock(t("Risposta"), entry.response));
+    article.append(headingRow, peer, url, exchangeArtifacts(entry));
     box.appendChild(article);
     items.push({ id: anchor, purpose, label: diagnosticStamp(entry), failed: diagnosticFailed(entry) });
   });

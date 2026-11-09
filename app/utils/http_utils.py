@@ -1,13 +1,14 @@
 """Shared HTTP request helpers with retry and proxy support."""
 
+import json
 import logging
 import time
 from typing import Any, Callable
-from urllib.parse import urlparse
+from urllib.parse import urlencode, urlparse
 
 import requests
 
-from app.utils.diagnostic_log import record_exchange
+from app.utils.diagnostic_log import http_request_message, http_response_message, record_exchange
 from app.utils.utils import sanitize_for_logging
 
 logger = logging.getLogger(__name__)
@@ -60,10 +61,37 @@ def _response_object(response: requests.Response):
         return response.text
 
 
+def _attempted_body(req_kwargs: dict):
+    if req_kwargs.get("json") is not None:
+        return json.dumps(req_kwargs["json"], ensure_ascii=False)
+    data = req_kwargs.get("data")
+    if isinstance(data, dict):
+        return urlencode(data)
+    return data
+
+
+def _response_text(response: requests.Response) -> str:
+    try:
+        return response.text
+    except Exception:
+        return response.content
+
+
 def _record_http(
     method: str, url: str, req_kwargs: dict, response: requests.Response | None = None, error: Exception | None = None
 ):
     body = req_kwargs.get("json", req_kwargs.get("data"))
+    prepared = getattr(response, "request", None) if response is not None else None
+    if prepared is not None:
+        request_http = http_request_message(prepared.method, prepared.url, prepared.headers, prepared.body)
+    else:
+        request_http = http_request_message(method, url, req_kwargs.get("headers"), _attempted_body(req_kwargs))
+    if response is not None:
+        response_http = http_response_message(
+            response.status_code, response.reason, response.headers, _response_text(response)
+        )
+    else:
+        response_http = str(error) if error else ""
     record_exchange(
         method=method,
         url=url,
@@ -71,6 +99,8 @@ def _record_http(
         request_body=body,
         status=response.status_code if response is not None else None,
         response_body=_response_object(response) if response is not None else (str(error) if error else None),
+        request_http=request_http,
+        response_http=response_http,
     )
 
 

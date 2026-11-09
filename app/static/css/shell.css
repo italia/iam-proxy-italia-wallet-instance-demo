@@ -469,6 +469,11 @@
   color: #5c6f82;
 }
 
+.diagnostic-exchange .nav-tabs {
+  flex-wrap: wrap;
+  row-gap: 0.25rem;
+}
+
 .diagnostic-jwt .nav-tabs .nav-link {
   font-size: 0.875rem;
 }

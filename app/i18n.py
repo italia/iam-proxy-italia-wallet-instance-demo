@@ -18,6 +18,8 @@ JS_MESSAGES = (
     "Seleziona gli scambi da rimuovere.",
     "Richiesta",
     "Risposta",
+    "Richiesta HTTP",
+    "Risposta HTTP",
     "Issuer di credenziali",
     "Verificatore",
     "Federazione",

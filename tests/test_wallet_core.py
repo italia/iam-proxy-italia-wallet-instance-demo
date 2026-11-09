@@ -116,6 +116,60 @@ class MdocDiagnosticTests(unittest.TestCase):
         self.assertIn("h'0304'", text)
 
 
+class HttpHistoryTests(unittest.TestCase):
+    def test_http_message_keeps_the_body_in_the_format_that_was_sent(self):
+        from app.utils.diagnostic_log import (
+            http_request_message,
+            http_response_message,
+            list_entries,
+            record_exchange,
+            remove_entries,
+        )
+
+        request_http = http_request_message(
+            "POST",
+            "https://issuer.example.org/token?x=1",
+            {"Content-Type": "application/json", "X-Private-Key": "secret"},
+            '{"grant":"code"}',
+        )
+        response_http = http_response_message(200, "OK", {"Content-Type": "application/json"}, '{"access_token":"tok"}')
+        self.assertTrue(request_http.startswith("POST /token?x=1 HTTP/1.1\n"))
+        self.assertIn("Host: issuer.example.org", request_http)
+        self.assertIn("X-Private-Key: [omesso]", request_http)
+        self.assertNotIn("secret", request_http)
+        self.assertIn('{"grant":"code"}', request_http)
+        self.assertTrue(response_http.startswith("HTTP/1.1 200 OK\n"))
+        self.assertIn('{"access_token":"tok"}', response_http)
+        form_http = http_request_message(
+            "POST",
+            "https://issuer.example.org/par",
+            {"Content-Type": "application/x-www-form-urlencoded"},
+            "scope=pid&client_id=wallet",
+        )
+        self.assertTrue(form_http.startswith("POST /par HTTP/1.1\n"))
+        self.assertIn("Content-Type: application/x-www-form-urlencoded", form_http)
+        self.assertIn("scope=pid&client_id=wallet", form_http)
+
+        record_exchange(
+            method="POST",
+            url="https://issuer.example.org/token?x=1",
+            request_headers={"Content-Type": "application/json"},
+            request_body={"grant": "code"},
+            status=200,
+            response_body={"access_token": "tok"},
+            request_http=request_http,
+            response_http=response_http,
+        )
+        stored = [entry for entry in list_entries() if entry.get("url") == "https://issuer.example.org/token?x=1"]
+        self.assertTrue(stored)
+        entry = stored[-1]
+        self.assertEqual(entry["request_http"], request_http)
+        self.assertEqual(entry["response_http"], response_http)
+        self.assertEqual(entry["request"]["body"]["grant"], "code")
+        self.assertEqual(entry["response"]["access_token"], "tok")
+        remove_entries([entry["id"]])
+
+
 class IssuerConfigurationTests(unittest.TestCase):
     def test_doctype_and_namespaces_come_from_the_credential_configuration(self):
         configuration = {

@@ -388,6 +388,12 @@ msgstr "Request"
 msgid "Risposta"
 msgstr "Response"
 
+msgid "Richiesta HTTP"
+msgstr "HTTP request"
+
+msgid "Risposta HTTP"
+msgstr "HTTP response"
+
 msgid "Issuer di credenziali"
 msgstr "Credential issuer"
 
