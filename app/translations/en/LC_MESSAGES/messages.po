@@ -592,6 +592,9 @@ msgstr "No configured issuer issues the selected attestation. Reload the page an
 msgid "La configurazione dell'issuer non dichiara lo scope di questa attestazione."
 msgstr "The issuer configuration does not declare the scope of this attestation."
 
+msgid "La configurazione dell'issuer non dichiara il formato di questa attestazione."
+msgstr "The issuer configuration does not declare the format of this attestation."
+
 msgid "Descrizione"
 msgstr "Description"
 

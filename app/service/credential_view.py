@@ -6,7 +6,6 @@ from datetime import date, datetime
 
 import cbor2
 
-from app.constants import JWT_PREFIX, MSO_MDOC_PREFIX, SD_JWT_PREFIX
 from app.routes.itwallet_routes import (
     _format_label,
     display_index,
@@ -156,12 +155,11 @@ def _mdoc_cleartext(token: str) -> dict | None:
     signed["disclosures"] = _json_text(_jsonable(namespaces))
     return signed
 
-def _credential_cleartext(token, credential_format: str, credential_id: str) -> dict | None:
+def _credential_cleartext(token, credential_format: str) -> dict | None:
     fmt = (credential_format or "").lower()
-    key = str(credential_id or "")
-    if fmt in _SD_JWT_FORMATS or key.startswith(SD_JWT_PREFIX):
+    if fmt in _SD_JWT_FORMATS:
         return _sd_jwt_cleartext(token) if isinstance(token, str) else None
-    if fmt in _MDOC_FORMATS or key.startswith(MSO_MDOC_PREFIX):
+    if fmt in _MDOC_FORMATS:
         return _mdoc_cleartext(token) if isinstance(token, str) else None
     return _jwt_cleartext(token)
 
@@ -189,7 +187,7 @@ def _held_view(issuer, group, credential_id, entry, index) -> dict:
         "format_label": _or_text(meta.get("format_label"), _format_label(credential_format)),
         "claims": meta.get("claims") or [],
         "config_id": _or_text(meta.get("id"), credential_id),
-        "credential": _credential_cleartext(entry.get("data_row"), credential_format, credential_id),
+        "credential": _credential_cleartext(entry.get("data_row"), credential_format),
         "status_label": _STATUS_LABELS.get(status.lower(), _or_text(status, "Non verificata")),
         "assertion": _jwt_cleartext(entry.get("status_assertion")),
     }

@@ -51,9 +51,7 @@ from app.constants import (
     METADATA_TYPE_CREDENTIAL_VERIFIER,
     METADATA_TYPE_FEDERATION_ENTITY,
     METADATA_TYPE_WALLET_PROVIDER,
-    MSO_MDOC_PREFIX,
     PRESENTATION_RESPONSE_MODE_DIRECT_POST_JWT,
-    SD_JWT_PREFIX,
     WALLET_ATTESTATION_NAME,
     WALLET_UNIT_ATTESTATION_NAME,
 )
@@ -63,6 +61,7 @@ from app.service.discovery import FederationDiscovery
 from app.service.itwallet_helpers import (
     apply_credential_issuer_overrides,
     apply_replace_values,
+    credential_configuration_format,
     credential_configuration_scope,
     get_proxies_from_config,
     get_trust_root_and_eaa_provider_ec,
@@ -431,6 +430,7 @@ class IssuanceFlow:
             credential_configuration_id=CREDENTIAL_CONFIGURATION_ID_FOR_INITIALIZING,
             credential_identifiers=credential_identifiers,
             dpop_bound_access_token=dpop_bound_access_token,
+            entity_configuration=pid_provider_ec,
         )
 
         # Stampo i dati in sessione
@@ -679,6 +679,7 @@ class IssuanceFlow:
             credential_configuration_id=credential_configuration_id,
             credential_identifiers=credential_identifiers,
             dpop_bound_access_token=dpop_bound_access_token,
+            entity_configuration=eaa_provider_ec,
         )
         self.session.pop("query_params", None)
         return {"success": True, "data": {"credential_id": credential_id}}
@@ -836,6 +837,7 @@ class IssuanceFlow:
             credential_configuration_id=credential_configuration_id,
             credential_identifiers=credential_identifiers,
             dpop_bound_access_token=dpop_bound_access_token,
+            entity_configuration=eaa_provider_ec,
         )
 
         self._print_session_data()
@@ -977,9 +979,14 @@ class IssuanceFlow:
 
 
     def _decode_and_validate_single_credential(
-        self, cred: dict, index: int, credential_id: str, credential_configuration_id: str, credential_issuer_jwks: dict
+        self,
+        cred: dict,
+        index: int,
+        credential_configuration_id: str,
+        credential_issuer_jwks: dict,
+        entity_configuration: dict,
     ) -> tuple | None:
-        """Decode and validate a single credential (SD-JWT or mDL). Returns (credential, vct, claims) or None."""
+        """Decode and validate a single credential (SD-JWT or mdoc). Returns (credential, vct, claims) or None."""
         credential = cred.get("credential")
         if not credential:
             logger.info("Content of credential #%d is missing or invalid.", index)
@@ -988,12 +995,13 @@ class IssuanceFlow:
         credential_config: Credential = self._app_config.credentials_config.supported_credentials.get(
             credential_configuration_id
         )
+        credential_format = credential_configuration_format(entity_configuration, credential_configuration_id).lower()
 
-        if credential_id.startswith(SD_JWT_PREFIX):
+        if credential_format in {"dc+sd-jwt", "vc+sd-jwt"}:
             claims = decode_and_verify_sd_jwt(sd_jwt_compact=credential, jwks=credential_issuer_jwks)
             logger.info("Valid credential #%d SD-JWT)", index)
             return credential, claims.get("vct", ""), claims
-        if credential_id.startswith(MSO_MDOC_PREFIX):
+        if credential_format == "mso_mdoc":
             if not credential_config.document_format.specs:
                 raise ValueError(
                     "Format specifications not found for credential configuration: {}".format(
@@ -1067,6 +1075,7 @@ class IssuanceFlow:
         credential_configuration_id: str,
         credential_identifiers: list,
         dpop_bound_access_token: str,
+        entity_configuration: dict,
     ) -> str:
         """Request credentials via nonce+proof, decode/validate, store in credential_store. Returns credential_id."""
         wallet_private_key, wallet_public_key = self._retrieve_instance_hw_keys(CONFIG_DIR)
@@ -1088,6 +1097,7 @@ class IssuanceFlow:
             credential_configuration_id,
             credential_issuer_jwks,
             credential_issuer_url,
+            entity_configuration,
         )
         if not issued:
             logger.info("❌ Nessuna credenziale valida ricevuta")
@@ -1123,6 +1133,7 @@ class IssuanceFlow:
         credential_configuration_id: str,
         credential_issuer_jwks: dict,
         credential_issuer_url,
+        entity_configuration: dict,
     ):
         last_valid = None
         for credential_id in credential_identifiers:
@@ -1137,7 +1148,7 @@ class IssuanceFlow:
             )
             for index, cred in enumerate(credentials, start=1):
                 result = self._decode_and_validate_single_credential(
-                    cred, index, credential_id, credential_configuration_id, credential_issuer_jwks
+                    cred, index, credential_configuration_id, credential_issuer_jwks, entity_configuration
                 )
                 if result:
                     last_valid = (credential_id, *result)
