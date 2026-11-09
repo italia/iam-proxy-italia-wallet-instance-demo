@@ -89,9 +89,6 @@ def _jsonable(value):
     return value
 
 def _cose_key(key):
-    names = {1: "alg", 4: "kid"}
-    if key in names:
-        return names[key]
     return str(key) if isinstance(key, int) else key
 
 def _cbor_diag_items(value):
@@ -275,6 +272,37 @@ def _held_entries(issuer, group):
 def _is_held_entry(entry) -> bool:
     return isinstance(entry, dict) and "data_row" in entry
 
+def _lookup_path(source, path):
+    current = source
+    for step in path:
+        if not isinstance(current, dict) or step not in current:
+            return None
+        current = current[step]
+    return current
+
+def _claim_text(value) -> str:
+    if value is None or (isinstance(value, (dict, list)) and not value):
+        return ""
+    if isinstance(value, (dict, list)):
+        return json.dumps(value, ensure_ascii=False)
+    return str(value).strip()
+
+def _claim_lines(entries, stored, credential_format: str) -> list[str]:
+    source = stored if isinstance(stored, dict) else {}
+    if credential_format in _MDOC_FORMATS and isinstance(source.get("nameSpaces"), dict):
+        source = source["nameSpaces"]
+    lines = []
+    for item in entries or []:
+        if not isinstance(item, dict):
+            continue
+        label = str(item.get("label") or "").strip()
+        path = item.get("path")
+        if not label:
+            continue
+        rendered = _claim_text(_lookup_path(source, path)) if isinstance(path, list) else ""
+        lines.append(f"{label}: {rendered}" if rendered else label)
+    return lines
+
 def _held_view(issuer, group, credential_id, entry, index) -> dict:
     meta = lookup_attestation(str(entry.get("configuration_id") or ""), index)
     status = str(_or_text(entry.get("status"))).strip()
@@ -286,7 +314,7 @@ def _held_view(issuer, group, credential_id, entry, index) -> dict:
         "description": _or_text(meta.get("description")),
         "format": credential_format,
         "format_label": _or_text(meta.get("format_label"), _format_label(credential_format)),
-        "claims": meta.get("claims") or [],
+        "claims": _claim_lines(meta.get("claim_paths"), entry.get("claims"), credential_format) or meta.get("claims") or [],
         "config_id": _or_text(meta.get("id"), credential_id),
         "credential": _credential_cleartext(entry.get("data_row"), credential_format),
         "status_label": _STATUS_LABELS.get(status.lower(), _or_text(status, "Non verificata")),

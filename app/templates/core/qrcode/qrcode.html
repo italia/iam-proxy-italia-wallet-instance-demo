@@ -2,20 +2,27 @@
   <div class="modal-dialog modal-dialog-centered" role="document">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title w-100 text-center" id="qrModalTitle">{{ _('Inquadra o carica il QR Code') }}</h5>
+        <h5 class="modal-title w-100 text-center" id="qrModalTitle">{{ _('Inquadra, cattura o carica il QR Code') }}</h5>
         <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="{{ _('Chiudi') }}" onclick="stopQrScanner()"></button>
       </div>
       <div class="modal-body text-center">
-        <video id="qr-video" style="display: none;"></video>
-        <canvas id="qr-canvas" style="width: 100%; max-width: 400px; height: auto; border: 2px solid #0066cc; border-radius: 4px;"></canvas>
+        <div id="qr-stage">
+          <video id="qr-video" style="display: none;"></video>
+          <canvas id="qr-canvas"></canvas>
+          <div id="qr-selection" hidden></div>
+        </div>
 
-        <p class="mt-3 text-muted">{{ _('Inquadra il QR Code oppure:') }}</p>
+        <p id="qr-hint" class="mt-3 text-muted">{{ _('Inquadra il QR Code oppure:') }}</p>
 
-        <div class="mb-2">
+        <div class="qr-source-actions">
           <input type="file" id="qr-file-input" accept="image/*" style="display: none;" onchange="handleQrFileUpload(event)" />
           <button type="button" class="btn btn-outline-primary btn-sm" onclick="document.getElementById('qr-file-input').click()">
             <svg class="icon icon-sm" aria-hidden="true"><use href="/static/svg/sprites.svg#it-upload"></use></svg>
             {{ _("Carica un'immagine QR") }}
+          </button>
+          <button type="button" class="btn btn-outline-primary btn-sm" onclick="startScreenPortion()">
+            <svg class="icon icon-sm" aria-hidden="true"><use href="/static/svg/sprites.svg#it-fullscreen"></use></svg>
+            {{ _('Inquadra una porzione dello schermo') }}
           </button>
         </div>
       </div>

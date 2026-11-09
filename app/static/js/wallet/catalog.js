@@ -6,9 +6,14 @@ function escapeCatalogText(value) {
     .replaceAll('"', "&quot;");
 }
 
+function offeredAttestationsLabel(count) {
+  if (count === 1) return t("1 attestazione disponibile");
+  return t("{count} attestazioni disponibili", { count });
+}
+
 function catalogSectionHtml(section, sectionIndex) {
   const options = [
-    `<option value="" selected>${t("Scegli un'attestazione")}</option>`,
+    `<option value="" selected>${t("Seleziona una Attestazione disponibile")}</option>`,
     ...(section.attestations || []).map((item) => {
       const obtained = item.obtained ? ` — ${t("Già ottenuta")}` : "";
       const format = readableFormat(item.format || "");
@@ -24,17 +29,17 @@ function catalogSectionHtml(section, sectionIndex) {
   const selectId = `issuer-select-${sectionIndex}`;
   return `
     <article class="it-card rounded border shadow-sm catalog-section mb-4" data-issuer="${escapeCatalogText(section.issuer)}">
-      <div class="it-card-body p-4">
-        <h2 class="catalog-issuer">
-          <span><span class="catalog-issuer-label">${t("Nome del credential issuer")}:</span> ${escapeCatalogText(section.name || "")}</span>
-          <span><span class="catalog-issuer-label">${t("URI del credential issuer")}:</span> ${escapeCatalogText(section.uri || section.issuer || "")}</span>
-          <span><span class="catalog-issuer-label">${t("Numero di credenziali offerte")}:</span> ${escapeCatalogText((section.attestations || []).length)}</span>
-        </h2>
+      <div class="catalog-issuer-heading">
+        <h2 class="it-card-title h5">${escapeCatalogText(section.name || section.uri || section.issuer || "")}</h2>
+        <div class="chip chip-simple chip-primary" aria-label="${escapeCatalogText(t("Numero di credenziali offerte"))}">
+          <span class="chip-label">${escapeCatalogText(offeredAttestationsLabel((section.attestations || []).length))}</span>
+        </div>
+      </div>
+      <div class="it-card-body">
         <div class="form-group mb-0">
           <div class="catalog-obtain">
             <div class="select-wrapper">
-              <label for="${selectId}">${t("Attestazione")}</label>
-              <select id="${selectId}" data-source="${escapeCatalogText(section.source || "")}" aria-describedby="${selectId}-detail ${selectId}-error">
+              <select id="${selectId}" data-source="${escapeCatalogText(section.source || "")}" aria-label="${escapeCatalogText(t("Seleziona una Attestazione disponibile"))}" aria-describedby="${selectId}-detail ${selectId}-error">
                 ${options}
               </select>
             </div>
@@ -339,7 +344,9 @@ const DIAGNOSTIC_PURPOSES = [
   ["par", "Pushed authorization"],
   ["pushed_authorization_request", "Pushed authorization"],
   ["token", "Token"],
-  ["nonce", "Nonce"],
+  ["nonce", "Wallet Provider Nonce"],
+  ["nonce-endpoint", "Credential Issuer Nonce"],
+  ["wallet-attestation", "Wallet Attestation"],
   ["credential", "Rilascio dell'attestazione"],
   ["request_uri", "Request URI"],
   ["request-uri", "Request URI"],
@@ -365,6 +372,17 @@ function diagnosticFailed(entry) {
   if (entry.status === null || entry.status === undefined || entry.status === "") return true;
   const status = Number(entry.status);
   return !Number.isFinite(status) || status >= 400;
+}
+
+function diagnosticFailureIcon() {
+  const icon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  icon.setAttribute("class", "icon diagnostic-failure-icon");
+  icon.setAttribute("aria-hidden", "true");
+  icon.setAttribute("focusable", "false");
+  const use = document.createElementNS("http://www.w3.org/2000/svg", "use");
+  use.setAttribute("href", "/static/svg/sprites.svg#it-error");
+  icon.append(use);
+  return icon;
 }
 
 function diagnosticStamp(entry) {
@@ -402,7 +420,10 @@ function renderDiagnosticNav(items) {
       const link = document.createElement("a");
       link.href = `#${call.id}`;
       link.textContent = call.label;
-      if (call.failed) link.classList.add("is-failed");
+      if (call.failed) {
+        link.classList.add("is-failed");
+        link.prepend(diagnosticFailureIcon());
+      }
       link.addEventListener("click", (event) => {
         const target = document.getElementById(call.id);
         if (!target) return;
@@ -511,6 +532,10 @@ function renderDiagnostics(entries) {
     heading.className = "h5";
     heading.id = anchor;
     heading.textContent = `${t(purpose)} · ${diagnosticStamp(entry)}`;
+    if (diagnosticFailed(entry)) {
+      heading.classList.add("is-failed");
+      heading.prepend(diagnosticFailureIcon());
+    }
     headingRow.append(choice, heading);
     const peer = document.createElement("p");
     peer.className = "mb-1";
@@ -642,12 +667,15 @@ document.getElementById("issuer-catalog-form")?.addEventListener("submit", async
 
 document.addEventListener("DOMContentLoaded", () => {
   if (document.getElementById("diagnostic-log")) refreshDiagnostics();
-  const issued = new URLSearchParams(window.location.search).get("issued");
+  const issuedParams = new URLSearchParams(window.location.search);
+  const issued = issuedParams.get("issued");
+  const issuanceState = issuedParams.get("state");
   if (issued === "1" && typeof continueAddCredential === "function") {
     const url = new URL(window.location.href);
     url.searchParams.delete("issued");
+    url.searchParams.delete("state");
     window.history.replaceState({}, "", url.pathname + url.search + url.hash);
     if (typeof openCredPopup === "function") openCredPopup();
-    continueAddCredential();
+    continueAddCredential(issuanceState);
   }
 });

@@ -1,3 +1,4 @@
+import json
 import unittest
 from unittest.mock import patch
 
@@ -114,6 +115,13 @@ class MdocDiagnosticTests(unittest.TestCase):
         self.assertIn("1: -7", text)
         self.assertIn('"docType": "org.iso.18013.5.1.mDL"', text)
         self.assertIn("h'0304'", text)
+
+    def test_value_digest_indexes_stay_numeric(self):
+        from app.service.credential_view import _json_text, _jsonable
+
+        rendered = _json_text(_jsonable({"valueDigests": {"org.iso.18013.5.1": {0: b"a", 1: b"b", 4: b"c"}}}))
+        digests = json.loads(rendered)["valueDigests"]["org.iso.18013.5.1"]
+        self.assertEqual(set(digests), {"0", "1", "4"})
 
 
 class HttpHistoryTests(unittest.TestCase):

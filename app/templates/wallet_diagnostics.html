@@ -4,8 +4,12 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='wallet.css') }}">
 {% endblock %}
 {% block content %}
-  <h1 class="h2" id="page-title">{{ _('Storico Azioni HTTP') }}</h1>
-  <p>{{ _('Richieste e risposte verso i credential issuer e i verificatori.') }}</p>
+  <div class="it-wallet-title-row it-wallet-title-centered">
+    <div class="it-wallet-title-slot it-wallet-title-slot-start"></div>
+    <h1 class="it-wallet-title-heading mb-0" id="page-title">{{ _('Storico Azioni HTTP') }}</h1>
+    <div class="it-wallet-title-slot it-wallet-title-slot-end"></div>
+  </div>
+  <p class="text-center mb-4">{{ _('Richieste e risposte verso i credential issuer e i verificatori.') }}</p>
   <div class="diagnostic-layout">
     <nav id="diagnostic-nav" class="diagnostic-nav" aria-label="{{ _('Elenco degli scambi') }}">
       <h2 class="h6" id="diagnostic-nav-title">{{ _('Azioni') }}</h2>

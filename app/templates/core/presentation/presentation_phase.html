@@ -6,7 +6,8 @@
         <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="{{ _('Chiudi') }}" onclick="chiudiPresentationPopup()"></button>
       </div>
       <div class="modal-body text-center">
-        <p class="mt-3 text-muted">{{ _('Verranno condivisi i seguenti dati:') }}</p>
+        <div id="presentation-rp" class="presentation-rp mt-3"></div>
+        <p class="mt-3 text-muted">{{ _('Il Relying Party chiede i seguenti dati') }}</p>
         <div class ="mb-2">
           <ul id="presentation-claims-list" class="list-group list-group-flush text-start"></ul>
         </div>
@@ -20,7 +21,7 @@
 </div>
 
 <div class="modal fade" id="presentation-result-modal" tabindex="-1" role="dialog" aria-labelledby="presentationResultModalTitle" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered modal-sm" role="document">
+    <div class="modal-dialog modal-dialog-centered" role="document">
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title w-100 text-center" id="presentationResultModalTitle">{{ _('Esito accesso') }}</h5>

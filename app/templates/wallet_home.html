@@ -7,15 +7,9 @@
   <div class="it-wallet-title-row">
     <div class="it-wallet-title-slot it-wallet-title-slot-start"></div>
     <h1 class="it-wallet-title-heading mb-0" id="page-title">{{ _('Emissione') }}</h1>
-    <div class="it-wallet-title-slot it-wallet-title-slot-end">
-      <div class="it-wallet-title-actions">
-        <button type="button" class="it-wallet-icon-btn trash-icon" aria-label="{{ _('Reimposta demo') }}"{% if not wallet_initialized %} hidden{% endif %}>
-          <svg class="icon" aria-hidden="true"><use href="{{ url_for('static', filename='svg/sprites.svg') }}#it-delete"></use></svg>
-        </button>
-      </div>
-    </div>
+    <div class="it-wallet-title-slot it-wallet-title-slot-end"></div>
   </div>
-  <p class="text-center mb-4">{{ _('Scegli un credential issuer, seleziona un\'attestazione e richiedine l\'emissione.') }}</p>
+  <p class="text-center mb-4">{{ _('Configura un Credential Issuer da ispezionare, seleziona un\'attestazione e richiedine l\'emissione.') }}</p>
 
   <section class="mb-5" aria-label="{{ _('Attestazioni ottenibili') }}">
     <div id="result"></div>
@@ -56,18 +50,19 @@
       {% for section in catalog_sections %}
         {% set section_index = loop.index0 %}
         <article class="it-card rounded border shadow-sm catalog-section mb-4" data-issuer="{{ section.issuer }}">
-          <div class="it-card-body p-4">
-            <h2 class="catalog-issuer">
-              <span><span class="catalog-issuer-label">{{ _('Nome del credential issuer') }}:</span> {{ section.name }}</span>
-              <span><span class="catalog-issuer-label">{{ _('URI del credential issuer') }}:</span> {{ section.uri }}</span>
-              <span><span class="catalog-issuer-label">{{ _('Numero di credenziali offerte') }}:</span> {{ section.attestations|length }}</span>
-            </h2>
+          <div class="catalog-issuer-heading">
+            <h2 class="it-card-title h5">{{ section.name or section.uri }}</h2>
+            {% set offered = section.attestations|length %}
+            <div class="chip chip-simple chip-primary" aria-label="{{ _('Numero di credenziali offerte') }}">
+              <span class="chip-label">{% if offered == 1 %}{{ _('1 attestazione disponibile') }}{% else %}{{ _('{count} attestazioni disponibili').format(count=offered) }}{% endif %}</span>
+            </div>
+          </div>
+          <div class="it-card-body">
             <div class="form-group mb-0">
               <div class="catalog-obtain">
                 <div class="select-wrapper">
-                  <label for="issuer-select-{{ section_index }}">{{ _('Attestazione') }}</label>
-                  <select id="issuer-select-{{ section_index }}" data-source="{{ section.source }}" aria-describedby="issuer-select-{{ section_index }}-detail issuer-select-{{ section_index }}-error">
-                    <option value="" selected>{{ _("Scegli un'attestazione") }}</option>
+                  <select id="issuer-select-{{ section_index }}" data-source="{{ section.source }}" aria-label="{{ _('Seleziona una Attestazione disponibile') }}" aria-describedby="issuer-select-{{ section_index }}-detail issuer-select-{{ section_index }}-error">
+                    <option value="" selected>{{ _("Seleziona una Attestazione disponibile") }}</option>
                     {% for item in section.attestations %}
                       <option value="{{ item.id }}" data-description="{{ item.description }}" data-claims='{{ item.claims | tojson }}' data-format="{{ item.format }}" data-offer-uri="{{ item.offer_uri }}"{% if item.obtained %} disabled{% endif %}>{{ item.name }}{% if item.format_label %} — {{ item.format_label }}{% endif %}{% if item.disambiguator %} — {{ item.disambiguator }}{% endif %}{% if item.obtained %} — {{ _('Già ottenuta') }}{% endif %}</option>
                     {% endfor %}
@@ -91,14 +86,6 @@
       <div id="cred-popup-body"></div>
     </div>
   </div>
-
-  <dialog id="trash-popup" aria-labelledby="trash-popup-title">
-    <p id="trash-popup-title">{{ _('Vuoi resettare il wallet?') }}</p>
-    <div class="d-flex flex-wrap gap-2">
-      <button id="trash-popup-confirm-btn" class="btn btn-primary" type="button">{{ _('Conferma') }}</button>
-      <button id="trash-popup-cancel-btn" class="btn btn-outline-primary" type="button">{{ _('Annulla') }}</button>
-    </div>
-  </dialog>
 {% endblock %}
 {% block scripts %}
   <script src="{{ url_for('static', filename='js/wallet-utils.js') }}"></script>

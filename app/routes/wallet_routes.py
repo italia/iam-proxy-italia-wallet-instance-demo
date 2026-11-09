@@ -3,11 +3,13 @@ import hmac
 import json
 import logging
 import zlib
-from datetime import date, datetime
+from datetime import date, datetime, timedelta, timezone
 from urllib.parse import urlparse
+from zoneinfo import ZoneInfo
 
 import cbor2
-from flask import Blueprint, current_app, flash, jsonify, redirect, render_template, request, session, url_for
+from flask import Blueprint, Response, current_app, flash, jsonify, redirect, render_template, request, session, url_for
+from flask_babel import format_datetime
 from flask_babel import gettext as _
 
 from app.constants import (
@@ -25,6 +27,7 @@ from app.routes.itwallet_routes import (
     configured_trust_anchor,
     display_index,
     load_configured_issuers,
+    lookup_attestation,
 )
 from app.service.credential_view import (
     _b64url,
@@ -51,7 +54,7 @@ from app.service.credential_view import (
     _sd_jwt_cleartext,
 )
 from app.service.itwallet_service import ItWalletService
-from app.store import app_state
+from app.store import app_state, transaction_log
 from app.utils.diagnostic_log import peer_role
 from app.utils.itwalletUtils import request_status_list
 from app.utils.jwtUtils import decode_and_verify_jwt
@@ -346,7 +349,10 @@ def wallet_credentials():
         return denied
     _ensure_member_state()
     load_configured_issuers()
-    return render_template("wallet_credentials.html", credentials=_held_credential_views())
+    return render_template(
+        "wallet_credentials.html",
+        credentials=_held_credential_views(),
+    )
 
 
 def _status_list_ref(token: str) -> tuple[str, int] | None:
@@ -402,34 +408,105 @@ def _require_status_list(claims, status_uri):
 
 def _store_status_list(credential_id, status_uri, status_idx, jwks, service):
     token = request_status_list(status_uri, proxies=service.proxies, no_proxy_domains=service.no_proxy_domains)
-    status_list = _require_status_list(decode_and_verify_jwt(token, jwks), status_uri)
+    claims = decode_and_verify_jwt(token, jwks)
+    status_list = _require_status_list(claims, status_uri)
     code = _status_list_code(status_list["lst"], int(status_list.get("bits") or 1), status_idx)
     app_state.credential_store.update_status(credential_id, token, _STATUS_LIST_CODES.get(code, str(code)))
-    return code
+    return code, claims
 
 
-def _flash_status_result(code: int) -> None:
+_STATUS_ZONE = ZoneInfo("Europe/Rome")
+
+
+def _status_moment(value) -> datetime | None:
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or value <= 0:
+        return None
+    return datetime.fromtimestamp(int(value), timezone.utc)
+
+
+def _status_seconds(value) -> int | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float)) and value > 0:
+        return int(value)
+    if isinstance(value, str) and value.isdigit() and int(value) > 0:
+        return int(value)
+    return None
+
+
+def _status_recheck(claims: dict) -> datetime | None:
+    issued = _status_moment(claims.get("iat"))
+    expires = _status_moment(claims.get("exp"))
+    ttl = _status_seconds(claims.get("ttl"))
+    fresh_until = issued + timedelta(seconds=ttl) if issued and ttl else None
+    moments = [moment for moment in (expires, fresh_until) if moment]
+    return min(moments) if moments else None
+
+
+def _format_status_moment(moment: datetime | None) -> str:
+    if moment is None:
+        return ""
+    local = moment.astimezone(_STATUS_ZONE).replace(tzinfo=None)
+    return format_datetime(local, "d MMMM yyyy, HH:mm")
+
+
+def _credential_name(credential_id: str, entry) -> str:
+    configuration_id = ""
+    if isinstance(entry, dict):
+        configuration_id = str(entry.get("configuration_id") or "").strip()
+    meta = lookup_attestation(configuration_id) if configuration_id else {}
+    name = str(meta.get("name") or "").strip() if isinstance(meta, dict) else ""
+    return name or credential_id
+
+
+def _flash_status_result(code: int, name: str, claims: dict | None = None) -> None:
     if code == 0:
-        flash(_("La credenziale è valida e non risulta essere stata revocata."), "success")
+        checked = _format_status_moment(_status_moment((claims or {}).get("iat")))
+        expires = _format_status_moment(_status_recheck(claims or {}))
+        if checked and expires:
+            flash(
+                _(
+                    "La credenziale %(name)s è valida e non risulta essere stata revocata al %(checked)s "
+                    "e lo stato va ricontrollato entro il %(expires)s."
+                )
+                % {"name": name, "checked": checked, "expires": expires},
+                "success",
+            )
+            return
+        if checked:
+            flash(
+                _("La credenziale %(name)s è valida e non risulta essere stata revocata al %(checked)s.")
+                % {"name": name, "checked": checked},
+                "success",
+            )
+            return
+        flash(
+            _("La credenziale %(name)s è valida e non risulta essere stata revocata.") % {"name": name},
+            "success",
+        )
         return
     if code == 1:
-        flash(_("La credenziale risulta revocata."), "error")
+        flash(_("La credenziale %(name)s risulta revocata.") % {"name": name}, "error")
         return
     if code == 2:
-        flash(_("La credenziale risulta sospesa."), "error")
+        flash(_("La credenziale %(name)s risulta sospesa.") % {"name": name}, "error")
         return
-    flash(_("Lo stato della credenziale non è riconosciuto."), "error")
+    flash(_("Lo stato della credenziale %(name)s non è riconosciuto.") % {"name": name}, "error")
 
 
-def _flash_status_failure(exc):
+def _flash_status_failure(exc, name: str):
     logger.error("❌ %s", sanitize_for_logging(str(exc)))
     reason = " ".join(str(exc).split())
     if len(reason) > 500:
         reason = reason[:500] + "…"
     if reason:
-        flash(_("Impossibile verificare lo stato di revoca. %(reason)s") % {"reason": reason}, "error")
+        flash(
+            _("Impossibile verificare lo stato di revoca della credenziale %(name)s. %(reason)s")
+            % {"name": name, "reason": reason},
+            "error",
+        )
         return
-    flash(_("Impossibile verificare lo stato di revoca."), "error")
+    flash(_("Impossibile verificare lo stato di revoca della credenziale %(name)s.") % {"name": name}, "error")
 
 
 @wallet_routes.route("/credentials/status", methods=["POST"])
@@ -442,24 +519,30 @@ def credential_status():
     _ensure_member_state()
     load_configured_issuers()
     stored_issuer, entry = _find_held_credential(issuer, credential_id)
+    name = _credential_name(credential_id, entry)
     token = entry.get("data_row") if isinstance(entry, dict) else None
     if not isinstance(token, str):
-        flash(_("Attestazione non trovata."), "error")
+        flash(_("La credenziale %(name)s non è stata trovata.") % {"name": name}, "error")
         return _credentials_page()
     listed = _status_list_ref(token)
     if not listed:
-        flash(_("Questa attestazione non contiene una status list."), "error")
+        flash(_("La credenziale %(name)s non contiene una status list.") % {"name": name}, "error")
         return _credentials_page()
     jwks = _issuer_status_jwks(stored_issuer)
     if not isinstance(jwks, dict):
-        flash(_("Questo issuer non pubblica l'endpoint di stato."), "error")
+        flash(
+            _("La credenziale %(name)s non può essere verificata perché l'issuer non pubblica l'endpoint di stato.")
+            % {"name": name},
+            "error",
+        )
         return _credentials_page()
     service = ItWalletService(session)
     peer = peer_role.set("credential_issuer")
     try:
-        _flash_status_result(_store_status_list(credential_id, listed[0], listed[1], jwks, service))
+        code, claims = _store_status_list(credential_id, listed[0], listed[1], jwks, service)
+        _flash_status_result(code, name, claims)
     except Exception as exc:
-        _flash_status_failure(exc)
+        _flash_status_failure(exc, name)
     finally:
         peer_role.reset(peer)
     return _credentials_page()
@@ -475,13 +558,14 @@ def credential_delete():
     _ensure_member_state()
     load_configured_issuers()
     stored_issuer, entry = _find_held_credential(issuer, credential_id)
+    name = _credential_name(credential_id, entry)
     if not entry:
-        flash(_("Attestazione non trovata."), "error")
+        flash(_("La credenziale %(name)s non è stata trovata.") % {"name": name}, "error")
         return redirect(url_for("wallet_routes.wallet_credentials"))
     if not app_state.credential_store.remove_held(stored_issuer or issuer, credential_id):
-        flash(_("Impossibile rimuovere l'attestazione."), "error")
+        flash(_("Impossibile rimuovere la credenziale %(name)s.") % {"name": name}, "error")
         return redirect(url_for("wallet_routes.wallet_credentials"))
-    flash(_("Attestazione rimossa."), "success")
+    flash(_("La credenziale %(name)s è stata rimossa.") % {"name": name}, "success")
     return redirect(url_for("wallet_routes.wallet_credentials"))
 
 
@@ -491,6 +575,127 @@ def wallet_present():
     if denied:
         return denied
     return render_template("wallet_present.html")
+
+
+@wallet_routes.route("/presentation/transaction", methods=["POST"])
+def presentation_transaction():
+    denied = _require_session()
+    if denied:
+        return denied
+    body = request.get_json(silent=True) or {}
+    transaction_id = body.get("id")
+    if (
+        body.get("outcome") == "interrotta"
+        and isinstance(transaction_id, str)
+        and transaction_id
+        and session.get("rp_transaction_id") == transaction_id
+    ):
+        transaction_log.interrupt_if_open(transaction_id)
+    return jsonify({"success": True})
+
+
+@wallet_routes.route("/dashboard", methods=["GET"])
+def wallet_dashboard():
+    denied = _require_session()
+    if denied:
+        return denied
+    records = _dashboard_rows()
+    selected_id = request.args.get("id") or ""
+    selected = next((row for row in records if row["id"] == selected_id), None)
+    return render_template(
+        "wallet_dashboard.html", records=records, selected=selected, confirm_ids=[], confirm_names=[]
+    )
+
+
+@wallet_routes.route("/dashboard/export", methods=["POST"])
+def dashboard_export():
+    denied = _require_session()
+    if denied:
+        return denied
+    identifiers = request.form.getlist("ids")
+    if not identifiers:
+        flash(_("Seleziona almeno un record."), "error")
+        return redirect(url_for("wallet_routes.wallet_dashboard"))
+    payload = json.dumps(transaction_log.records_by_ids(identifiers), ensure_ascii=False, indent=2)
+    return Response(
+        payload,
+        mimetype="application/json",
+        headers={"Content-Disposition": "attachment; filename=registro-transazioni.json"},
+    )
+
+
+@wallet_routes.route("/dashboard/reset", methods=["POST"])
+def dashboard_reset():
+    denied = _require_session()
+    if denied:
+        return denied
+    transaction_log.delete_all()
+    return redirect(url_for("wallet_routes.wallet_dashboard"))
+
+
+@wallet_routes.route("/dashboard/delete", methods=["POST"])
+def dashboard_delete():
+    denied = _require_session()
+    if denied:
+        return denied
+    identifiers = [value for value in request.form.getlist("ids") if isinstance(value, str) and value]
+    records = [row for row in _dashboard_rows() if row["id"] in identifiers]
+    if not records:
+        flash(_("Seleziona almeno un record."), "error")
+        return redirect(url_for("wallet_routes.wallet_dashboard"))
+    return render_template(
+        "wallet_dashboard.html",
+        records=_dashboard_rows(),
+        selected=None,
+        confirm_ids=[row["id"] for row in records],
+        confirm_names=[row["name"] for row in records],
+    )
+
+
+@wallet_routes.route("/dashboard/delete/confirm", methods=["POST"])
+def dashboard_delete_confirm():
+    denied = _require_session()
+    if denied:
+        return denied
+    identifiers = [value for value in request.form.getlist("ids") if isinstance(value, str) and value]
+    if identifiers:
+        transaction_log.delete_records(identifiers)
+    return redirect(url_for("wallet_routes.wallet_dashboard"))
+
+
+def _dashboard_rows() -> list[dict]:
+    labels = {
+        "in_corso": _("In corso"),
+        "completata": _("Completata"),
+        "fallita": _("Fallita"),
+        "interrotta": _("Interrotta"),
+    }
+    rows = []
+    for record in transaction_log.list_records():
+        if record.get("category") != "presentation":
+            continue
+        relying_party = record.get("rp") if isinstance(record.get("rp"), dict) else {}
+        created = record.get("created")
+        moment = None
+        if isinstance(created, str) and created:
+            try:
+                parsed = datetime.fromisoformat(created)
+            except ValueError:
+                parsed = None
+            if parsed is not None:
+                if parsed.tzinfo is None:
+                    parsed = parsed.replace(tzinfo=timezone.utc)
+                moment = parsed.astimezone(ZoneInfo("Europe/Rome")).replace(tzinfo=None)
+        rows.append(
+            {
+                "id": record.get("id"),
+                "name": relying_party.get("name") or relying_party.get("client_id") or "",
+                "outcome": labels.get(record.get("outcome"), record.get("outcome") or ""),
+                "created_label": format_datetime(moment, "d MMMM yyyy, HH:mm") if moment else "",
+                "record": record,
+            }
+        )
+    return rows
 
 
 @wallet_routes.route("/diagnostics", methods=["GET"])
@@ -507,6 +712,7 @@ def logout():
     lang = session.get("lang")
     # codeql[py/log-injection]
     logger.info("✅ Effettuato logout (sessione cancellata id=%s).", sanitize_for_logging(session_id))
+    transaction_log.abandon_open_presentation(session)
     session.clear()
     if lang:
         session["lang"] = lang
@@ -525,8 +731,27 @@ def wallet_callback():
     else:
         logger.info("Ricevuta request GET %s senza query string", sanitize_for_logging(current_path))
 
-    session["query_params"] = dict(params_list)
-    return render_template("wallet_cb.html")
+    params = dict(params_list)
+    state = params.get("state")
+    remembered = session.get("issuance_requests")
+    if not isinstance(remembered, dict):
+        remembered = {}
+    entry = remembered.get(state) if isinstance(state, str) else None
+    current = session.get("oauth_state")
+    if not isinstance(entry, dict) and current and state != current:
+        logger.info("Risposta di autorizzazione di una richiesta di rilascio precedente.")
+        return render_template("wallet_cb.html", stale=True, state="")
+    if isinstance(entry, dict):
+        updated = dict(entry)
+        updated["authorization_response"] = params
+        remembered = dict(remembered)
+        remembered[state] = updated
+        session["issuance_requests"] = remembered
+        if state != current:
+            logger.info("Risposta associata alla richiesta di rilascio ricordata.")
+    if not isinstance(entry, dict) or state == current:
+        session["query_params"] = params
+    return render_template("wallet_cb.html", stale=False, state=state or "")
 
 
 @wallet_routes.route("/presentation", methods=["POST"], strict_slashes=False)
@@ -550,7 +775,17 @@ def presentation_phase():
         logger.error(f"Error, message: {e}")
         # @Todo insert this into Util
         return jsonify({"success": False, "error_message": f"Exception :{e}."}), 400
-    return jsonify({"success": True, "success_message": "Login success.", "data": credentials}), 200
+    relying_party = session.get("rp_display")
+    transaction_id = session.get("rp_transaction_id")
+    return jsonify(
+        {
+            "success": True,
+            "success_message": "Login success.",
+            "data": credentials,
+            "relying_party": relying_party if isinstance(relying_party, dict) else {},
+            "transaction_id": transaction_id if isinstance(transaction_id, str) else "",
+        }
+    ), 200
 
 
 @wallet_routes.route("/authorization", methods=["POST"], strict_slashes=False)
@@ -568,11 +803,15 @@ def authorization_phase():
         return jsonify(result), status_code
     except Exception as e:
         logger.error(f"Error, message: {e}")
-        # @Todo insert this into Util
-        return jsonify({"success": False, "error_message": f"Exception :{e}."}), 400
+        return jsonify({"success": False, "error_message": str(e)}), 400
 
 
 def _clear_session():
-    preserved = {"session_id": session.get("session_id"), "authenticated": session.get("authenticated")}
+    transaction_log.abandon_open_presentation(session)
+    preserved = {
+        "session_id": session.get("session_id"),
+        "authenticated": session.get("authenticated"),
+        "issuance_requests": session.get("issuance_requests"),
+    }
     session.clear()
     session.update({k: v for k, v in preserved.items() if v is not None})

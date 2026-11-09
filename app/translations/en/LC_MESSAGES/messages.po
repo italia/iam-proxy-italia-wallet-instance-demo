@@ -61,8 +61,8 @@ msgstr "Load attestations"
 msgid "Attestazione"
 msgstr "Attestation"
 
-msgid "Scegli un'attestazione"
-msgstr "Choose an attestation"
+msgid "Seleziona una Attestazione disponibile"
+msgstr "Select an available attestation"
 
 msgid "Già ottenuta"
 msgstr "Already obtained"
@@ -199,8 +199,14 @@ msgstr "Pushed authorization"
 msgid "Token"
 msgstr "Token"
 
-msgid "Nonce"
-msgstr "Nonce"
+msgid "Wallet Provider Nonce"
+msgstr "Wallet Provider Nonce"
+
+msgid "Credential Issuer Nonce"
+msgstr "Credential Issuer Nonce"
+
+msgid "Wallet Attestation"
+msgstr "Wallet Attestation"
 
 msgid "Rilascio dell'attestazione"
 msgstr "Attestation issuance"
@@ -310,8 +316,20 @@ msgstr "Something went wrong while searching."
 msgid "Scegli il tipo di ricerca e scrivi cosa cercare."
 msgstr "Choose a search type and enter the text to search for."
 
-msgid "Inquadra o carica il QR Code"
-msgstr "Scan or upload the QR code"
+msgid "Inquadra, cattura o carica il QR Code"
+msgstr "Scan, capture or upload the QR code"
+
+msgid "Inquadra una porzione dello schermo"
+msgstr "Capture a portion of the screen"
+
+msgid "Trascina un riquadro attorno al QR Code."
+msgstr "Drag a frame around the QR code."
+
+msgid "La cattura dello schermo non è disponibile."
+msgstr "Screen capture is not available."
+
+msgid "Non riesco a catturare lo schermo."
+msgstr "The screen cannot be captured."
 
 msgid "Inquadra il QR Code oppure:"
 msgstr "Point the camera at the QR code, or:"
@@ -322,8 +340,8 @@ msgstr "Upload a QR image"
 msgid "Conferma presentazione"
 msgstr "Confirm presentation"
 
-msgid "Verranno condivisi i seguenti dati:"
-msgstr "These details will be shared:"
+msgid "Il Relying Party chiede i seguenti dati"
+msgstr "The Relying Party requests the following data"
 
 msgid "Esito accesso"
 msgstr "Sign-in result"
@@ -336,6 +354,9 @@ msgstr "Done"
 
 msgid "Accesso completato. Torno al wallet per salvare l'attestazione."
 msgstr "Sign-in completed. Returning to the wallet to save the attestation."
+
+msgid "La richiesta del Relying Party non contiene la chiave per cifrare la risposta."
+msgstr "The Relying Party request does not contain the key for encrypting the response."
 
 msgid "Dettaglio attestazione"
 msgstr "Attestation details"
@@ -448,8 +469,8 @@ msgstr "The wallet cannot obtain the attestation."
 msgid "Errore sconosciuto"
 msgstr "Unknown error"
 
-msgid "Attestazione ottenuta."
-msgstr "Attestation saved."
+msgid "Hai appena ottenuto l'attestazione {name}."
+msgstr "You have just obtained the attestation {name}."
 
 msgid "Visualizzala"
 msgstr "View it"
@@ -490,6 +511,9 @@ msgstr "The wallet cannot show the selected item."
 msgid "Il wallet è stato reimpostato."
 msgstr "The wallet has been reset."
 
+msgid "Non riesco a reimpostare il wallet."
+msgstr "The wallet cannot be reset."
+
 msgid "La fotocamera non è disponibile. Serve HTTPS oppure localhost."
 msgstr "The camera is not available. Use HTTPS or localhost."
 
@@ -507,6 +531,12 @@ msgstr "Sign-in completed."
 
 msgid "Accesso non riuscito."
 msgstr "Sign-in failed."
+
+msgid "Il Relying Party chiede %(requested)s e il wallet possiede %(held)s."
+msgstr "The Relying Party requests %(requested)s and the wallet holds %(held)s."
+
+msgid "Il Relying Party chiede %(requested)s e il wallet non possiede attestazioni."
+msgstr "The Relying Party requests %(requested)s and the wallet holds no attestations."
 
 msgid "I dati da condividere con l'issuer non sono nel formato atteso."
 msgstr "The details to share with the issuer are not in the expected format."
@@ -637,6 +667,12 @@ msgstr "Credential Issuer URI"
 msgid "Numero di credenziali offerte"
 msgstr "Number of credentials offered"
 
+msgid "1 attestazione disponibile"
+msgstr "1 attestation available"
+
+msgid "{count} attestazioni disponibili"
+msgstr "{count} attestations available"
+
 msgid "Credential offer"
 msgstr "Credential offer"
 
@@ -688,8 +724,8 @@ msgstr "HTTP action history"
 msgid "Sezioni del wallet"
 msgstr "Wallet sections"
 
-msgid "Scegli un credential issuer, seleziona un'attestazione e richiedine l'emissione."
-msgstr "Choose a credential issuer, select an attestation and request issuance."
+msgid "Configura un Credential Issuer da ispezionare, seleziona un'attestazione e richiedine l'emissione."
+msgstr "Configure a Credential Issuer to inspect, select an attestation and request issuance."
 
 msgid "Attestazioni già ottenute: metadata, intestazione, payload e stato di revoca."
 msgstr "Attestations already obtained: metadata, header, payload and revocation status."
@@ -724,14 +760,11 @@ msgstr "Check revocation"
 msgid "Rimuovi"
 msgstr "Remove"
 
+msgid "Rimuovi {name}"
+msgstr "Remove {name}"
+
 msgid "Rimuovere questa attestazione?"
 msgstr "Remove this attestation?"
-
-msgid "Attestazione rimossa."
-msgstr "Attestation removed."
-
-msgid "Impossibile rimuovere l'attestazione."
-msgstr "The attestation could not be removed."
 
 msgid "Questa attestazione non è un JWT."
 msgstr "This attestation is not a JWT."
@@ -739,32 +772,128 @@ msgstr "This attestation is not a JWT."
 msgid "Assertion di stato"
 msgstr "Status assertion"
 
-msgid "Attestazione non trovata."
-msgstr "Attestation not found."
+msgid "La credenziale %(name)s non è stata trovata."
+msgstr "The credential %(name)s was not found."
 
-msgid "Lo stato di revoca si può verificare solo per le attestazioni SD-JWT."
-msgstr "Revocation status can be checked only for SD-JWT attestations."
+msgid "La credenziale %(name)s non contiene una status list."
+msgstr "The credential %(name)s does not contain a status list."
 
-msgid "Questa attestazione non contiene una status list."
-msgstr "This attestation does not contain a status list."
+msgid "La credenziale %(name)s non può essere verificata perché l'issuer non pubblica l'endpoint di stato."
+msgstr "The credential %(name)s cannot be checked because the issuer does not publish a status endpoint."
 
-msgid "Questo issuer non pubblica l'endpoint di stato."
-msgstr "This issuer does not publish a status endpoint."
+msgid "La credenziale %(name)s è valida e non risulta essere stata revocata."
+msgstr "The credential %(name)s is valid and does not appear to have been revoked."
 
-msgid "La credenziale è valida e non risulta essere stata revocata."
-msgstr "The credential is valid and does not appear to have been revoked."
+msgid "La credenziale %(name)s è valida e non risulta essere stata revocata al %(checked)s."
+msgstr "The credential %(name)s is valid and does not appear to have been revoked as of %(checked)s."
 
-msgid "La credenziale risulta revocata."
-msgstr "The credential is revoked."
+msgid "La credenziale %(name)s è valida e non risulta essere stata revocata al %(checked)s e lo stato va ricontrollato entro il %(expires)s."
+msgstr "The credential %(name)s is valid and does not appear to have been revoked as of %(checked)s and the status must be checked again by %(expires)s."
 
-msgid "La credenziale risulta sospesa."
-msgstr "The credential is suspended."
+msgid "La credenziale %(name)s risulta revocata."
+msgstr "The credential %(name)s is revoked."
 
-msgid "Lo stato della credenziale non è riconosciuto."
-msgstr "The credential status is not recognized."
+msgid "La credenziale %(name)s risulta sospesa."
+msgstr "The credential %(name)s is suspended."
 
-msgid "Impossibile verificare lo stato di revoca."
-msgstr "The revocation status could not be checked."
+msgid "Lo stato della credenziale %(name)s non è riconosciuto."
+msgstr "The status of the credential %(name)s is not recognized."
 
-msgid "Impossibile verificare lo stato di revoca. %(reason)s"
-msgstr "The revocation status could not be checked. %(reason)s"
+msgid "Impossibile verificare lo stato di revoca della credenziale %(name)s."
+msgstr "The revocation status of the credential %(name)s could not be checked."
+
+msgid "Impossibile verificare lo stato di revoca della credenziale %(name)s. %(reason)s"
+msgstr "The revocation status of the credential %(name)s could not be checked. %(reason)s"
+
+msgid "La credenziale %(name)s è stata rimossa."
+msgstr "The credential %(name)s has been removed."
+
+msgid "Impossibile rimuovere la credenziale %(name)s."
+msgstr "The credential %(name)s could not be removed."
+
+msgid "Accesso completato presso {name}."
+msgstr "Sign-in with {name} is complete."
+
+msgid "Consulta la Dashboard Presentazioni per i dettagli dell'avvenuta presentazione."
+msgstr "Consult the Presentations Dashboard for the details of the completed presentation."
+
+msgid "Nome"
+msgstr "Name"
+
+msgid "Identificativo"
+msgstr "Identifier"
+
+msgid "Sito"
+msgstr "Website"
+
+msgid "Informativa"
+msgstr "Privacy notice"
+
+msgid "Termini"
+msgstr "Terms"
+
+msgid "Contatti"
+msgstr "Contacts"
+
+msgid "Dashboard Presentazioni"
+msgstr "Presentation Dashboard"
+
+msgid "Storico delle presentazioni alle Relying Party."
+msgstr "History of presentations to Relying Parties."
+
+msgid "Nessuna interazione con Relying Party."
+msgstr "There are no Relying Party interactions."
+
+msgid "In corso"
+msgstr "In progress"
+
+msgid "Completata"
+msgstr "Completed"
+
+msgid "Fallita"
+msgstr "Failed"
+
+msgid "Interrotta"
+msgstr "Interrupted"
+
+msgid "Elenco delle interazioni"
+msgstr "Interaction list"
+
+msgid "Interazioni"
+msgstr "Interactions"
+
+msgid "Esito"
+msgstr "Outcome"
+
+msgid "Attestazioni richieste"
+msgstr "Requested attestations"
+
+msgid "Attestazioni presentate"
+msgstr "Presented attestations"
+
+msgid "Richiedi la cancellazione dei dati"
+msgstr "Request deletion of the data"
+
+msgid "Cancella"
+msgstr "Delete"
+
+msgid "Conferma cancellazione"
+msgstr "Confirm deletion"
+
+msgid "Seleziona almeno un record."
+msgstr "Select at least one record."
+
+msgid "Apri un record per vederne il dettaglio."
+msgstr "Open a record to see its detail."
+
+msgid "La cancellazione elimina solo la copia locale di questi record e non può essere annullata."
+msgstr "Deletion removes only the local copy of these records and cannot be undone."
+
+msgid "La cancellazione può incidere sui diritti dell'Utente in materia di protezione dei dati."
+msgstr "Deletion may affect the User's data protection rights."
+
+msgid "Reimposta lo storico"
+msgstr "Reset the history"
+
+msgid "Vuoi cancellare lo storico delle presentazioni?"
+msgstr "Do you want to delete the presentation history?"

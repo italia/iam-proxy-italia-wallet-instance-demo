@@ -73,7 +73,7 @@ from app.service.itwallet_helpers import (
     validate_response_mode,
     validate_response_type,
 )
-from app.store import app_state
+from app.store import app_state, transaction_log
 from app.utils.cborUtils import decode_and_verify_issuer_signed
 from app.utils.diagnostic_log import diagnostic_peer
 from app.utils.http_utils import _parse_json_response, http_request_with_retry
@@ -111,6 +111,23 @@ from app.utils.utils import (
 
 logger = logging.getLogger(__name__)
 
+
+def _client_id_discovery(client_id: str) -> tuple[str, str]:
+    """Il prefisso del client_id sceglie la discovery. Per openid_federation l'identificativo è l'URL dell'entità."""
+    if not isinstance(client_id, str) or not client_id:
+        raise ValueError("Il client_id del verificatore è assente.")
+    scheme, _, identifier = client_id.partition(":")
+    if scheme in ("https", "http"):
+        return "openid_federation", client_id
+    if scheme == "openid_federation":
+        if not identifier.startswith(("https://", "http://")):
+            raise ValueError("L'identificativo openid_federation non è l'URL dell'entità.")
+        return "openid_federation", identifier
+    if scheme == "x509_hash":
+        if not identifier:
+            raise ValueError("L'identificativo x509_hash è assente.")
+        return "x509_hash", identifier
+    raise ValueError("Il prefisso del client_id non è supportato.")
 
 
 class PresentationFlow:
@@ -182,9 +199,14 @@ class PresentationFlow:
 
         logger.info(f"query_trust_root: {query_trust_root}")
 
-        # Richiama il metodo privato per ottenere l'EC, validarlo e recuperne il payload
+        discovery, identifier = _client_id_discovery(clientId)
+        logger.info("Discovery del verificatore: %s", discovery)
+        if discovery == "x509_hash":
+            raise ValueError("Il client_id x509_hash si risolve dal certificato della richiesta.")
         external_verifier_ec = self._entity_configuration_management(
-            clientId, [METADATA_TYPE_FEDERATION_ENTITY, METADATA_TYPE_CREDENTIAL_VERIFIER], trust_root_url
+            identifier,
+            [METADATA_TYPE_FEDERATION_ENTITY, METADATA_TYPE_CREDENTIAL_VERIFIER],
+            trust_root_url,
         )
 
         logger.info(
@@ -228,10 +250,24 @@ class PresentationFlow:
         except ValueError as ve:
             raise ValueError(f"Exception during JWT validation: {str(ve)}")
 
+        response_jwks = (request_uri_response_jwt_payload.get("client_metadata") or {}).get("jwks")
+        if not isinstance(response_jwks, dict) or not response_jwks.get("keys"):
+            raise ValueError(gettext("La richiesta del Relying Party non contiene la chiave per cifrare la risposta."))
+
+        display = _relying_party_display(external_verifier_ec, clientId, request_uri_response_jwt_payload)
+        try:
+            transaction_id = transaction_log.start_presentation(display, _attestation_descriptors(credentials_requested))
+        except OSError:
+            logger.error("Registro delle transazioni non aggiornato.")
+            transaction_id = ""
+
         self.session["rp_client_id"] = clientId
         self.session["rp_state"] = rp_state
         self.session["rp_nonce"] = rp_nonce
         self.session["rp_response_uri"] = rp_response_uri
+        self.session["rp_response_jwks"] = response_jwks
+        self.session["rp_display"] = display
+        self.session["rp_transaction_id"] = transaction_id
 
         return credentials_requested
 
@@ -240,7 +276,14 @@ class PresentationFlow:
         """
         Metodo pubblico per completare il login ad un Verifier
         """
+        try:
+            return self._complete_presentation_body(credentials_presenting)
+        except Exception:
+            presented = credentials_presenting if isinstance(credentials_presenting, list) else []
+            self._record_presentation("fallita", presented)
+            raise
 
+    def _complete_presentation_body(self, credentials_presenting: list[dict]):
         session_id = self.session.get("session_id")
         if not session_id:
             raise ValueError("Sessione non inizializzata")
@@ -278,6 +321,10 @@ class PresentationFlow:
 
         logger.debug(f"rp_jwks: {rp_jwks}")
 
+        response_enc_jwks = self.session.get("rp_response_jwks")
+        if not isinstance(response_enc_jwks, dict) or not response_enc_jwks.get("keys"):
+            raise ValueError(gettext("La richiesta del Relying Party non contiene la chiave per cifrare la risposta."))
+
         # recupero del response_mode relativo al credentialflow dalla configurazione
         credential_flow_response_mode = extract_claim(current_app.config, "metadata.credential_flow.response_mode")
 
@@ -291,6 +338,7 @@ class PresentationFlow:
             rp_response_uri=rp_response_uri,
             rp_client_id=rp_client_id,
             rp_jwks=rp_jwks,
+            response_enc_jwks=response_enc_jwks,
             response_mode=credential_flow_response_mode,
         )
 
@@ -302,7 +350,20 @@ class PresentationFlow:
         # Stampo i dati in sessione
         self._print_session_data()
 
-        return {"success": True}
+        self._record_presentation("completata", credentials_presenting)
+        display = self.session.get("rp_display")
+        return {"success": True, "relying_party": display if isinstance(display, dict) else {}}
+
+    def _record_presentation(self, outcome: str, credentials_presenting: list) -> None:
+        transaction_id = self.session.get("rp_transaction_id")
+        if not isinstance(transaction_id, str) or not transaction_id:
+            return
+        try:
+            transaction_log.finish_presentation(
+                transaction_id, outcome, _attestation_descriptors(credentials_presenting)
+            )
+        except OSError:
+            logger.error("Registro delle transazioni non aggiornato.")
 
 
     def _add_credential_presentation_to_vp(
@@ -375,6 +436,7 @@ class PresentationFlow:
         rp_jwks: dict,
         response_mode: str,
         rp_client_id: str | None = None,
+        response_enc_jwks: dict | None = None,
     ) -> dict:
         """Build vp_token from credentials_presenting, send response_uri request, return auth response."""
         logger.debug(
@@ -407,12 +469,12 @@ class PresentationFlow:
             )
 
         if len(vp_token_claims) == 0:
-            raise ValueError("vp_token empty claim")
+            raise ValueError(_missing_presentation_message(credentials_presenting))
 
         logger.info(f"vp_token: {(list(vp_token_claims.keys()))}")
 
         response_uri_request_jwt = self._build_response_uri_request(
-            enc, vp_token_claims, rp_state, rp_jwks, wallet_private_key
+            enc, vp_token_claims, rp_state, response_enc_jwks or rp_jwks, wallet_private_key
         )
 
         logger.info(f"rp_response_uri: {rp_response_uri}")
@@ -636,3 +698,112 @@ class PresentationFlow:
                 return result
         logger.info("❌ Nessun vct del DCQL ha individuato una credenziale nel wallet")
         return None
+
+
+def _requested_attestation(item: dict) -> str:
+    name = str(item.get("id") or "").strip()
+    meta = item.get("meta") if isinstance(item.get("meta"), dict) else {}
+    if item.get("format") == "mso_mdoc":
+        kind = meta.get("doctype_value") if isinstance(meta.get("doctype_value"), str) else ""
+    else:
+        values = meta.get("vct_values")
+        kinds = [value for value in values if isinstance(value, str) and value] if isinstance(values, list) else []
+        kind = ", ".join(kinds)
+    if name and kind:
+        return f"{name} ({kind})"
+    return name or kind or "un'attestazione"
+
+
+def _held_attestation_types() -> str:
+    held = []
+    for _key, entry in app_state.credential_store._held_entries():
+        vct = entry.get("vct")
+        if isinstance(vct, str) and vct and vct not in held:
+            held.append(vct)
+    return ", ".join(held)
+
+
+def _text(value) -> str:
+    return value.strip() if isinstance(value, str) else ""
+
+
+def _https(value) -> str:
+    text = _text(value)
+    return text if text.startswith("https://") else ""
+
+
+def _relying_party_display(entity_configuration: dict, client_id: str, request_payload: dict) -> dict:
+    metadata = entity_configuration.get("metadata") if isinstance(entity_configuration.get("metadata"), dict) else {}
+    federation = metadata.get(METADATA_TYPE_FEDERATION_ENTITY)
+    verifier = metadata.get(METADATA_TYPE_CREDENTIAL_VERIFIER)
+    federation = federation if isinstance(federation, dict) else {}
+    verifier = verifier if isinstance(verifier, dict) else {}
+    request_metadata = request_payload.get("client_metadata")
+    request_metadata = request_metadata if isinstance(request_metadata, dict) else {}
+    organization_name = _text(federation.get("organization_name"))
+    client_name = _text(verifier.get("client_name"))
+    if not organization_name and not client_name:
+        client_name = _text(request_metadata.get("client_name"))
+    name = organization_name or client_name or client_id
+    logo = _https(federation.get("logo_uri")) or _https(verifier.get("logo_uri"))
+    if not logo and not organization_name:
+        logo = _https(request_metadata.get("logo_uri"))
+    contacts = verifier.get("contacts")
+    if not isinstance(contacts, list):
+        contacts = federation.get("contacts") if isinstance(federation.get("contacts"), list) else []
+    display = {
+        "name": name,
+        "client_id": client_id,
+        "client_name": client_name if client_name and client_name != name else "",
+        "logo_uri": logo,
+        "homepage_uri": _https(federation.get("homepage_uri")),
+        "policy_uri": _https(federation.get("policy_uri")),
+        "tos_uri": _https(federation.get("tos_uri")),
+        "contacts": [item.strip() for item in contacts if isinstance(item, str) and item.strip()],
+        "erasure_endpoint": _https(verifier.get("erasure_endpoint")),
+    }
+    return {key: value for key, value in display.items() if value}
+
+
+def _attestation_descriptors(items: list) -> list:
+    descriptors = []
+    if not isinstance(items, list):
+        return descriptors
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        meta = item.get("meta") if isinstance(item.get("meta"), dict) else {}
+        if item.get("format") == "mso_mdoc":
+            kind = meta.get("doctype_value") if isinstance(meta.get("doctype_value"), str) else ""
+        else:
+            values = meta.get("vct_values")
+            kinds = [value for value in values if isinstance(value, str) and value] if isinstance(values, list) else []
+            kind = ", ".join(kinds)
+        paths = []
+        claims = item.get("claims") if isinstance(item.get("claims"), list) else []
+        for claim in claims:
+            path = claim.get("path") if isinstance(claim, dict) else None
+            if isinstance(path, list) and path:
+                paths.append(".".join(str(part) for part in path))
+        descriptors.append(
+            {
+                "id": item.get("id") if isinstance(item.get("id"), str) else "",
+                "format": item.get("format") if isinstance(item.get("format"), str) else "",
+                "type": kind,
+                "claims": paths,
+            }
+        )
+    return descriptors
+
+
+def _missing_presentation_message(items: list[dict]) -> str:
+    requested = ", ".join(_requested_attestation(item) for item in items) or "un'attestazione"
+    held = _held_attestation_types()
+    if held:
+        return gettext("Il Relying Party chiede %(requested)s e il wallet possiede %(held)s.") % {
+            "requested": requested,
+            "held": held,
+        }
+    return gettext("Il Relying Party chiede %(requested)s e il wallet non possiede attestazioni.") % {
+        "requested": requested
+    }

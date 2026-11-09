@@ -5,12 +5,11 @@
    * @param {Object|null} body - dati JSON opzionali per il body
    */
   async function executeFetch(url, method = "GET", body = null) {
+    const headers = { "Content-Type": "application/json" };
+    if (typeof SESSION_ID !== "undefined" && SESSION_ID) headers["X-Correlation-ID"] = SESSION_ID;
     const options = {
       method: method,
-      headers: {
-        "X-Correlation-ID": SESSION_ID,
-        "Content-Type": "application/json"
-      }
+      headers: headers
     };
 
     // Aggiunge il body solo se non è GET e se body è valorizzato
@@ -347,7 +346,7 @@ async function confirmAddCredential() {
     }
 }
 
-async function continueAddCredential() {
+async function continueAddCredential(issuanceState) {
   // Mostra spinner durante la richiesta
   credPopupBody.innerHTML = `
     <div class="spinner-wrapper">
@@ -359,6 +358,7 @@ async function continueAddCredential() {
   try {
     const response = await executeFetch("/itwallet/addCredential/complete", "POST", {
       credentialsPresenting: credentialsPresenting || null,
+      issuanceState: typeof issuanceState === "string" ? issuanceState : "",
     });
 
     if (!response.ok) {
@@ -374,9 +374,13 @@ async function continueAddCredential() {
       const viewLink = viewUrl
         ? ` <a href="${String(viewUrl).replaceAll('"', "&quot;")}">${t("Visualizzala")}</a>`
         : "";
+      const credentialName = String(data?.data?.credential_name || "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;");
       result.innerHTML = `
         <div class="alert alert-success" role="status">
-          <p>${t("Attestazione ottenuta.")}${viewLink}</p>
+          <p>${t("Hai appena ottenuto l'attestazione {name}.", { name: credentialName })}${viewLink}</p>
         </div>
       `;
       addButton(credential_id);
@@ -630,7 +634,7 @@ async function deleteCredential() {
 async function getErrorMessage(response) {
   try {
     const errorJson = await response.json();
-    const err = errorJson?.data?.error || t("Errore generico");
+    const err = errorJson?.data?.error || errorJson?.error_message || t("Errore generico");
     const desc = errorJson?.data?.error_description;
     return desc ? `${err} - ${desc}` : err;
   } catch (e) {

@@ -4,9 +4,15 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='wallet.css') }}">
 {% endblock %}
 {% block content %}
-  <h1 class="h2" id="page-title">{{ _('Presentazione') }}</h1>
-  <p>{{ _("Inquadra il QR del verificatore per presentare un'attestazione già ottenuta.") }}</p>
-  <button type="button" class="btn btn-primary" onclick="openQrPopup()">{{ _('Presenta') }}</button>
+  <div class="it-wallet-title-row it-wallet-title-centered">
+    <div class="it-wallet-title-slot it-wallet-title-slot-start"></div>
+    <h1 class="it-wallet-title-heading mb-0" id="page-title">{{ _('Presentazione') }}</h1>
+    <div class="it-wallet-title-slot it-wallet-title-slot-end"></div>
+  </div>
+  <p class="text-center mb-4">{{ _("Inquadra il QR del verificatore per presentare un'attestazione già ottenuta.") }}</p>
+  <div class="text-center">
+    <button type="button" class="btn btn-primary" onclick="openQrPopup()">{{ _('Presenta') }}</button>
+  </div>
   <div id="result"></div>
   <div id="overlay" style="display:none;" role="status" aria-live="polite">
     <div class="loader"></div>
@@ -16,6 +22,9 @@
   {% include 'core/presentation/presentation_phase.html' %}
 {% endblock %}
 {% block scripts %}
+  <script>
+    const SESSION_ID = {{ session.get("session_id", "")|tojson }};
+  </script>
   <script src="{{ url_for('static', filename='js/jsQR.min.js') }}"></script>
   <script src="{{ url_for('static', filename='js/wallet-utils.js') }}"></script>
   <script src="{{ url_for('static', filename='js/wallet/state.js') }}"></script>

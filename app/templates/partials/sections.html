@@ -5,6 +5,7 @@
     <li><a href="{{ url_for('wallet_routes.wallet_home') }}"{% if request.endpoint == 'wallet_routes.wallet_home' %} aria-current="page"{% endif %}>{{ _('Emissione') }}</a></li>
     <li><a href="{{ url_for('wallet_routes.wallet_credentials') }}"{% if request.endpoint == 'wallet_routes.wallet_credentials' %} aria-current="page"{% endif %}>{{ _('Attestati ottenuti') }}</a></li>
     <li><a href="{{ url_for('wallet_routes.wallet_present') }}"{% if request.endpoint == 'wallet_routes.wallet_present' %} aria-current="page"{% endif %}>{{ _('Presentazione') }}</a></li>
+    <li><a href="{{ url_for('wallet_routes.wallet_dashboard') }}"{% if request.endpoint == 'wallet_routes.wallet_dashboard' or (request.endpoint or '').startswith('wallet_routes.dashboard') %} aria-current="page"{% endif %}>{{ _('Dashboard Presentazioni') }}</a></li>
     <li><a href="{{ url_for('wallet_routes.wallet_diagnostics') }}"{% if request.endpoint == 'wallet_routes.wallet_diagnostics' %} aria-current="page"{% endif %}>{{ _('Storico Azioni HTTP') }}</a></li>
   </ul>
   </div>

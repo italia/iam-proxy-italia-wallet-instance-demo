@@ -42,6 +42,7 @@ def _with_credential_view_url(result: dict) -> dict:
 
     for index, item in enumerate(_held_credential_views()):
         if item.get("id") == credential_id:
+            data["credential_name"] = item.get("name") or credential_id
             data["view_url"] = url_for("wallet_routes.wallet_credentials", _anchor=f"credential-{index}")
             break
     return result
@@ -95,16 +96,26 @@ def _italian_display(displays) -> dict:
     return _localized_display(displays, "it")
 
 def _claim_labels(config: dict) -> list[str]:
+    return [item["label"] for item in _claim_entries(config)]
+
+def _claim_entries(config: dict) -> list[dict]:
     claims = (config.get("credential_metadata") or {}).get("claims") or []
-    labels = []
+    entries = []
+    seen = set()
     for claim in claims:
         if not isinstance(claim, dict):
             continue
+        path = claim.get("path")
+        if not isinstance(path, list) or not path:
+            continue
         chosen = _italian_display(claim.get("display") or [])
-        label = chosen.get("name") or chosen.get("label") or ""
-        if label and label not in labels:
-            labels.append(label)
-    return labels
+        label = str(chosen.get("name") or chosen.get("label") or path[-1]).strip()
+        key = tuple(str(step) for step in path)
+        if not label or key in seen:
+            continue
+        seen.add(key)
+        entries.append({"label": label, "path": [str(step) for step in path]})
+    return entries
 
 def load_configured_issuers() -> str | None:
     """Fetch each configured issuer into ec_store. Returns an Italian error, or None."""
@@ -189,6 +200,7 @@ def _attestation_record(config_id, config: dict) -> dict:
         "name": name,
         "description": description,
         "claims": _claim_labels(config),
+        "claim_paths": _claim_entries(config),
         "format": credential_format,
         "format_label": _format_label(credential_format),
         "obtained": bool(app_state.credential_store.find_by_configuration_id(str(config_id))),

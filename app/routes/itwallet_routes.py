@@ -15,7 +15,7 @@ from app.constants import (
 )
 from app.i18n import get_locale
 from app.service.itwallet_service import ItWalletService
-from app.store import app_state
+from app.store import app_state, transaction_log
 from app.utils.diagnostic_log import list_entries, peer_role, remove_entries
 from app.utils.http_utils import http_request_with_retry
 from app.utils.utils import (
@@ -263,7 +263,10 @@ def completedAddCredentialItWallet():
         credentials_presenting = data.get("credentialsPresenting") if data else None
         service = ItWalletService(session)
         if not credentials_presenting:
-            result = _with_credential_view_url(service.complete_add_credential_from_browser())
+            issuance_state = data.get("issuanceState") if isinstance(data, dict) else None
+            if not isinstance(issuance_state, str) or not issuance_state:
+                issuance_state = None
+            result = _with_credential_view_url(service.complete_add_credential_from_browser(issuance_state))
             status_code = 200 if result["success"] else 500
             return jsonify(result), status_code
 
@@ -338,8 +341,13 @@ def completedLoginToVerifier():
         return jsonify({"success": False, "data": {"error": _(str(e))}}), 500
 
 def _clear_session():
+    transaction_log.abandon_open_presentation(session)
     # Salva le chiavi da preservare
-    preserved = {"session_id": session.get("session_id"), "authenticated": session.get("authenticated")}
+    preserved = {
+        "session_id": session.get("session_id"),
+        "authenticated": session.get("authenticated"),
+        "issuance_requests": session.get("issuance_requests"),
+    }
 
     # Pulisce la sessione
     session.clear()

@@ -103,6 +103,7 @@ from app.utils.utils import (
     ec_private_key_from_pem_file,
     ec_public_key_from_pem_file,
     extract_claim,
+    generate_nonce,
     generate_pem_keys,
     generate_pkce_pair,
     get_thumbprint_from_private_key,
@@ -151,6 +152,54 @@ class IssuanceFlow:
         if not url:
             raise ValueError(f"EC per {cred_config_id} non presenta claim 'iss'")
         return url
+
+    def _remember_issuance(
+        self, state: str, code_verifier: str, issuer_url: str, credential_configuration_id: str | None
+    ) -> None:
+        remembered = self.session.get("issuance_requests")
+        if not isinstance(remembered, dict):
+            remembered = {}
+        else:
+            remembered = dict(remembered)
+        remembered[state] = {
+            "code_verifier": code_verifier,
+            "issuer_url": issuer_url,
+            "credential_configuration_id": credential_configuration_id,
+        }
+        unanswered = [
+            key
+            for key, value in remembered.items()
+            if key != state and not (isinstance(value, dict) and value.get("authorization_response"))
+        ]
+        while len(remembered) > 8 and unanswered:
+            remembered.pop(unanswered.pop(0), None)
+        self.session["issuance_requests"] = remembered
+
+    def _issuance_context(self, issuance_state: str | None) -> dict | None:
+        remembered = self.session.get("issuance_requests")
+        state = issuance_state or self.session.get("oauth_state")
+        if not isinstance(remembered, dict) or not isinstance(state, str):
+            return None
+        entry = remembered.get(state)
+        if not isinstance(entry, dict) or not entry.get("code_verifier"):
+            return None
+        if not isinstance(entry.get("authorization_response"), dict):
+            return None
+        return {
+            "state": state,
+            "code_verifier": entry["code_verifier"],
+            "credential_configuration_id": entry.get("credential_configuration_id"),
+            "issuer_url": entry.get("issuer_url"),
+            "authorization_response": entry["authorization_response"],
+        }
+
+    def _forget_issuance(self, state: str) -> None:
+        remembered = self.session.get("issuance_requests")
+        if not isinstance(remembered, dict) or state not in remembered:
+            return
+        remembered = dict(remembered)
+        remembered.pop(state, None)
+        self.session["issuance_requests"] = remembered
 
 
     def initialize_wallet(self, idp: str, country: str):
@@ -234,8 +283,11 @@ class IssuanceFlow:
         # codeql[py/log-injection]
         logger.info(" 🔧 method: %s", sanitize_for_logging(pkce.get("code_challenge_method", "")))
 
-        # Salvataggio in sessione del PKCE code verifier
+        # Salvataggio in sessione del PKCE code verifier e dello state di questa richiesta
+        oauth_state = generate_nonce()
+        self.session["oauth_state"] = oauth_state
         self.session["code_verifier"] = pkce["code_verifier"]
+        self._remember_issuance(oauth_state, pkce["code_verifier"], pid_provider_url, cred_config_id)
 
         # Generazione Request Object JWT per richiedere il PID
         logger.info("Generazione Request Object JWT per il wallet...")
@@ -251,7 +303,7 @@ class IssuanceFlow:
         request_object_jwt = generate_par_request_object_jwt(
             issuer_private_key=wallet_private_key,
             audience=pid_provider_url,
-            state=session_id,
+            state=oauth_state,
             code_challenge=pkce["code_challenge"],
             code_challenge_method=pkce["code_challenge_method"],
             response_type=initialize_flow_response_type,
@@ -355,18 +407,21 @@ class IssuanceFlow:
         if not session_id:
             raise ValueError("Sessione non inizializzata")
 
-        # recupero code_verifier dalla sessione
-        pkce_code_verifier = self.session.get("code_verifier")
-        if not pkce_code_verifier:
+        context = self._issuance_context(None)
+        if context:
+            pkce_code_verifier = context["code_verifier"]
+            oauth_state = context["state"]
+            authorization_response = context["authorization_response"]
+            pid_provider_url = context["issuer_url"]
+        else:
+            pkce_code_verifier = self.session.get("code_verifier")
+            oauth_state = self.session.get("oauth_state")
+            authorization_response = self.session.get("query_params")
+            pid_provider_url = self.session.get("pid_provider_url")
+        if not pkce_code_verifier or not oauth_state:
             raise ValueError("Non trovato il PKCE code verifier nella sessione")
-
-        # recupero l'Authorization Response dalla sessione dove è stato memorizzato dalla callback del wallet
-        authorization_response = self.session.get("query_params")
         if not authorization_response:
             raise ValueError("Non trovata l'Authorization Response nella sessione")
-
-        # recupero pid provider url dalla sessione
-        pid_provider_url = self.session.get("pid_provider_url")
         if not pid_provider_url:
             raise ValueError("Non trovato l'URL del PID provider nella sessione")
 
@@ -408,7 +463,7 @@ class IssuanceFlow:
 
         # gestisco l'Authorization Response
         authorization_response_code, _, _ = self._authorization_response_management(
-            authorization_response=authorization_response, state_expected=session_id, iss_expected=pid_provider_url
+            authorization_response=authorization_response, state_expected=oauth_state, iss_expected=pid_provider_url
         )
 
         # gestione rilascio dell'access token
@@ -433,6 +488,10 @@ class IssuanceFlow:
             dpop_bound_access_token=dpop_bound_access_token,
             entity_configuration=pid_provider_ec,
         )
+
+        self._forget_issuance(oauth_state)
+        if self.session.get("oauth_state") == oauth_state:
+            self.session.pop("query_params", None)
 
         # Stampo i dati in sessione
         self._print_session_data()
@@ -546,8 +605,11 @@ class IssuanceFlow:
 
         logger.info("method: %s", pkce.get("code_challenge_method", ""))
 
-        # Salvataggio in sessione del PKCE code verifier
+        # Salvataggio in sessione del PKCE code verifier e dello state di questa richiesta
+        oauth_state = generate_nonce()
+        self.session["oauth_state"] = oauth_state
         self.session["code_verifier"] = pkce["code_verifier"]
+        self._remember_issuance(oauth_state, pkce["code_verifier"], eaa_provider_url, credential_configuration_id)
 
         logger.info("Generate Request Object JWT ")
         authorization_details = [
@@ -570,7 +632,7 @@ class IssuanceFlow:
         request_object_jwt = generate_par_request_object_jwt(
             issuer_private_key=wallet_private_key,
             audience=eaa_provider_url,
-            state=session_id,
+            state=oauth_state,
             code_challenge=pkce["code_challenge"],
             code_challenge_method=pkce["code_challenge_method"],
             response_type=credential_flow_response_type,
@@ -607,7 +669,7 @@ class IssuanceFlow:
         return {"success": True, "data": {"redirect_url": authorization_url}}
 
 
-    def complete_add_credential_from_browser(self):
+    def complete_add_credential_from_browser(self, issuance_state: str | None = None):
         """Completa il rilascio dopo che il browser torna dall'issuer con il codice di autorizzazione."""
         logger.info("Entering method: complete_add_credential_from_browser")
 
@@ -620,19 +682,27 @@ class IssuanceFlow:
         if not session_id:
             raise ValueError("La sessione della demo non è più valida. Esci e accedi di nuovo.")
 
-        credential_configuration_id = self.session.get("credential_configuration_id")
+        context = self._issuance_context(issuance_state)
+        if issuance_state and not context:
+            raise ValueError("Non trovo più la verifica della richiesta. Premi di nuovo Ottieni.")
+        if context:
+            credential_configuration_id = context["credential_configuration_id"]
+            pkce_code_verifier = context["code_verifier"]
+            oauth_state = context["state"]
+            authorization_response = context["authorization_response"]
+            eaa_provider_url = context["issuer_url"]
+        else:
+            credential_configuration_id = self.session.get("credential_configuration_id")
+            pkce_code_verifier = self.session.get("code_verifier")
+            oauth_state = self.session.get("oauth_state")
+            authorization_response = self.session.get("query_params")
+            eaa_provider_url = self.session.get("eaa_provider_url")
         if not credential_configuration_id:
             raise ValueError("Non trovo più l'attestazione richiesta. Premi di nuovo Ottieni.")
-
-        pkce_code_verifier = self.session.get("code_verifier")
-        if not pkce_code_verifier:
+        if not pkce_code_verifier or not oauth_state:
             raise ValueError("Non trovo più la verifica della richiesta. Premi di nuovo Ottieni.")
-
-        authorization_response = self.session.get("query_params")
         if not authorization_response:
             raise ValueError("L'issuer non ha ancora restituito l'autorizzazione. Completa l'accesso e riprova.")
-
-        eaa_provider_url = self.session.get("eaa_provider_url")
         if not eaa_provider_url:
             raise ValueError("Non trovo più l'issuer di questa richiesta. Premi di nuovo Ottieni.")
 
@@ -660,7 +730,7 @@ class IssuanceFlow:
 
         authorization_response_code, _, _ = self._authorization_response_management(
             authorization_response=authorization_response,
-            state_expected=session_id,
+            state_expected=oauth_state,
             iss_expected=eaa_provider_url,
         )
         dpop_bound_access_token, credential_identifiers = self._token_issuing_management(
@@ -682,7 +752,9 @@ class IssuanceFlow:
             dpop_bound_access_token=dpop_bound_access_token,
             entity_configuration=eaa_provider_ec,
         )
-        self.session.pop("query_params", None)
+        self._forget_issuance(oauth_state)
+        if self.session.get("oauth_state") == oauth_state:
+            self.session.pop("query_params", None)
         return {"success": True, "data": {"credential_id": credential_id}}
 
 
