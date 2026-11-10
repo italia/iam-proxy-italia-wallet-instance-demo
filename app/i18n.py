@@ -1,5 +1,7 @@
 """Locale selection for the wallet demo. Italian is the source language."""
 
+from pathlib import Path
+
 from flask import session
 from flask_babel import gettext
 
@@ -102,6 +104,22 @@ JS_MESSAGES = (
     "Payload",
     "Payload cifrato: serve la chiave del destinatario per leggerlo.",
 )
+
+
+def compile_translations() -> None:
+    """Write messages.mo from messages.po when the catalog is missing or older."""
+    from babel.messages.mofile import write_mo
+    from babel.messages.pofile import read_po
+
+    root = Path(__file__).resolve().parent / "translations"
+    for po_path in root.glob("*/LC_MESSAGES/messages.po"):
+        mo_path = po_path.with_suffix(".mo")
+        if mo_path.exists() and mo_path.stat().st_mtime >= po_path.stat().st_mtime:
+            continue
+        with po_path.open("rb") as po_file:
+            catalog = read_po(po_file)
+        with mo_path.open("wb") as mo_file:
+            write_mo(mo_file, catalog)
 
 
 def get_locale() -> str:

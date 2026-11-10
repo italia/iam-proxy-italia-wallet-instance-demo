@@ -33,6 +33,8 @@ COPY --from=builder /application/.venv ./.venv
 COPY app/ ./app
 COPY *.py ./
 
+RUN /application/.venv/bin/python -m babel.messages.frontend compile -d app/translations
+
 RUN chown -R wiwuser:wiwgroup ./app
 RUN chown wiwuser:wiwgroup ./*.py
 

@@ -30,7 +30,7 @@ The access password is `WALLET_INSTANCE_PASSWORD`.
 
 ## Run with IAM Proxy Italia
 
-The full demo is the `wallet-instance-demo` service of IAM Proxy Italia. It is available at `https://demo-wi.example.org:8080`. Compose uses the image `ghcr.io/italia/iam-proxy-italia-wallet-instance-demo:1.0.1`. In that compose file the password defaults to `wallet`.
+The full demo is the `wallet-instance-demo` service of IAM Proxy Italia. It is available at `https://demo-wi.example.org:8080`. Compose uses the image `ghcr.io/italia/iam-proxy-italia-wallet-instance-demo:1.0.2`. In that compose file the password defaults to `wallet`.
 
 ## Run this repository
 

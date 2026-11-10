@@ -9,7 +9,7 @@ from flask import Flask, g, has_app_context, request, session
 from flask_babel import Babel
 
 from app.constants import APP_SETTINGS_KEY, CHROME_DEVTOOLS_PATH, CONFIG_DIR, CORRELATION_ID_FALLBACK
-from app.i18n import get_locale, js_catalog
+from app.i18n import compile_translations, get_locale, js_catalog
 from app.models import AppConfig
 from app.routes.itwallet_routes import lookup_attestation, wallet_api_bp
 from app.routes.main_routes import main_routes
@@ -138,6 +138,7 @@ def load_config(app, config_path: str | None = None):
 
 
 def create_app():
+    compile_translations()
     # setup app
     app = Flask(__name__)
     load_config(app)
