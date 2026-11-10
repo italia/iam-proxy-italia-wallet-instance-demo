@@ -727,8 +727,14 @@ msgstr "Wallet sections"
 msgid "Configura un Credential Issuer da ispezionare, seleziona un'attestazione e richiedine l'emissione."
 msgstr "Configure a Credential Issuer to inspect, select an attestation and request issuance."
 
-msgid "Attestazioni già ottenute: metadata, intestazione, payload e stato di revoca."
-msgstr "Attestations already obtained: metadata, header, payload and revocation status."
+msgid "Attestazioni già ottenute: metadata, attributi, attestazione e stato di revoca."
+msgstr "Attestations already obtained: metadata, attributes, the attestation, and the revocation status."
+
+msgid "Attributi"
+msgstr "Attributes"
+
+msgid "Nessun attributo dell'utente."
+msgstr "No user attributes."
 
 msgid "Nessuna attestazione ottenuta."
 msgstr "No attestation obtained yet."
@@ -738,6 +744,12 @@ msgstr "Metadata"
 
 msgid "Issuer"
 msgstr "Issuer"
+
+msgid "Data di emissione"
+msgstr "Issuance date"
+
+msgid "Data di scadenza"
+msgstr "Expiry date"
 
 msgid "Stato di revoca"
 msgstr "Revocation status"
@@ -897,3 +909,39 @@ msgstr "Reset the history"
 
 msgid "Vuoi cancellare lo storico delle presentazioni?"
 msgstr "Do you want to delete the presentation history?"
+
+msgid "Presenta comunque"
+msgstr "Present anyway"
+
+msgid "Richiedi una nuova emissione"
+msgstr "Request a new issuance"
+
+msgid "La credenziale %(name)s è scaduta."
+msgstr "The credential %(name)s has expired."
+
+msgid "Puoi presentarla comunque oppure richiedere una nuova emissione."
+msgstr "You can present it anyway or request a new issuance."
+
+msgid "Puoi presentarle comunque oppure richiedere una nuova emissione."
+msgstr "You can present them anyway or request a new issuance."
+
+msgid "Richiedi una nuova emissione della credenziale %(name)s."
+msgstr "Request a new issuance of the credential %(name)s."
+
+msgid "Richiedi una nuova emissione delle credenziali %(names)s."
+msgstr "Request a new issuance of the credentials %(names)s."
+
+msgid "Il verificatore ha rifiutato la presentazione perché la credenziale %(name)s è scaduta."
+msgstr "The verifier rejected the presentation because the credential %(name)s has expired."
+
+msgid "Il verificatore ha rifiutato la presentazione perché la credenziale %(name)s risulta revocata."
+msgstr "The verifier rejected the presentation because the credential %(name)s is revoked."
+
+msgid "Il verificatore ha rifiutato la presentazione perché la credenziale %(name)s risulta sospesa."
+msgstr "The verifier rejected the presentation because the credential %(name)s is suspended."
+
+msgid "Il verificatore ha rifiutato la presentazione perché la credenziale %(name)s è scaduta e risulta revocata."
+msgstr "The verifier rejected the presentation because the credential %(name)s has expired and is revoked."
+
+msgid "Il verificatore ha rifiutato la presentazione perché la credenziale %(name)s è scaduta e risulta sospesa."
+msgstr "The verifier rejected the presentation because the credential %(name)s has expired and is suspended."

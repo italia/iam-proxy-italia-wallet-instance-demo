@@ -1,6 +1,7 @@
 import io
 import json
 import logging
+from app.service.credential_status import presentation_error_message
 from urllib.parse import quote, urlparse
 
 import pyqrcode
@@ -362,7 +363,7 @@ def completedLoginToVerifier():
         return jsonify({"success": False, "data": {"error": _(str(ve))}}), 400
     except Exception as e:
         logger.error("Errore: %s", sanitize_for_logging(str(e)))
-        return jsonify({"success": False, "data": {"error": _(str(e))}}), 500
+        return jsonify({"success": False, "data": {"error": presentation_error_message(e)}}), 500
 
 
 def _clear_session():

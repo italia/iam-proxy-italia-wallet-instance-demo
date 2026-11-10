@@ -90,6 +90,7 @@ JS_MESSAGES = (
     "Contatti",
     "Descrizione",
     "Formato",
+    "Attributi",
     "Dati contenuti",
     "Identificativo di configurazione",
     "Nome del credential issuer",

@@ -268,6 +268,9 @@ class PresentationFlow:
         self.session["rp_response_jwks"] = response_jwks
         self.session["rp_display"] = display
         self.session["rp_transaction_id"] = transaction_id
+        from app.service.credential_status import remember_presentation_dialog
+
+        remember_presentation_dialog(credentials_requested, self)
 
         return credentials_requested
 

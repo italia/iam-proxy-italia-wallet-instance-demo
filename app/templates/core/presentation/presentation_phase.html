@@ -1,19 +1,25 @@
 <div class="modal fade" id="presentation-modal" tabindex="-1" role="dialog" aria-labelledby="presentationModalTitle" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered" role="document">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable" role="document">
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title w-100 text-center" id="presentationModalTitle">{{ _('Conferma presentazione') }}</h5>
         <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="{{ _('Chiudi') }}" onclick="chiudiPresentationPopup()"></button>
       </div>
-      <div class="modal-body text-center">
-        <div id="presentation-rp" class="presentation-rp mt-3"></div>
-        <p class="mt-3 text-muted">{{ _('Il Relying Party chiede i seguenti dati') }}</p>
-        <div class ="mb-2">
-          <ul id="presentation-claims-list" class="list-group list-group-flush text-start"></ul>
-        </div>
+      <div class="modal-body">
+        <div id="presentation-warning" class="alert alert-warning d-none" role="status"></div>
+        <section class="presentation-section">
+          <h6>{{ _('Verificatore') }}</h6>
+          <div id="presentation-rp" class="presentation-rp presentation-fields"></div>
+        </section>
+        <section class="presentation-section">
+          <h6>{{ _('Attestazioni richieste') }}</h6>
+          <div id="presentation-credentials" class="presentation-fields"></div>
+        </section>
       </div>
       <div class="modal-footer justify-content-center">
-        <button class="btn btn-primary btn-sm" type="button" data-bs-dismiss="modal" onclick="authorizationProcess()">{{ _('Conferma') }}</button>
+        <button id="presentation-confirm" class="btn btn-primary btn-sm" type="button" data-bs-dismiss="modal" onclick="authorizationProcess()">{{ _('Conferma') }}</button>
+        <button id="presentation-continue" class="btn btn-primary btn-sm d-none" type="button" data-bs-dismiss="modal" onclick="authorizationProcess()">{{ _('Presenta comunque') }}</button>
+        <button id="presentation-reissue" class="btn btn-outline-primary btn-sm d-none" type="button" data-bs-dismiss="modal" onclick="requestNewIssuance()">{{ _('Richiedi una nuova emissione') }}</button>
         <button class="btn btn-secondary btn-sm" type="button" data-bs-dismiss="modal" onclick="chiudiPresentationPopup()">{{ _('Annulla') }}</button>
       </div>
     </div>
