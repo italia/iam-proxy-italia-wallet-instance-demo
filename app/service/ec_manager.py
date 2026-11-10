@@ -56,7 +56,12 @@ class ECBaseManager:
         metadata_obj = _metadata_cls.model_validate(
             self._provider_config.metadata_group, context={"public_core_jwks": self._provider_config.public_core_jwks}
         )
-        return metadata_obj.model_dump(mode="json", exclude_unset=True)
+        dumped = metadata_obj.model_dump(mode="json", exclude_unset=True)
+        # The running issuer reads the attestation signing keys from wallet_solution.
+        provider = dumped.get("openid_wallet_provider")
+        if provider is not None:
+            dumped["wallet_solution"] = provider
+        return dumped
 
     @property
     def authority_hints(self) -> list[str]:

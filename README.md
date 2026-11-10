@@ -30,7 +30,7 @@ The access password is `WALLET_INSTANCE_PASSWORD`.
 
 ## Run with IAM Proxy Italia
 
-The full demo is the `wallet-instance-demo` service of IAM Proxy Italia. It is available at `https://demo-wi.example.org:8080`. The image is `ghcr.io/italia/iam-proxy-italia-wallet-instance-demo:v1.0`. Compose builds this Dockerfile when that tag is absent. In that compose file the password defaults to `wallet`.
+The full demo is the `wallet-instance-demo` service of IAM Proxy Italia. It is available at `https://demo-wi.example.org:8080`. Compose uses the image `ghcr.io/italia/iam-proxy-italia-wallet-instance-demo:1.0.1`. In that compose file the password defaults to `wallet`.
 
 ## Run this repository
 
@@ -51,7 +51,7 @@ Without `WALLET_TLS_CERT` and `WALLET_TLS_KEY` the server speaks HTTP on port 80
 ### Docker Compose
 
 ```bash
-docker compose up --build
+docker compose up
 ```
 
 The service reads `./config` and publishes port 8080.
