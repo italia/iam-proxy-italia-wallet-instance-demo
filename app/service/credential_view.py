@@ -6,11 +6,7 @@ from datetime import date, datetime, timezone
 
 import cbor2
 
-from app.routes.itwallet_routes import (
-    _format_label,
-    display_index,
-    lookup_attestation,
-)
+from app.service.catalog import _format_label, display_index, lookup_attestation
 from app.store import app_state
 from app.utils.cborUtils import _cose_alg_id_to_name
 
