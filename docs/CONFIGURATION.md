@@ -57,7 +57,7 @@ All `!ENV` references across the YAML files. These must be set before the applic
 | `OPENID_CIE_PROVIDER_URL` | `app_config.yaml` | URL of the CIE Level 2 Identity Provider |
 | `WALLET_INITIALIZE_REDIRECT_URI` | `app_config.yaml` | Redirect URI for the PID Issuance (initialization) flow |
 | `WALLET_CREDENTIAL_REDIRECT_URI` | `app_config.yaml` | Redirect URI for the EAA Credential Issuance flow |
-| `CREDENTIAL_ISSUER_URLS` | `app_config.yaml` | Comma-separated credential issuer URLs shown in the catalog |
+| `CREDENTIAL_ISSUER_URL` | `app_config.yaml` | Comma-separated credential issuer URLs shown in the catalog |
 
 ---
 
@@ -113,7 +113,7 @@ Comma-separated credential issuer URLs. The home page loads each one and lists i
 
 | Key | Value | Description |
 |---|---|---|
-| `credential_issuers` | `!ENV CREDENTIAL_ISSUER_URLS` | Issuers of the catalog. In the IAM Proxy Italia demo this is `https://<SATOSA_HOSTNAME>/OpenID4VCI` |
+| `credential_issuers` | `!ENV CREDENTIAL_ISSUER_URL` | Issuers of the catalog. In the IAM Proxy Italia demo this is `https://<SATOSA_HOSTNAME>/OpenID4VCI` |
 
 ### `ms_trust_configuration`
 
