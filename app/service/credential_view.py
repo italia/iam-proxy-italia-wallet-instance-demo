@@ -595,6 +595,23 @@ def _expires_at(entry: dict) -> str:
     return ""
 
 
+def _is_expired(entry: dict) -> bool:
+    payload = _token_payload(entry.get("data_row"))
+    claims = entry.get("claims") if isinstance(entry.get("claims"), dict) else {}
+    validity = _validity_info(claims)
+    for value in (
+        payload.get("exp"),
+        claims.get("exp"),
+        validity.get("validUntil"),
+        claims.get("date_of_expiry"),
+        claims.get("expiry_date"),
+    ):
+        moment = _claim_moment(value)
+        if moment:
+            return datetime.now(timezone.utc) > moment
+    return False
+
+
 def _held_view(issuer, group, credential_id, entry, index) -> dict:
     meta = lookup_attestation(str(entry.get("configuration_id") or ""), index)
     status = str(_or_text(entry.get("status"))).strip()
@@ -610,6 +627,7 @@ def _held_view(issuer, group, credential_id, entry, index) -> dict:
         "config_id": _or_text(meta.get("id"), credential_id),
         "issued_at": _issued_at(entry),
         "expires_at": _expires_at(entry),
+        "is_expired": _is_expired(entry),
         "credential": _credential_cleartext(entry.get("data_row"), credential_format),
         "status_label": _STATUS_LABELS.get(status.lower(), _or_text(status, "Non verificata")),
         "assertion": _jwt_cleartext(entry.get("status_assertion")),

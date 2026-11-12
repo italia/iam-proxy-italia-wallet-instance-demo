@@ -1017,3 +1017,26 @@ input.form-check-input:focus-visible {
   }
 }
 
+/* Credential warning icon */
+#credential-nav a .icon-warning {
+  width: 1.25rem;
+  height: 1.25rem;
+  margin-right: 0.5rem;
+  display: inline-block;
+  vertical-align: middle;
+  color: #d32f2f;
+  flex-shrink: 0;
+}
+
+#credential-nav li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+#credential-nav a {
+  display: flex;
+  align-items: center;
+  flex: 1;
+}
+
