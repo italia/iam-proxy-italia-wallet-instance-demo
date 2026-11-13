@@ -589,7 +589,12 @@ class BranchCoverageTests(unittest.TestCase):
         with self.assertRaises(Exception):
             cborUtils.decode_and_verify_issuer_signed(utils.base64url_encode(cbor2.dumps({"nameSpaces": {}})), ["ns"], "1.0", "doc")
 
-        from app.models.config.credentials_config import Credential, CredentialsConfig, DocumentFormat, DocumentIdentifier
+        from app.models.config.credentials_config import (
+            Credential,
+            CredentialsConfig,
+            DocumentFormat,
+            DocumentIdentifier,
+        )
 
         credential = Credential(
             proto_version="1",
@@ -670,6 +675,8 @@ class BranchCoverageTests(unittest.TestCase):
 
 
     def test_remaining_diagnostic_and_protocol_branches(self):
+        import jwt
+
         from app.service import credential_status, credential_view
         from app.service.itwallet_service import ItWalletService
         from app.service.presentation_flow import (
@@ -677,8 +684,6 @@ class BranchCoverageTests(unittest.TestCase):
             _held_by_vct,
             _require_encryption_jwks,
         )
-        import jwt
-
         from app.utils import cborUtils, diagnostic_log, itwalletUtils, jwtUtils
         from app.utils.utils import base64url_encode
 

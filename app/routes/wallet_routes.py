@@ -26,6 +26,12 @@ from app.routes.itwallet_routes import (
     load_configured_issuers,
     lookup_attestation,
 )
+from app.service.credential_status import (
+    issuer_status_jwks,
+    presentation_error_message,
+    status_list_ref,
+    store_status_list,
+)
 from app.service.credential_view import (
     _b64url,
     _cbor_diag,
@@ -49,7 +55,6 @@ from app.service.credential_view import (
     _or_text,
     _sd_jwt_cleartext,
 )
-from app.service.credential_status import issuer_status_jwks, presentation_error_message, status_list_ref, store_status_list
 from app.service.itwallet_service import ItWalletService
 from app.store import app_state, transaction_log
 from app.utils.diagnostic_log import peer_role

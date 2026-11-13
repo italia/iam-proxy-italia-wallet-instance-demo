@@ -1,7 +1,6 @@
 import io
 import json
 import logging
-from app.service.credential_status import presentation_error_message
 from urllib.parse import quote, urlparse
 
 import pyqrcode
@@ -56,6 +55,7 @@ from app.service.catalog import (
     load_configured_issuers,
     lookup_attestation,
 )
+from app.service.credential_status import presentation_error_message
 from app.service.itwallet_service import ItWalletService
 from app.store import app_state, transaction_log
 from app.utils.diagnostic_log import list_entries, peer_role, remove_entries

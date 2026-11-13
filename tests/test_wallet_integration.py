@@ -8,6 +8,7 @@ import shutil
 import tempfile
 import unittest
 from unittest.mock import patch
+
 import cbor2
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization

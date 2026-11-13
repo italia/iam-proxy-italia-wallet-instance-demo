@@ -8,8 +8,8 @@ import shutil
 import tempfile
 import time
 import unittest
-from urllib.parse import parse_qs, urlparse
 from unittest.mock import patch
+from urllib.parse import parse_qs, urlparse
 
 import jwt
 import yaml
