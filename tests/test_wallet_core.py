@@ -1,3 +1,5 @@
+import base64
+import datetime
 import json
 import unittest
 from unittest.mock import patch
@@ -251,6 +253,231 @@ class StatusListTests(unittest.TestCase):
             token = request_status_list("https://issuer.example.org/status")
 
         self.assertEqual(token, "header.payload.signature")
+
+
+class CredentialValidityDatesTests(unittest.TestCase):
+    def test_expiry_for_sd_jwt_and_mdoc(self):
+        from app.service.credential_view import _is_expired
+
+        now = datetime.datetime.now(datetime.timezone.utc)
+        for offset, expired in ((-3600, True), (3600, False)):
+            moment = now + datetime.timedelta(seconds=offset)
+            body = base64.urlsafe_b64encode(json.dumps({"exp": int(moment.timestamp())}).encode()).decode().rstrip("=")
+            entries = (
+                {"data_row": f"e30.{body}.sig"},
+                {"claims": {"mso": {"validityInfo": {"validUntil": moment.isoformat()}}}},
+            )
+            for entry in entries:
+                with self.subTest(entry=entry):
+                    self.assertEqual(_is_expired(entry), expired)
+
+        self.assertFalse(_is_expired({"claims": {}}))
+
+    def test_issued_and_expires_come_from_sd_jwt_claims(self):
+        from app.service.credential_view import _expires_at, _issued_at
+
+        body = base64.urlsafe_b64encode(json.dumps({"iat": 1_700_000_000, "exp": 1_700_003_600}).encode()).decode().rstrip("=")
+        entry = {"data_row": f"e30.{body}.sig"}
+        self.assertEqual(_issued_at(entry), "2023-11-14T22:13:20Z")
+        self.assertEqual(_expires_at(entry), "2023-11-14T23:13:20Z")
+
+    def test_mdoc_validity_info_supplies_dates(self):
+        from app.service.credential_view import _expires_at, _issued_at
+
+        entry = {
+            "claims": {
+                "mso": {
+                    "validityInfo": {
+                        "signed": "2026-11-10T10:00:00Z",
+                        "validUntil": "2026-11-10T11:00:00+00:00",
+                    }
+                }
+            }
+        }
+        self.assertEqual(_issued_at(entry), "2026-11-10T10:00:00Z")
+        self.assertEqual(_expires_at(entry), "2026-11-10T11:00:00Z")
+
+
+class HeldAttributeTests(unittest.TestCase):
+    def test_sd_jwt_attributes_include_disclosures_and_skip_protocol_fields(self):
+        from app.service.credential_view import _attribute_lines
+
+        disclosure = base64.urlsafe_b64encode(json.dumps(["salt", "given_name", "Mario"]).encode()).decode().rstrip("=")
+        entry = {
+            "data_row": f"e30.e30.sig~{disclosure}",
+            "claims": {"iss": "https://issuer.example.org", "vct": "urn:pid", "family_name": "Rossi"},
+        }
+        lines = _attribute_lines(
+            entry,
+            "dc+sd-jwt",
+            [
+                {"label": "Nome", "path": ["given_name"]},
+                {"label": "Cognome", "path": ["family_name"]},
+            ],
+        )
+        self.assertEqual(lines, ["Nome: Mario", "Cognome: Rossi"])
+
+    def test_mdoc_attributes_come_from_namespaces_and_from_the_credential(self):
+        from app.service.credential_view import _attribute_lines
+
+        stored = _attribute_lines(
+            {"claims": {"nameSpaces": {"org.iso.18013.5.1": {"family_name": "Rossi", "given_name": "Mario"}}}},
+            "mso_mdoc",
+            [{"label": "Cognome", "path": ["org.iso.18013.5.1", "family_name"]}],
+        )
+        self.assertEqual(stored, ["Cognome: Rossi", "given_name: Mario"])
+
+        item = cbor2.dumps(
+            {
+                "digestID": 1,
+                "random": bytes.fromhex("aa"),
+                "elementIdentifier": "family_name",
+                "elementValue": "Bianchi",
+            }
+        )
+        issuer_signed = {
+            "nameSpaces": {"org.iso.18013.5.1": [cbor2.CBORTag(24, item)]},
+            "issuerAuth": [cbor2.dumps({1: -7}), {}, cbor2.dumps({"docType": "org.iso.18013.5.1.mDL"}), b""],
+        }
+        token = base64.urlsafe_b64encode(cbor2.dumps(issuer_signed)).decode().rstrip("=")
+        from_token = _attribute_lines({"data_row": token}, "mso_mdoc", [])
+        self.assertEqual(from_token, ["family_name: Bianchi"])
+
+    def test_mdoc_header_uses_names_and_keeps_raw_bytes_in_the_diagnostic_notation(self):
+        from cryptography import x509
+        from cryptography.hazmat.primitives import hashes, serialization
+        from cryptography.hazmat.primitives.asymmetric import ec
+        from cryptography.x509.oid import NameOID
+
+        from app.service.credential_view import _cose_headers_text, _iso_mdoc_diag
+
+        key = ec.generate_private_key(ec.SECP256R1())
+        name = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "issuer.example.org")])
+        now = datetime.datetime.now(datetime.timezone.utc)
+        certificate = (
+            x509.CertificateBuilder()
+            .subject_name(name)
+            .issuer_name(name)
+            .public_key(key.public_key())
+            .serial_number(1)
+            .not_valid_before(now)
+            .not_valid_after(now + datetime.timedelta(days=1))
+            .sign(key, hashes.SHA256())
+        )
+        der = certificate.public_bytes(serialization.Encoding.DER)
+        header = _cose_headers_text(cbor2.dumps({1: -7, 4: b"issuer-key"}), {33: der})
+        self.assertIn("alg: ES256", header)
+        self.assertIn("kid: issuer-key", header)
+        self.assertIn("x5chain: CN=issuer.example.org", header)
+        self.assertNotIn("h'", header)
+
+        diagnostic = _iso_mdoc_diag(cbor2.dumps({1: -7, 33: der}))
+        self.assertIn("1: -7", diagnostic)
+        self.assertIn("h'", diagnostic)
+
+
+def _sd_jwt(payload: dict) -> str:
+    body = base64.urlsafe_b64encode(json.dumps(payload).encode()).decode().rstrip("=")
+    return f"e30.{body}.sig"
+
+
+class PresentationValidityTests(unittest.TestCase):
+    def test_status_list_code_reads_the_index(self):
+        import zlib
+
+        from app.service.credential_status import status_list_code
+
+        raw = bytes([0b00000001])
+        listed = base64.urlsafe_b64encode(zlib.compress(raw)).decode().rstrip("=")
+        self.assertEqual(status_list_code(listed, 1, 0), 1)
+        self.assertEqual(status_list_code(listed, 1, 1), 0)
+
+    def test_expired_credential_is_reported_before_presentation(self):
+        from types import SimpleNamespace
+
+        from app.service.credential_status import collect_presentation_issues
+        from app.store import app_state
+
+        issuer = "https://issuer.example.org"
+        key = "eid-expired"
+        token = _sd_jwt({"exp": 1})
+        app_state.credential_store.add_credential(issuer, key, token, "urn:it-wallet:eid:1")
+        item = {"format": "dc+sd-jwt", "meta": {"vct_values": ["urn:it-wallet:eid:1"]}}
+        try:
+            issues = collect_presentation_issues([item], SimpleNamespace())
+        finally:
+            app_state.credential_store.remove_held(issuer, key)
+        self.assertEqual(len(issues), 1)
+        self.assertTrue(issues[0]["expired"])
+        self.assertFalse(issues[0]["revoked"])
+        self.assertFalse(issues[0]["status_unknown"])
+
+    def test_revoked_credential_is_reported_before_presentation(self):
+        from types import SimpleNamespace
+
+        from app.service.credential_status import collect_presentation_issues
+        from app.store import app_state
+
+        issuer = "https://issuer.example.org"
+        key = "eid-revoked"
+        token = _sd_jwt(
+            {
+                "exp": 4_000_000_000,
+                "status": {"status_list": {"uri": "https://issuer.example.org/status", "idx": 0}},
+            }
+        )
+        app_state.credential_store.add_credential(issuer, key, token, "urn:it-wallet:eid:1")
+        item = {"format": "dc+sd-jwt", "meta": {"vct_values": ["urn:it-wallet:eid:1"]}}
+        service = SimpleNamespace(proxies=None, no_proxy_domains=None)
+        try:
+            with (
+                patch("app.service.credential_status.issuer_status_jwks", return_value={"keys": []}),
+                patch("app.service.credential_status.store_status_list", return_value=(1, {})),
+            ):
+                issues = collect_presentation_issues([item], service)
+        finally:
+            app_state.credential_store.remove_held(issuer, key)
+        self.assertEqual(len(issues), 1)
+        self.assertFalse(issues[0]["expired"])
+        self.assertTrue(issues[0]["revoked"])
+
+    def test_valid_credential_does_not_warn(self):
+        from types import SimpleNamespace
+
+        from app.service.credential_status import collect_presentation_issues
+        from app.store import app_state
+
+        issuer = "https://issuer.example.org"
+        key = "eid-valid"
+        token = _sd_jwt({"exp": 4_000_000_000})
+        app_state.credential_store.add_credential(issuer, key, token, "urn:it-wallet:eid:1")
+        item = {"format": "dc+sd-jwt", "meta": {"vct_values": ["urn:it-wallet:eid:1"]}}
+        try:
+            issues = collect_presentation_issues([item], SimpleNamespace())
+        finally:
+            app_state.credential_store.remove_held(issuer, key)
+        self.assertEqual(issues, [])
+
+    def test_dialog_offers_continue_or_new_issuance(self):
+        from flask import Flask
+        from flask_babel import Babel
+
+        from app.service.credential_status import eloquent_presentation_error, presentation_dialog
+
+        app = Flask(__name__)
+        Babel(app)
+        issue = {"name": "eID", "expired": True, "revoked": False, "suspended": False, "status_unknown": False}
+        with app.app_context():
+            dialog = presentation_dialog([issue])
+        self.assertIn("eID è scaduta", dialog["message"])
+        self.assertIn("presentarla comunque", dialog["message"])
+        self.assertIn("nuova emissione", dialog["reissue"])
+        verifier = (
+            "Errore ritornato dall'endpoint https://iam-proxy-italia.example.org/OpenID4VP/response-uri: "
+            "invalid_request - invalid DCQL response: validation error (HTTP Status code: 400)"
+        )
+        self.assertIn("scaduta", eloquent_presentation_error(verifier, dialog["failure"]))
+        self.assertEqual(eloquent_presentation_error("altro errore", dialog["failure"]), "altro errore")
 
 
 if __name__ == "__main__":

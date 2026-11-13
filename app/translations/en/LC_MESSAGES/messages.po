@@ -34,7 +34,7 @@ msgstr "Back to top"
 msgid "Wallet demo"
 msgstr "Wallet demo"
 
-msgid "Presenta un'attestazione"
+msgid "Presenta un'attestato"
 msgstr "Present an attestation"
 
 msgid "Reimposta demo"
@@ -73,7 +73,7 @@ msgstr "Obtain"
 msgid "Presenta"
 msgstr "Present"
 
-msgid "Inquadra il QR del verificatore per presentare un'attestazione già ottenuta."
+msgid "Inquadra il QR del verificatore per presentare un'attestato già ottenuta."
 msgstr "Scan the verifier QR code to present an attestation you already hold."
 
 msgid "Diagnosi"
@@ -208,7 +208,7 @@ msgstr "Credential Issuer Nonce"
 msgid "Wallet Attestation"
 msgstr "Wallet Attestation"
 
-msgid "Rilascio dell'attestazione"
+msgid "Rilascio dell'attestato"
 msgstr "Attestation issuance"
 
 msgid "Status List"
@@ -352,13 +352,13 @@ msgstr "OK"
 msgid "Completato"
 msgstr "Done"
 
-msgid "Accesso completato. Torno al wallet per salvare l'attestazione."
+msgid "Accesso completato. Torno al wallet per salvare l'attestato."
 msgstr "Sign-in completed. Returning to the wallet to save the attestation."
 
 msgid "La richiesta del Relying Party non contiene la chiave per cifrare la risposta."
 msgstr "The Relying Party request does not contain the key for encrypting the response."
 
-msgid "Dettaglio attestazione"
+msgid "Dettaglio attestato"
 msgstr "Attestation details"
 
 msgid "Chiudi finestra modale"
@@ -403,7 +403,7 @@ msgstr "Date of expiry:"
 msgid "Dettagli aggiuntivi"
 msgstr "Additional details"
 
-msgid "Ottieni attestazione"
+msgid "Ottieni attestato"
 msgstr "Obtain attestation"
 
 msgid "Richiesta"
@@ -427,10 +427,10 @@ msgstr "Verifier"
 msgid "Federazione"
 msgstr "Federation"
 
-msgid "Seleziona un'attestazione."
+msgid "Seleziona un'attestato."
 msgstr "Select an attestation."
 
-msgid "Seleziona l'attestazione da ottenere."
+msgid "Seleziona l'attestato da ottenere."
 msgstr "Select the attestation to obtain."
 
 msgid "Inserisci un URL http o https."
@@ -445,7 +445,7 @@ msgstr "This address does not publish attestations you can obtain."
 msgid "Richiesta in corso..."
 msgstr "Request in progress..."
 
-msgid "Ti sto portando all'issuer per scegliere l'identità digitale. Al termine torni qui e l'attestazione viene salvata."
+msgid "Ti sto portando all'issuer per scegliere l'identità digitale. Al termine torni qui e l'attestato viene salvata."
 msgstr "Taking you to the issuer to choose a digital identity. When that finishes, you return here and the attestation is saved."
 
 msgid "Per il rilascio di {name}, non sarà condiviso alcun dato con l'issuer."
@@ -463,19 +463,19 @@ msgstr "Continue"
 msgid "La risposta non contiene l'elenco dei dati da condividere."
 msgstr "The response does not list the details to be shared."
 
-msgid "Non riesco a ottenere l'attestazione."
+msgid "Non riesco a ottenere l'attestato."
 msgstr "The wallet cannot obtain the attestation."
 
 msgid "Errore sconosciuto"
 msgstr "Unknown error"
 
-msgid "Hai appena ottenuto l'attestazione {name}."
+msgid "Hai appena ottenuto l'attestato {name}."
 msgstr "You have just obtained the attestation {name}."
 
 msgid "Visualizzala"
 msgstr "View it"
 
-msgid "Non riesco a salvare l'attestazione."
+msgid "Non riesco a salvare l'attestato."
 msgstr "The wallet cannot save the attestation."
 
 msgid "Per l'accesso con il verificatore selezionato, non sarà condiviso alcun dato."
@@ -487,7 +487,7 @@ msgstr "These details will be shared to sign in with the selected verifier:"
 msgid "Impossibile effettuare l'accesso"
 msgstr "The wallet cannot complete the sign-in."
 
-msgid "Rimuovere l'attestazione {name}?"
+msgid "Rimuovere l'attestato {name}?"
 msgstr "Remove attestation {name}?"
 
 msgid "Attestazione {name} rimossa."
@@ -496,7 +496,7 @@ msgstr "Attestation {name} removed."
 msgid "Attestazione {name} rimossa. Il wallet è stato reimpostato."
 msgstr "Attestation {name} removed. The wallet has been reset."
 
-msgid "Non riesco a eliminare l'attestazione."
+msgid "Non riesco a eliminare l'attestato."
 msgstr "The wallet cannot delete the attestation."
 
 msgid "Errore generico"
@@ -556,7 +556,7 @@ msgstr "The QR code content is not a valid URL."
 msgid "Il client indicato nel QR non corrisponde al verificatore."
 msgstr "The client in the QR code does not match the verifier."
 
-msgid "Questa attestazione è già nel wallet."
+msgid "Questa attestato è già nel wallet."
 msgstr "This attestation is already in the wallet."
 
 msgid "Mancano le chiavi di questo wallet. Reimposta la demo e riprova."
@@ -565,7 +565,7 @@ msgstr "This wallet is missing its keys. Reset the demo and try again."
 msgid "Non riesco a preparare la prova di possesso richiesta dall'issuer."
 msgstr "The wallet cannot prepare the proof of possession the issuer requires."
 
-msgid "Il wallet provider non pubblica le chiavi per firmare l'attestazione del wallet."
+msgid "Il wallet provider non pubblica le chiavi per firmare l'attestato del wallet."
 msgstr "The wallet provider does not publish the keys needed to sign the wallet attestation."
 
 msgid "La sessione della demo non è più valida. Esci e accedi di nuovo."
@@ -580,7 +580,7 @@ msgstr "The issuer did not return the address of the authorization request."
 msgid "Non è configurato il trust anchor della demo, quindi non posso completare il rilascio."
 msgstr "The demo trust anchor is not configured, so the wallet cannot finish issuing the attestation."
 
-msgid "Non trovo più l'attestazione richiesta. Premi di nuovo Ottieni."
+msgid "Non trovo più l'attestato richiesta. Premi di nuovo Ottieni."
 msgstr "The requested attestation is no longer available. Press Obtain again."
 
 msgid "Non trovo più la verifica della richiesta. Premi di nuovo Ottieni."
@@ -610,13 +610,13 @@ msgstr "The issuer did not return the authorization code."
 msgid "La risposta arriva da un issuer diverso da quello della richiesta."
 msgstr "The response comes from an issuer other than the one in the request."
 
-msgid "L'issuer non ha restituito l'attestazione."
+msgid "L'issuer non ha restituito l'attestato."
 msgstr "The issuer did not return the attestation."
 
 msgid "Non è configurato il trust anchor della demo, quindi non posso identificare il wallet provider."
 msgstr "The demo trust anchor is not configured, so the wallet cannot identify the wallet provider."
 
-msgid "Non trovo il wallet provider della demo nel trust anchor. Senza di esso il wallet non può ottenere l'attestazione."
+msgid "Non trovo il wallet provider della demo nel trust anchor. Senza di esso il wallet non può ottenere l'attestato."
 msgstr "The demo wallet provider is not in the trust anchor. Without it the wallet cannot obtain the attestation."
 
 msgid "Il wallet provider risponde, ma la sua configurazione non contiene i dati attesi."
@@ -625,22 +625,22 @@ msgstr "The wallet provider responded, but its configuration does not contain th
 msgid "Il wallet provider configurato per questa demo non compare nell'elenco pubblicato dal trust anchor."
 msgstr "The wallet provider configured for this demo is not in the list published by the trust anchor."
 
-msgid "Non è configurato il trust anchor della demo, quindi non posso chiedere l'attestazione."
+msgid "Non è configurato il trust anchor della demo, quindi non posso chiedere l'attestato."
 msgstr "The demo trust anchor is not configured, so the wallet cannot request the attestation."
 
-msgid "Nessun issuer configurato rilascia l'attestazione selezionata. Ricarica la pagina e riprova."
+msgid "Nessun issuer configurato rilascia l'attestato selezionata. Ricarica la pagina e riprova."
 msgstr "No configured issuer issues the selected attestation. Reload the page and try again."
 
-msgid "La configurazione dell'issuer non dichiara lo scope di questa attestazione."
+msgid "La configurazione dell'issuer non dichiara lo scope di questa attestato."
 msgstr "The issuer configuration does not declare the scope of this attestation."
 
-msgid "La configurazione dell'issuer non dichiara il formato di questa attestazione."
+msgid "La configurazione dell'issuer non dichiara il formato di questa attestato."
 msgstr "The issuer configuration does not declare the format of this attestation."
 
-msgid "La configurazione dell'issuer non dichiara il doctype di questa attestazione."
+msgid "La configurazione dell'issuer non dichiara il doctype di questa attestato."
 msgstr "The issuer configuration does not declare the doctype of this attestation."
 
-msgid "La configurazione dell'issuer non dichiara i namespace di questa attestazione."
+msgid "La configurazione dell'issuer non dichiara i namespace di questa attestato."
 msgstr "The issuer configuration does not declare the namespaces of this attestation."
 
 msgid "Descrizione"
@@ -667,7 +667,7 @@ msgstr "Credential Issuer URI"
 msgid "Numero di credenziali offerte"
 msgstr "Number of credentials offered"
 
-msgid "1 attestazione disponibile"
+msgid "1 attestato disponibile"
 msgstr "1 attestation available"
 
 msgid "{count} attestazioni disponibili"
@@ -724,13 +724,19 @@ msgstr "HTTP action history"
 msgid "Sezioni del wallet"
 msgstr "Wallet sections"
 
-msgid "Configura un Credential Issuer da ispezionare, seleziona un'attestazione e richiedine l'emissione."
+msgid "Configura un Credential Issuer da ispezionare, seleziona un'attestato e richiedine l'emissione."
 msgstr "Configure a Credential Issuer to inspect, select an attestation and request issuance."
 
-msgid "Attestazioni già ottenute: metadata, intestazione, payload e stato di revoca."
-msgstr "Attestations already obtained: metadata, header, payload and revocation status."
+msgid "Attestazioni già ottenute: metadata, attributi, attestato e stato di revoca."
+msgstr "Attestations already obtained: metadata, attributes, the attestation, and the revocation status."
 
-msgid "Nessuna attestazione ottenuta."
+msgid "Attributi"
+msgstr "Attributes"
+
+msgid "Nessun attributo dell'utente."
+msgstr "No user attributes."
+
+msgid "Nessuna attestato ottenuta."
 msgstr "No attestation obtained yet."
 
 msgid "Metadata"
@@ -738,6 +744,12 @@ msgstr "Metadata"
 
 msgid "Issuer"
 msgstr "Issuer"
+
+msgid "Data di emissione"
+msgstr "Issuance date"
+
+msgid "Data di scadenza"
+msgstr "Expiry date"
 
 msgid "Stato di revoca"
 msgstr "Revocation status"
@@ -763,10 +775,10 @@ msgstr "Remove"
 msgid "Rimuovi {name}"
 msgstr "Remove {name}"
 
-msgid "Rimuovere questa attestazione?"
+msgid "Rimuovere questa attestato?"
 msgstr "Remove this attestation?"
 
-msgid "Questa attestazione non è un JWT."
+msgid "Questa attestato non è un JWT."
 msgstr "This attestation is not a JWT."
 
 msgid "Assertion di stato"
@@ -781,14 +793,14 @@ msgstr "The credential %(name)s does not contain a status list."
 msgid "La credenziale %(name)s non può essere verificata perché l'issuer non pubblica l'endpoint di stato."
 msgstr "The credential %(name)s cannot be checked because the issuer does not publish a status endpoint."
 
-msgid "La credenziale %(name)s è valida e non risulta essere stata revocata."
-msgstr "The credential %(name)s is valid and does not appear to have been revoked."
+msgid "La credenziale %(name)s non risulta essere stata revocata."
+msgstr "The credential %(name)s does not appear to have been revoked."
 
-msgid "La credenziale %(name)s è valida e non risulta essere stata revocata al %(checked)s."
-msgstr "The credential %(name)s is valid and does not appear to have been revoked as of %(checked)s."
+msgid "La credenziale %(name)s non risulta essere stata revocata al %(checked)s."
+msgstr "The credential %(name)s does not appear to have been revoked as of %(checked)s."
 
-msgid "La credenziale %(name)s è valida e non risulta essere stata revocata al %(checked)s e lo stato va ricontrollato entro il %(expires)s."
-msgstr "The credential %(name)s is valid and does not appear to have been revoked as of %(checked)s and the status must be checked again by %(expires)s."
+msgid "La credenziale %(name)s non risulta essere stata revocata al %(checked)s e lo stato va ricontrollato entro il %(expires)s."
+msgstr "The credential %(name)s does not appear to have been revoked as of %(checked)s and the status must be checked again by %(expires)s."
 
 msgid "La credenziale %(name)s risulta revocata."
 msgstr "The credential %(name)s is revoked."
@@ -897,3 +909,120 @@ msgstr "Reset the history"
 
 msgid "Vuoi cancellare lo storico delle presentazioni?"
 msgstr "Do you want to delete the presentation history?"
+
+msgid "Presenta comunque"
+msgstr "Present anyway"
+
+msgid "Richiedi una nuova emissione"
+msgstr "Request a new issuance"
+
+msgid "La credenziale %(name)s è scaduta."
+msgstr "The credential %(name)s has expired."
+
+msgid "Puoi presentarla comunque oppure richiedere una nuova emissione."
+msgstr "You can present it anyway or request a new issuance."
+
+msgid "Puoi presentarle comunque oppure richiedere una nuova emissione."
+msgstr "You can present them anyway or request a new issuance."
+
+msgid "Richiedi una nuova emissione della credenziale %(name)s."
+msgstr "Request a new issuance of the credential %(name)s."
+
+msgid "Richiedi una nuova emissione delle credenziali %(names)s."
+msgstr "Request a new issuance of the credentials %(names)s."
+
+msgid "Il verificatore ha rifiutato la presentazione perché la credenziale %(name)s è scaduta."
+msgstr "The verifier rejected the presentation because the credential %(name)s has expired."
+
+msgid "Il verificatore ha rifiutato la presentazione perché la credenziale %(name)s risulta revocata."
+msgstr "The verifier rejected the presentation because the credential %(name)s is revoked."
+
+msgid "Il verificatore ha rifiutato la presentazione perché la credenziale %(name)s risulta sospesa."
+msgstr "The verifier rejected the presentation because the credential %(name)s is suspended."
+
+msgid "Il verificatore ha rifiutato la presentazione perché la credenziale %(name)s è scaduta e risulta revocata."
+msgstr "The verifier rejected the presentation because the credential %(name)s has expired and is revoked."
+
+msgid "Il verificatore ha rifiutato la presentazione perché la credenziale %(name)s è scaduta e risulta sospesa."
+msgstr "The verifier rejected the presentation because the credential %(name)s has expired and is suspended."
+
+msgid "Seleziona un Attestato disponibile"
+msgstr "Select an available credential"
+
+msgid "Ottieni attestato"
+msgstr "Obtain credential"
+
+msgid "Rilascio dell'attestato"
+msgstr "Credential issuance"
+
+msgid "Seleziona un attestato."
+msgstr "Select a credential."
+
+msgid "Ti sto portando all'issuer per scegliere l'identità digitale. Al termine torni qui e l'attestato viene salvato."
+msgstr "Taking you to the issuer to choose a digital identity. When that finishes, you return here and the credential is saved."
+
+msgid "Non riesco a ottenere l'attestato."
+msgstr "I could not obtain the credential."
+
+msgid "Hai appena ottenuto l'attestato {name}."
+msgstr "You have just obtained the credential {name}."
+
+msgid "Non riesco a salvare l'attestato."
+msgstr "I could not save the credential."
+
+msgid "Rimuovere l'attestato {name}?"
+msgstr "Remove the credential {name}?"
+
+msgid "Attestato {name} rimosso."
+msgstr "Credential {name} removed."
+
+msgid "Attestato {name} rimosso. Il wallet è stato reimpostato."
+msgstr "Credential {name} removed. The wallet has been reset."
+
+msgid "Non riesco a eliminare l'attestato."
+msgstr "I could not remove the credential."
+
+msgid "1 attestato disponibile"
+msgstr "1 credential available"
+
+msgid "{count} attestati disponibili"
+msgstr "{count} credentials available"
+
+msgid "Seleziona l'attestato da ottenere."
+msgstr "Select the credential to obtain."
+
+msgid "Attestati ottenibili"
+msgstr "Credentials available"
+
+msgid "Configura un Credential Issuer da ispezionare, seleziona un attestato e richiedine l'emissione."
+msgstr "Configure a Credential Issuer to inspect, select a credential and request issuance."
+
+msgid "Attestati già ottenuti: metadata, attributi, attestato e stato di revoca."
+msgstr "Credentials already obtained: metadata, attributes, credential, and revocation status."
+
+msgid "Inquadra il QR del verificatore per presentare un attestato già ottenuto."
+msgstr "Scan the verifier QR code to present a credential you already hold."
+
+msgid "Accesso completato. Torno al wallet per salvare l'attestato."
+msgstr "Access complete. Returning to the wallet to save the credential."
+
+msgid "Attestato scaduto"
+msgstr "Expired credential"
+
+msgid "Rimuovere questo attestato?"
+msgstr "Remove this credential?"
+
+msgid "Nessun attestato ottenuto."
+msgstr "No credential obtained yet."
+
+msgid "Attestato"
+msgstr "Credential"
+
+msgid "Questo attestato non è un JWT."
+msgstr "This credential is not a JWT."
+
+msgid "Attestati richiesti"
+msgstr "Requested credentials"
+
+msgid "Attestati presentati"
+msgstr "Presented credentials"

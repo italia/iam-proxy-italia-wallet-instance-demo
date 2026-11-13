@@ -55,6 +55,7 @@ from app.service.catalog import (
     load_configured_issuers,
     lookup_attestation,
 )
+from app.service.credential_status import presentation_error_message
 from app.service.itwallet_service import ItWalletService
 from app.store import app_state, transaction_log
 from app.utils.diagnostic_log import list_entries, peer_role, remove_entries
@@ -219,7 +220,7 @@ def deleteCredentialItWallet():
 
         credential_id = data.get("credentialId")
         if not credential_id:
-            return jsonify({"success": False, "data": {"error": _("Seleziona l'attestazione da ottenere.")}}), 400
+            return jsonify({"success": False, "data": {"error": _("Seleziona l'attestato da ottenere.")}}), 400
 
         service = ItWalletService(session)
         result = service.delete_credential_wallet(credential_id)
@@ -246,7 +247,7 @@ def addCredentialItWallet():
 
         credential_id = data.get("credentialId")
         if not credential_id:
-            return jsonify({"success": False, "data": {"error": _("Seleziona l'attestazione da ottenere.")}}), 400
+            return jsonify({"success": False, "data": {"error": _("Seleziona l'attestato da ottenere.")}}), 400
 
         _ensure_member_state()
         service = ItWalletService(session)
@@ -362,7 +363,7 @@ def completedLoginToVerifier():
         return jsonify({"success": False, "data": {"error": _(str(ve))}}), 400
     except Exception as e:
         logger.error("Errore: %s", sanitize_for_logging(str(e)))
-        return jsonify({"success": False, "data": {"error": _(str(e))}}), 500
+        return jsonify({"success": False, "data": {"error": presentation_error_message(e)}}), 500
 
 
 def _clear_session():

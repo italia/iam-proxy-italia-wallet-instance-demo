@@ -1,7 +1,7 @@
 services:
 
   wallet-instance:
-    image: ghcr.io/italia/iam-proxy-italia-wallet-instance-demo:1.0.2-1
+    image: ghcr.io/italia/iam-proxy-italia-wallet-instance-demo:1.1.0
     container_name: iam-proxy-italia-wallet-instance-demo
     environment:
       - FLASK_RUN_PORT=8080
