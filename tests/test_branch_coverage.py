@@ -174,6 +174,26 @@ class BranchCoverageTests(unittest.TestCase):
     def _login(self):
         return self.client.post("/wallet/access", data={"password": "wallet", "next": "/wallet/home"})
 
+    def test_issuance_completion_returns_view_url_for_credential_with_expiry(self):
+        store = CredentialStore()
+        token = f"e30.{_part({'exp': int(time.time()) + 3600})}.sig"
+        store.add_credential(ISSUER, "issued-id", token, PID_VCT)
+        with self.client.session_transaction() as current:
+            current["authenticated"] = True
+        with (
+            patch.object(app_state, "credential_store", store),
+            patch(
+                "app.service.itwallet_service.ItWalletService.complete_add_credential_from_browser",
+                return_value={"success": True, "data": {"credential_id": "issued-id"}},
+            ),
+        ):
+            response = self.client.post("/itwallet/addCredential/complete", json={"issuanceState": "state"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json["success"])
+        self.assertEqual(response.json["data"]["credential_id"], "issued-id")
+        self.assertIn("#credential-0", response.json["data"]["view_url"])
+
     def test_pages_filters_and_api(self):
         from app.routes.wallet_routes import (
             convert_to_list,

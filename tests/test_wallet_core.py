@@ -256,6 +256,23 @@ class StatusListTests(unittest.TestCase):
 
 
 class CredentialValidityDatesTests(unittest.TestCase):
+    def test_expiry_for_sd_jwt_and_mdoc(self):
+        from app.service.credential_view import _is_expired
+
+        now = datetime.datetime.now(datetime.timezone.utc)
+        for offset, expired in ((-3600, True), (3600, False)):
+            moment = now + datetime.timedelta(seconds=offset)
+            body = base64.urlsafe_b64encode(json.dumps({"exp": int(moment.timestamp())}).encode()).decode().rstrip("=")
+            entries = (
+                {"data_row": f"e30.{body}.sig"},
+                {"claims": {"mso": {"validityInfo": {"validUntil": moment.isoformat()}}}},
+            )
+            for entry in entries:
+                with self.subTest(entry=entry):
+                    self.assertEqual(_is_expired(entry), expired)
+
+        self.assertFalse(_is_expired({"claims": {}}))
+
     def test_issued_and_expires_come_from_sd_jwt_claims(self):
         from app.service.credential_view import _expires_at, _issued_at
 

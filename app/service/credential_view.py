@@ -608,7 +608,7 @@ def _is_expired(entry: dict) -> bool:
     ):
         moment = _claim_moment(value)
         if moment:
-            return datetime.now(timezone.utc) > moment
+            return datetime.now(timezone.utc).timestamp() > moment
     return False
 
 
