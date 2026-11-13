@@ -537,20 +537,22 @@ pre {
 
 .cred-popup-close-btn {
   position: absolute;
-  top: var(--bs-spacer-3);
-  right: var(--bs-spacer-3);
+  top: 0;
+  right: 0;
   background: transparent;
   border: none;
   font-size: 1.5rem;
   cursor: pointer;
   color: var(--bs-body-color);
   transition: color 0.15s ease-in-out;
-  padding: 0;
-  width: 32px;
-  height: 32px;
+  padding: var(--bs-spacer-2) var(--bs-spacer-1);
+  width: auto;
+  height: auto;
   display: flex;
   align-items: center;
   justify-content: center;
+  z-index: 10;
+  line-height: 1;
 }
 
 .cred-popup-close-btn:hover {
@@ -788,6 +790,16 @@ pre {
 }
 
 /* === Credential Navigation === */
+
+.icon-warning {
+  width: 1.25rem;
+  height: 1.25rem;
+  margin-right: var(--bs-spacer-2);
+  display: inline-block;
+  vertical-align: middle;
+  color: var(--color-danger);
+  flex-shrink: 0;
+}
 
 #credential-nav a .icon-warning {
   width: 1.25rem;

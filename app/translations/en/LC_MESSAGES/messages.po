@@ -793,14 +793,14 @@ msgstr "The credential %(name)s does not contain a status list."
 msgid "La credenziale %(name)s non può essere verificata perché l'issuer non pubblica l'endpoint di stato."
 msgstr "The credential %(name)s cannot be checked because the issuer does not publish a status endpoint."
 
-msgid "La credenziale %(name)s è valida e non risulta essere stata revocata."
-msgstr "The credential %(name)s is valid and does not appear to have been revoked."
+msgid "La credenziale %(name)s non risulta essere stata revocata."
+msgstr "The credential %(name)s does not appear to have been revoked."
 
-msgid "La credenziale %(name)s è valida e non risulta essere stata revocata al %(checked)s."
-msgstr "The credential %(name)s is valid and does not appear to have been revoked as of %(checked)s."
+msgid "La credenziale %(name)s non risulta essere stata revocata al %(checked)s."
+msgstr "The credential %(name)s does not appear to have been revoked as of %(checked)s."
 
-msgid "La credenziale %(name)s è valida e non risulta essere stata revocata al %(checked)s e lo stato va ricontrollato entro il %(expires)s."
-msgstr "The credential %(name)s is valid and does not appear to have been revoked as of %(checked)s and the status must be checked again by %(expires)s."
+msgid "La credenziale %(name)s non risulta essere stata revocata al %(checked)s e lo stato va ricontrollato entro il %(expires)s."
+msgstr "The credential %(name)s does not appear to have been revoked as of %(checked)s and the status must be checked again by %(expires)s."
 
 msgid "La credenziale %(name)s risulta revocata."
 msgstr "The credential %(name)s is revoked."

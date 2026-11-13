@@ -374,7 +374,7 @@ def _flash_status_result(code: int, name: str, claims: dict | None = None) -> No
         if checked and expires:
             flash(
                 _(
-                    "La credenziale %(name)s è valida e non risulta essere stata revocata al %(checked)s "
+                    "La credenziale %(name)s non risulta essere stata revocata al %(checked)s "
                     "e lo stato va ricontrollato entro il %(expires)s."
                 )
                 % {"name": name, "checked": checked, "expires": expires},
@@ -383,13 +383,13 @@ def _flash_status_result(code: int, name: str, claims: dict | None = None) -> No
             return
         if checked:
             flash(
-                _("La credenziale %(name)s è valida e non risulta essere stata revocata al %(checked)s.")
+                _("La credenziale %(name)s non risulta essere stata revocata al %(checked)s.")
                 % {"name": name, "checked": checked},
                 "success",
             )
             return
         flash(
-            _("La credenziale %(name)s è valida e non risulta essere stata revocata.") % {"name": name},
+            _("La credenziale %(name)s non risulta essere stata revocata.") % {"name": name},
             "success",
         )
         return
