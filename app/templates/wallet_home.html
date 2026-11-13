@@ -23,58 +23,65 @@
     </div>
 
     <form id="issuer-catalog-form" class="mb-4" novalidate>
-      <div class="issuer-load-row">
-        <div class="issuer-url-field">
-          <label for="issuer-url">{{ _('URL del credential issuer') }}</label>
-          <input type="url" class="form-control long-text" id="issuer-url" name="issuerUrl" autocomplete="url" aria-describedby="issuer-url-error" value="{{ default_issuer_url }}" data-copy-ignore="true">
+      <div class="issuer-load-row row g-3 mb-4">
+        <div class="issuer-url-field col-12 col-md-4">
+          <label for="issuer-url" class="form-label">{{ _('URL del credential issuer') }}</label>
+          <input type="url" class="form-control" id="issuer-url" name="issuerUrl" autocomplete="url" aria-describedby="issuer-url-error" value="{{ default_issuer_url }}" data-copy-ignore="true">
         </div>
-        <div class="issuer-trust-field">
-          <label for="trust-anchor">{{ _('Trust Anchor') }}</label>
-          <input type="url" class="form-control long-text" id="trust-anchor" name="trustAnchor" autocomplete="url" value="{{ default_trust_anchor }}" data-copy-ignore="true" data-compose-trust-anchor="{{ default_trust_anchor }}" data-eudiw-lotl="{{ eudiw_lotl_url }}">
+        <div class="issuer-trust-field col-12 col-md-4">
+          <label for="trust-anchor" class="form-label">{{ _('Trust Anchor') }}</label>
+          <input type="url" class="form-control" id="trust-anchor" name="trustAnchor" autocomplete="url" value="{{ default_trust_anchor }}" data-copy-ignore="true" data-compose-trust-anchor="{{ default_trust_anchor }}" data-eudiw-lotl="{{ eudiw_lotl_url }}">
         </div>
-        <div class="issuer-discovery-field">
-          <label for="issuer-discovery">{{ _('Modalità di discovery') }}</label>
-          <select id="issuer-discovery" class="form-control issuer-discovery-select" name="discovery" aria-describedby="issuer-discovery-error">
+        <div class="issuer-discovery-field col-12 col-md-3">
+          <label for="issuer-discovery" class="form-label">{{ _('Modalità di discovery') }}</label>
+          <select id="issuer-discovery" class="form-select" name="discovery" aria-describedby="issuer-discovery-error">
             <option value="openid">{{ _('openid (direct)') }}</option>
             <option value="openid-federation" selected>{{ _('openid federation') }}</option>
             <option value="eudiw-lotl" class="discovery-pending">{{ _('eudiw lotl (not implemented yet)') }}</option>
           </select>
         </div>
-        <button type="submit" class="btn btn-primary">{{ _('Carica attestazioni') }}</button>
+        <div class="col-12 col-md-1 d-flex align-items-end">
+          <button type="submit" class="btn btn-primary w-100">{{ _('Carica') }}</button>
+        </div>
       </div>
-      <p id="issuer-url-error" class="field-error" hidden></p>
-      <p id="issuer-discovery-error" class="field-error" hidden></p>
+      <p id="issuer-url-error" class="field-error text-danger small" hidden></p>
+      <p id="issuer-discovery-error" class="field-error text-danger small" hidden></p>
     </form>
 
     <div id="issuer-catalog">
       {% for section in catalog_sections %}
         {% set section_index = loop.index0 %}
-        <article class="it-card rounded border shadow-sm catalog-section mb-4" data-issuer="{{ section.issuer }}">
-          <div class="catalog-issuer-heading">
-            <h2 class="it-card-title h5">{{ section.name or section.uri }}</h2>
-            {% set offered = section.attestations|length %}
-            <div class="chip chip-simple chip-primary" aria-label="{{ _('Numero di credenziali offerte') }}">
-              <span class="chip-label">{% if offered == 1 %}{{ _('1 attestazione disponibile') }}{% else %}{{ _('{count} attestazioni disponibili').format(count=offered) }}{% endif %}</span>
+        <div class="card shadow-sm border-0 mb-4 catalog-section" data-issuer="{{ section.issuer }}">
+          <div class="card-header bg-white border-bottom py-3">
+            <div class="d-flex align-items-center justify-content-between">
+              <h2 class="card-title h5 mb-0">{{ section.name or section.uri }}</h2>
+              {% set offered = section.attestations|length %}
+              <span class="badge bg-primary">
+                {% if offered == 1 %}{{ _('1 attestazione') }}{% else %}{{ _('{count} attestazioni').format(count=offered) }}{% endif %}
+              </span>
             </div>
           </div>
-          <div class="it-card-body">
-            <div class="form-group mb-0">
-              <div class="catalog-obtain">
-                <div class="select-wrapper">
-                  <select id="issuer-select-{{ section_index }}" data-source="{{ section.source }}" aria-label="{{ _('Seleziona una Attestazione disponibile') }}" aria-describedby="issuer-select-{{ section_index }}-detail issuer-select-{{ section_index }}-error">
+          <div class="card-body">
+            <form class="mb-0">
+              <div class="row g-3 align-items-end">
+                <div class="col-12 col-md-8">
+                  <label for="issuer-select-{{ section_index }}" class="form-label">{{ _('Seleziona una Attestazione') }}</label>
+                  <select id="issuer-select-{{ section_index }}" class="form-select" data-source="{{ section.source }}" aria-describedby="issuer-select-{{ section_index }}-error">
                     <option value="" selected>{{ _("Seleziona una Attestazione disponibile") }}</option>
                     {% for item in section.attestations %}
                       <option value="{{ item.id }}" data-description="{{ item.description }}" data-claims='{{ item.claims | tojson }}' data-format="{{ item.format }}" data-offer-uri="{{ item.offer_uri }}"{% if item.obtained %} disabled{% endif %}>{{ item.name }}{% if item.format_label %} — {{ item.format_label }}{% endif %}{% if item.disambiguator %} — {{ item.disambiguator }}{% endif %}{% if item.obtained %} — {{ _('Già ottenuta') }}{% endif %}</option>
                     {% endfor %}
                   </select>
                 </div>
-                <button type="button" class="btn btn-primary obtain-one">{{ _('Ottieni') }}</button>
+                <div class="col-12 col-md-4">
+                  <button type="button" class="btn btn-primary w-100 obtain-one">{{ _('Ottieni') }}</button>
+                </div>
               </div>
-              <p id="issuer-select-{{ section_index }}-error" class="field-error" hidden></p>
+              <p id="issuer-select-{{ section_index }}-error" class="field-error text-danger small mt-2" hidden></p>
               <div id="issuer-select-{{ section_index }}-detail" class="attestation-detail mt-3"></div>
-            </div>
+            </form>
           </div>
-        </article>
+        </div>
       {% endfor %}
     </div>
   </section>
@@ -82,7 +89,7 @@
   <div id="cred-popup" class="modal" role="dialog" aria-modal="true" aria-labelledby="cred-popup-title" aria-hidden="true">
     <div class="cred-popup-content">
       <button type="button" id="cred-popup-close" class="cred-popup-close-btn" aria-label="{{ _('Chiudi') }}" onclick="closeCredPopup()">×</button>
-      <h2 id="cred-popup-title" class="h5"></h2>
+      <h2 id="cred-popup-title" class="mb-3"></h2>
       <div id="cred-popup-body"></div>
     </div>
   </div>
