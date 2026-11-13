@@ -70,7 +70,7 @@ def get_trust_root_and_eaa_provider_ec(
     trust_root_url = extract_claim(current_app.config, f"ms_trust_configuration.{country}.trust_root")
 
     if not trust_root_url:
-        raise ValueError("Non è configurato il trust anchor della demo, quindi non posso chiedere l'attestazione.")
+        raise ValueError("Non è configurato il trust anchor della demo, quindi non posso chiedere l'attestato.")
     query = (
         f"metadata.{METADATA_TYPE_CREDENTIAL_ISSUER}.credential_configurations_supported.{credential_configuration_id}"
     )
@@ -78,7 +78,7 @@ def get_trust_root_and_eaa_provider_ec(
     ec_list = app_state.ec_store.all_values(query)
 
     if not ec_list:
-        raise ValueError("Nessun issuer configurato rilascia l'attestazione selezionata. Ricarica la pagina e riprova.")
+        raise ValueError("Nessun issuer configurato rilascia l'attestato selezionato. Ricarica la pagina e riprova.")
 
     ec = ec_list[0]
 
@@ -98,7 +98,7 @@ def credential_configuration_scope(entity_configuration: dict, credential_config
     )
     scope = extract_claim(entity_configuration, query)
     if not isinstance(scope, str) or not scope:
-        raise ValueError("La configurazione dell'issuer non dichiara lo scope di questa attestazione.")
+        raise ValueError("La configurazione dell'issuer non dichiara lo scope di questo attestato.")
     return scope
 
 
@@ -110,7 +110,7 @@ def credential_configuration_format(entity_configuration: dict, credential_confi
     )
     credential_format = extract_claim(entity_configuration, query)
     if not isinstance(credential_format, str) or not credential_format:
-        raise ValueError("La configurazione dell'issuer non dichiara il formato di questa attestazione.")
+        raise ValueError("La configurazione dell'issuer non dichiara il formato di questo attestato.")
     return credential_format
 
 
@@ -122,7 +122,7 @@ def credential_configuration_doctype(entity_configuration: dict, credential_conf
     )
     doctype = extract_claim(entity_configuration, query)
     if not isinstance(doctype, str) or not doctype:
-        raise ValueError("La configurazione dell'issuer non dichiara il doctype di questa attestazione.")
+        raise ValueError("La configurazione dell'issuer non dichiara il doctype di questo attestato.")
     return doctype
 
 
@@ -140,7 +140,7 @@ def credential_configuration_namespaces(entity_configuration: dict, credential_c
             if isinstance(path, list) and path and isinstance(path[0], str) and path[0] not in namespaces:
                 namespaces.append(path[0])
     if not namespaces:
-        raise ValueError("La configurazione dell'issuer non dichiara i namespace di questa attestazione.")
+        raise ValueError("La configurazione dell'issuer non dichiara i namespace di questo attestato.")
     return namespaces
 
 

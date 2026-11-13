@@ -220,7 +220,7 @@ def deleteCredentialItWallet():
 
         credential_id = data.get("credentialId")
         if not credential_id:
-            return jsonify({"success": False, "data": {"error": _("Seleziona l'attestazione da ottenere.")}}), 400
+            return jsonify({"success": False, "data": {"error": _("Seleziona l'attestato da ottenere.")}}), 400
 
         service = ItWalletService(session)
         result = service.delete_credential_wallet(credential_id)
@@ -247,7 +247,7 @@ def addCredentialItWallet():
 
         credential_id = data.get("credentialId")
         if not credential_id:
-            return jsonify({"success": False, "data": {"error": _("Seleziona l'attestazione da ottenere.")}}), 400
+            return jsonify({"success": False, "data": {"error": _("Seleziona l'attestato da ottenere.")}}), 400
 
         _ensure_member_state()
         service = ItWalletService(session)

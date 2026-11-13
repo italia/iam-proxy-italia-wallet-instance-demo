@@ -4,17 +4,17 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='wallet.css') }}">
 {% endblock %}
 {% block content %}
-  <div class="it-wallet-title-row it-wallet-title-wide">
-    <div class="it-wallet-title-slot it-wallet-title-slot-start"></div>
-    <h1 class="it-wallet-title-heading mb-0" id="page-title">{{ _('Dashboard Presentazioni') }}</h1>
-    <div class="it-wallet-title-slot it-wallet-title-slot-end">
-      <div class="it-wallet-title-actions">
-        <button type="button" class="it-wallet-icon-btn" id="presentation-reset" aria-label="{{ _('Reimposta lo storico') }}"{% if not records %} hidden{% endif %}>
-          <svg class="icon" aria-hidden="true"><use href="{{ url_for('static', filename='svg/sprites.svg') }}#it-delete"></use></svg>
-        </button>
-      </div>
+  <header class="wallet-page-heading">
+    <div class="wallet-page-heading-copy">
+      <h1 class="h2 mb-2" id="page-title">{{ _('Dashboard Presentazioni') }}</h1>
+      <p class="lead text-secondary mb-0">{{ _('Storico delle presentazioni alle Relying Party.') }}</p>
     </div>
-  </div>
+    <div class="wallet-page-heading-actions">
+      <button type="button" class="it-wallet-icon-btn" id="presentation-reset" aria-label="{{ _('Reimposta lo storico') }}"{% if not records %} hidden{% endif %}>
+        <svg class="icon" aria-hidden="true"><use href="{{ url_for('static', filename='svg/sprites.svg') }}#it-delete"></use></svg>
+      </button>
+    </div>
+  </header>
   <dialog id="presentation-reset-dialog" aria-labelledby="presentation-reset-title">
     <p id="presentation-reset-title">{{ _('Vuoi cancellare lo storico delle presentazioni?') }}</p>
     <p>{{ _('La cancellazione elimina solo la copia locale di questi record e non può essere annullata.') }}</p>
@@ -26,7 +26,6 @@
       </div>
     </form>
   </dialog>
-  <p class="text-center mb-4">{{ _('Storico delle presentazioni alle Relying Party.') }}</p>
   {% include 'partials/presentation_dashboard.html' %}
 {% endblock %}
 {% block scripts %}

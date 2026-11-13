@@ -270,7 +270,7 @@ async function confirmAddCredential() {
 
       if (data.success && data.data && data.data.redirect_url) {
         credPopupBody.innerHTML = `
-          <p>${t("Ti sto portando all'issuer per scegliere l'identità digitale. Al termine torni qui e l'attestazione viene salvata.")}</p>
+          <p>${t("Ti sto portando all'issuer per scegliere l'identità digitale. Al termine torni qui e l'attestato viene salvato.")}</p>
         `;
         window.location.assign(data.data.redirect_url);
         return;
@@ -327,7 +327,7 @@ async function confirmAddCredential() {
       } else {
         result.innerHTML = `
           <div class="alert alert-danger" role="alert">
-            <p>${data?.data?.error || t("Non riesco a ottenere l'attestazione.")}</p>
+            <p>${data?.data?.error || t("Non riesco a ottenere l'attestato.")}</p>
           </div>`;
       }
     } catch (err) {
@@ -380,7 +380,7 @@ async function continueAddCredential(issuanceState) {
         .replaceAll(">", "&gt;");
       result.innerHTML = `
         <div class="alert alert-success" role="status">
-          <p>${t("Hai appena ottenuto l'attestazione {name}.", { name: credentialName })}${viewLink}</p>
+          <p>${t("Hai appena ottenuto l'attestato {name}.", { name: credentialName })}${viewLink}</p>
         </div>
       `;
       addButton(credential_id);
@@ -390,13 +390,13 @@ async function continueAddCredential(issuanceState) {
     else {
       result.innerHTML = `
         <div class="alert alert-danger" role="alert">
-          <p>${data?.data?.error || t("Non riesco a salvare l'attestazione.")}</p>
+          <p>${data?.data?.error || t("Non riesco a salvare l'attestato.")}</p>
         </div>`;
       if (typeof obtainQueue !== "undefined") obtainQueue = [];
       window.obtainNext = false;
     }
   } catch (err) {
-    const message = err?.message || t("Non riesco a salvare l'attestazione.");
+    const message = err?.message || t("Non riesco a salvare l'attestato.");
     result.innerHTML = `
       <div class="alert alert-danger" role="alert">
         <p>${message}</p>
@@ -560,7 +560,7 @@ async function deleteCredential() {
   if (credPopup && lastOpenedButtonId) {
     console.log("Ricevuta richiesa rimozione credenziale, id bottone origine:", lastOpenedButtonId);
 
-    const confirmed = confirm(t("Rimuovere l'attestazione {name}?", { name: lastOpenedButtonId }));
+    const confirmed = confirm(t("Rimuovere l'attestato {name}?", { name: lastOpenedButtonId }));
     
     if (confirmed) {
       // Mostra spinner durante la richiesta
@@ -609,11 +609,11 @@ async function deleteCredential() {
             else {
               result.innerHTML = `
                 <div class="flash-container flash-error">
-                  <p>${data?.data?.error || t("Non riesco a eliminare l'attestazione.")}</p>
+                  <p>${data?.data?.error || t("Non riesco a eliminare l'attestato.")}</p>
                 </div>`;
             }
           } catch (err) {
-            const message = err?.message || t("Non riesco a eliminare l'attestazione.");
+            const message = err?.message || t("Non riesco a eliminare l'attestato.");
             result.innerHTML = `
               <div class="flash-container flash-error">
                 <p>${message}</p>

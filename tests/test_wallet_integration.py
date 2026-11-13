@@ -233,7 +233,7 @@ class WalletDemoIntegrationTests(unittest.TestCase):
         page = self.client.get("/wallet/credentials")
         self.assertEqual(page.status_code, 200)
         body = page.get_data(as_text=True)
-        self.assertIn("metadata, attributi, attestazione e stato di revoca.", body)
+        self.assertIn("metadata, attributi, attestato e stato di revoca.", body)
         self.assertIn("Nome: Mario", body)
         self.assertIn("Cognome: Rossi", body)
         self.assertIn("alg: ES256", body)

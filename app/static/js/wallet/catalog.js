@@ -7,13 +7,13 @@ function escapeCatalogText(value) {
 }
 
 function offeredAttestationsLabel(count) {
-  if (count === 1) return t("1 attestazione disponibile");
-  return t("{count} attestazioni disponibili", { count });
+  if (count === 1) return t("1 attestato disponibile");
+  return t("{count} attestati disponibili", { count });
 }
 
 function catalogSectionHtml(section, sectionIndex) {
   const options = [
-    `<option value="" selected>${t("Seleziona una Attestazione disponibile")}</option>`,
+    `<option value="" selected>${t("Seleziona un Attestato disponibile")}</option>`,
     ...(section.attestations || []).map((item) => {
       const obtained = item.obtained ? ` — ${t("Già ottenuta")}` : "";
       const format = readableFormat(item.format || "");
@@ -28,26 +28,29 @@ function catalogSectionHtml(section, sectionIndex) {
   ].join("");
   const selectId = `issuer-select-${sectionIndex}`;
   return `
-    <article class="it-card rounded border shadow-sm catalog-section mb-4" data-issuer="${escapeCatalogText(section.issuer)}">
-      <div class="catalog-issuer-heading">
-        <h2 class="it-card-title h5">${escapeCatalogText(section.name || section.uri || section.issuer || "")}</h2>
-        <div class="chip chip-simple chip-primary" aria-label="${escapeCatalogText(t("Numero di credenziali offerte"))}">
-          <span class="chip-label">${escapeCatalogText(offeredAttestationsLabel((section.attestations || []).length))}</span>
+    <article class="card catalog-section mb-4" data-issuer="${escapeCatalogText(section.issuer)}">
+      <div class="card-header">
+        <div class="d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-2">
+          <h2 class="h5 mb-0">${escapeCatalogText(section.name || section.uri || section.issuer || "")}</h2>
+          <span class="badge bg-primary align-self-start align-self-sm-center">${escapeCatalogText(offeredAttestationsLabel((section.attestations || []).length))}</span>
         </div>
       </div>
-      <div class="it-card-body">
-        <div class="form-group mb-0">
-          <div class="catalog-obtain">
-            <div class="select-wrapper">
-              <select id="${selectId}" data-source="${escapeCatalogText(section.source || "")}" aria-label="${escapeCatalogText(t("Seleziona una Attestazione disponibile"))}" aria-describedby="${selectId}-detail ${selectId}-error">
+      <div class="card-body">
+        <form class="mb-0">
+          <div class="row g-3 align-items-end">
+            <div class="col-12 col-md-8">
+              <label for="${selectId}" class="form-label">${t("Seleziona l'attestato da ottenere.")}</label>
+              <select id="${selectId}" class="form-select" data-source="${escapeCatalogText(section.source || "")}" aria-describedby="${selectId}-error">
                 ${options}
               </select>
             </div>
-            <button type="button" class="btn btn-primary obtain-one">${t("Ottieni")}</button>
+            <div class="col-12 col-md-4">
+              <button type="button" class="btn btn-primary w-100 obtain-one">${t("Ottieni attestato")}</button>
+            </div>
           </div>
-          <p id="${selectId}-error" class="field-error" hidden></p>
+          <p id="${selectId}-error" class="field-error text-danger small mt-2 mb-0" hidden></p>
           <div id="${selectId}-detail" class="attestation-detail mt-3"></div>
-        </div>
+        </form>
       </div>
     </article>`;
 }
@@ -212,7 +215,7 @@ function openCredPopup() {
   credPopup.classList.add("show");
   credPopup.setAttribute("aria-hidden", "false");
   if (typeof credPopupTitle !== "undefined" && credPopupTitle) {
-    credPopupTitle.textContent = t("Ottieni attestazione");
+    credPopupTitle.textContent = t("Ottieni attestato");
   }
 }
 
@@ -347,7 +350,7 @@ const DIAGNOSTIC_PURPOSES = [
   ["nonce", "Wallet Provider Nonce"],
   ["nonce-endpoint", "Credential Issuer Nonce"],
   ["wallet-attestation", "Wallet Attestation"],
-  ["credential", "Rilascio dell'attestazione"],
+  ["credential", "Rilascio dell'attestato"],
   ["request_uri", "Request URI"],
   ["request-uri", "Request URI"],
   ["direct_post", "Risposta di presentazione"],
@@ -619,7 +622,7 @@ document.getElementById("issuer-catalog")?.addEventListener("click", (event) => 
     if (select) select.setAttribute("aria-invalid", "true");
     if (error) {
       error.hidden = false;
-      error.textContent = t("Seleziona un'attestazione.");
+      error.textContent = t("Seleziona un attestato.");
     }
     return;
   }

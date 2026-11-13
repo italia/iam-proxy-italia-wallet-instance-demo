@@ -700,7 +700,7 @@ def _requested_attestation(item: dict) -> str:
     kind = _dcql_kind(item, meta)
     if name and kind:
         return f"{name} ({kind})"
-    return name or kind or "un'attestazione"
+    return name or kind or "un attestato"
 
 
 def _held_attestation_types() -> str:
@@ -825,13 +825,13 @@ def _attestation_descriptors(items: list) -> list:
 
 
 def _missing_presentation_message(items: list[dict]) -> str:
-    requested = ", ".join(_requested_attestation(item) for item in items) or "un'attestazione"
+    requested = ", ".join(_requested_attestation(item) for item in items) or "un attestato"
     held = _held_attestation_types()
     if held:
         return gettext("Il Relying Party chiede %(requested)s e il wallet possiede %(held)s.") % {
             "requested": requested,
             "held": held,
         }
-    return gettext("Il Relying Party chiede %(requested)s e il wallet non possiede attestazioni.") % {
+    return gettext("Il Relying Party chiede %(requested)s e il wallet non possiede attestati.") % {
         "requested": requested
     }

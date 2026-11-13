@@ -864,3 +864,134 @@ pre {
   }
 }
 
+/* === Issuance and wallet pages === */
+
+.issuance-setup {
+  border-color: var(--bs-border-color);
+  border-radius: var(--bs-border-radius-lg, 0.5rem);
+  background-color: var(--bs-gray-100, #f8f9fa);
+}
+
+.issuance-setup .card-body {
+  padding: 1.5rem;
+}
+
+.issuance-setup .form-label,
+.catalog-section .form-label {
+  margin-bottom: var(--bs-spacer-2);
+  font-weight: 600;
+}
+
+.issuance-setup .form-control,
+.issuance-setup .form-select,
+.issuance-setup .btn,
+.catalog-section .form-select,
+.catalog-section .obtain-one {
+  min-height: 2.75rem;
+}
+
+.catalog-section {
+  border-color: var(--bs-border-color);
+  border-radius: var(--bs-border-radius-lg, 0.5rem);
+  box-shadow: var(--bs-box-shadow-sm);
+}
+
+.catalog-section .card-header {
+  padding: 1rem 1.25rem;
+  border-bottom-color: var(--bs-border-color);
+  background-color: #fff;
+}
+
+.catalog-section .card-body {
+  padding: 1.25rem;
+}
+
+.catalog-section h2 {
+  overflow-wrap: anywhere;
+}
+
+.credential-list {
+  min-width: 0;
+}
+
+.credential-layout-empty {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.presentation-start-panel,
+.dashboard-detail-card,
+.dashboard-confirm-panel,
+.diagnostic-toolbar-panel,
+.diagnostic-log-panel {
+  border-color: var(--bs-border-color);
+  border-radius: var(--bs-border-radius-lg, 0.5rem);
+  box-shadow: var(--bs-box-shadow-sm);
+}
+
+.dashboard-detail-card .card-header {
+  padding: 1rem 1.25rem;
+  border-bottom-color: var(--bs-border-color);
+  background-color: #fff;
+}
+
+.dashboard-metadata {
+  display: grid;
+  grid-template-columns: minmax(9rem, 12rem) minmax(0, 1fr);
+  gap: 0.5rem 1rem;
+  margin: 0 0 1.5rem;
+}
+
+.dashboard-metadata dt {
+  color: var(--bs-emphasis-color, var(--bs-body-color));
+  font-weight: 600;
+}
+
+.dashboard-metadata dd {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.dashboard-claims-list {
+  padding-left: 1.25rem;
+}
+
+.dashboard-claims-list > li + li {
+  margin-top: 0.5rem;
+}
+
+.dashboard-rp-logo {
+  max-width: 12rem;
+  object-fit: contain;
+  object-position: left center;
+}
+
+.diagnostic-toolbar-panel .card-body {
+  padding: 1rem 1.25rem;
+}
+
+.diagnostic-log-panel .card-body {
+  min-height: 7rem;
+}
+
+@media (width <= 575.98px) {
+  .issuance-setup .card-body,
+  .catalog-section .card-body {
+    padding: 1rem;
+  }
+
+  .dashboard-detail-card .card-body,
+  .diagnostic-log-panel .card-body {
+    padding: 1rem;
+  }
+
+  .dashboard-metadata {
+    grid-template-columns: 1fr;
+    gap: 0.15rem;
+  }
+
+  .dashboard-metadata dd {
+    margin-bottom: 0.5rem;
+  }
+}
+

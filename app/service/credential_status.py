@@ -64,7 +64,7 @@ def _require_status_list(claims, status_uri):
     if not isinstance(claims, dict):
         raise ValueError("La status list non contiene l'elenco degli stati")
     if claims.get("sub") != status_uri:
-        raise ValueError("Il subject della status list non coincide con l'URI dell'attestazione")
+        raise ValueError("Il subject della status list non coincide con l'URI dell'attestato")
     status_list = claims.get("status_list")
     if isinstance(status_list, dict) and isinstance(status_list.get("lst"), str):
         return status_list

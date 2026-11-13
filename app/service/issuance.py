@@ -119,7 +119,7 @@ def _require_issuance_fields(
     credential_configuration_id, pkce_code_verifier, oauth_state, authorization_response, eaa_provider_url
 ) -> None:
     if not credential_configuration_id:
-        raise ValueError("Non trovo più l'attestazione richiesta. Premi di nuovo Ottieni.")
+        raise ValueError("Non trovo più l'attestato richiesto. Premi di nuovo Ottieni.")
     if not pkce_code_verifier or not oauth_state:
         raise ValueError("Non trovo più la verifica della richiesta. Premi di nuovo Ottieni.")
     if not authorization_response:
@@ -584,7 +584,7 @@ class IssuanceFlow:
         logger.info(f"credential_store: {sanitize_for_logging(app_state.credential_store.keys_with_vct())}")
 
         if app_state.credential_store.find_by_configuration_id(credential_configuration_id):
-            raise ValueError("Questa attestazione è già nel wallet.")
+            raise ValueError("Questo attestato è già nel wallet.")
 
         validate_credential_and_presentation_flow()
 
@@ -619,7 +619,7 @@ class IssuanceFlow:
         provider_ec = self._wallet_provider_entity()
         pub_core_jwks = extract_claim(provider_ec, f"metadata.{METADATA_TYPE_WALLET_PROVIDER}.jwks.keys")
         if not pub_core_jwks:
-            raise ValueError("Il wallet provider non pubblica le chiavi per firmare l'attestazione del wallet.")
+            raise ValueError("Il wallet provider non pubblica le chiavi per firmare l'attestato del wallet.")
         wallet_attestation_jwt, _ = self._get_or_create_wallet_attestations(provider_ec["iss"], pub_core_jwks)
 
         # Generazione PKCE
@@ -1127,7 +1127,7 @@ class IssuanceFlow:
         credentials = cred_resp.get("credentials", [])
 
         if not credentials:
-            raise ValueError("L'issuer non ha restituito l'attestazione.")
+            raise ValueError("L'issuer non ha restituito l'attestato.")
         return credentials
 
     def _credential_issuing_management_v1_3(
