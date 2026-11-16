@@ -521,22 +521,34 @@ def _attribute_lines(entry: dict, credential_format: str, catalog_entries) -> li
 def _claim_moment(value) -> int | None:
     if isinstance(value, bool):
         return None
-    if isinstance(value, (int, float)) and value > 0:
-        return int(value)
+    if isinstance(value, (int, float)):
+        return int(value) if value > 0 else None
     if isinstance(value, datetime):
-        moment = value if value.tzinfo else value.replace(tzinfo=timezone.utc)
-        return int(moment.timestamp())
-    if isinstance(value, date) and not isinstance(value, datetime):
-        return int(datetime(value.year, value.month, value.day, tzinfo=timezone.utc).timestamp())
-    if isinstance(value, str) and value:
-        try:
-            parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
-        except ValueError:
-            return None
-        if parsed.tzinfo is None:
-            parsed = parsed.replace(tzinfo=timezone.utc)
-        return int(parsed.timestamp())
+        return _datetime_moment(value)
+    if isinstance(value, date):
+        return _date_moment(value)
+    if isinstance(value, str):
+        return _string_moment(value)
     return None
+
+
+def _datetime_moment(value: datetime) -> int:
+    moment = value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+    return int(moment.timestamp())
+
+
+def _date_moment(value: date) -> int:
+    return int(datetime(value.year, value.month, value.day, tzinfo=timezone.utc).timestamp())
+
+
+def _string_moment(value: str) -> int | None:
+    if not value:
+        return None
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return _datetime_moment(parsed)
 
 
 def _iso_utc(moment: int | None) -> str:

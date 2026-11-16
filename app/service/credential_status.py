@@ -76,7 +76,9 @@ def store_status_list(credential_id, status_uri, status_idx, jwks, service):
     claims = decode_and_verify_jwt(token, jwks)
     status_list = _require_status_list(claims, status_uri)
     code = status_list_code(status_list["lst"], int(status_list.get("bits") or 1), status_idx)
-    app_state.credential_store.update_status(credential_id, token, {0: "valid", 1: "revoked", 2: "suspended"}.get(code, str(code)))
+    app_state.credential_store.update_status(
+        credential_id, token, {0: "valid", 1: "revoked", 2: "suspended"}.get(code, str(code))
+    )
     return code, claims
 
 
@@ -242,19 +244,29 @@ def _issue_sentences(issue: dict) -> tuple[list[str], str]:
     failure = ""
     if issue["expired"] and issue["revoked"]:
         sentences.extend((expired, revoked))
-        failure = _("Il verificatore ha rifiutato la presentazione perché la credenziale %(name)s è scaduta e risulta revocata.") % {"name": name}
+        failure = _(
+            "Il verificatore ha rifiutato la presentazione perché la credenziale %(name)s è scaduta e risulta revocata."
+        ) % {"name": name}
     elif issue["expired"] and issue["suspended"]:
         sentences.extend((expired, suspended))
-        failure = _("Il verificatore ha rifiutato la presentazione perché la credenziale %(name)s è scaduta e risulta sospesa.") % {"name": name}
+        failure = _(
+            "Il verificatore ha rifiutato la presentazione perché la credenziale %(name)s è scaduta e risulta sospesa."
+        ) % {"name": name}
     elif issue["expired"]:
         sentences.append(expired)
-        failure = _("Il verificatore ha rifiutato la presentazione perché la credenziale %(name)s è scaduta.") % {"name": name}
+        failure = _("Il verificatore ha rifiutato la presentazione perché la credenziale %(name)s è scaduta.") % {
+            "name": name
+        }
     elif issue["revoked"]:
         sentences.append(revoked)
-        failure = _("Il verificatore ha rifiutato la presentazione perché la credenziale %(name)s risulta revocata.") % {"name": name}
+        failure = _(
+            "Il verificatore ha rifiutato la presentazione perché la credenziale %(name)s risulta revocata."
+        ) % {"name": name}
     elif issue["suspended"]:
         sentences.append(suspended)
-        failure = _("Il verificatore ha rifiutato la presentazione perché la credenziale %(name)s risulta sospesa.") % {"name": name}
+        failure = _("Il verificatore ha rifiutato la presentazione perché la credenziale %(name)s risulta sospesa.") % {
+            "name": name
+        }
     if issue["status_unknown"]:
         sentences.append(_("Impossibile verificare lo stato di revoca della credenziale %(name)s.") % {"name": name})
     return sentences, failure

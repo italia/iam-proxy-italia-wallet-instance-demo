@@ -255,7 +255,11 @@ class LocalIssuer:
                 {
                     "wallet_attestations": [
                         {"wallet_app_attestation": _sign({"iss": PROVIDER, "iat": now, "exp": now + 3600})},
-                        {"wallet_unit_attestation": _sign({"iss": PROVIDER, "iat": now, "exp": now + 3600, "unit": True})},
+                        {
+                            "wallet_unit_attestation": _sign(
+                                {"iss": PROVIDER, "iat": now, "exp": now + 3600, "unit": True}
+                            )
+                        },
                     ]
                 },
                 "application/json",
@@ -284,7 +288,9 @@ def _config():
                     "document_format": {"id": "sd-jwt-vc", "specs": {}},
                 }
             },
-            "internal_attributes_mappings": {"pid": {"given_name": {"sd-jwt-vc": {"element_identifier": "given_name"}}}},
+            "internal_attributes_mappings": {
+                "pid": {"given_name": {"sd-jwt-vc": {"element_identifier": "given_name"}}}
+            },
         },
         "app": {
             "host": "127.0.0.1",

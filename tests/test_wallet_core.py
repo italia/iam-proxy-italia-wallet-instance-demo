@@ -276,7 +276,11 @@ class CredentialValidityDatesTests(unittest.TestCase):
     def test_issued_and_expires_come_from_sd_jwt_claims(self):
         from app.service.credential_view import _expires_at, _issued_at
 
-        body = base64.urlsafe_b64encode(json.dumps({"iat": 1_700_000_000, "exp": 1_700_003_600}).encode()).decode().rstrip("=")
+        body = (
+            base64.urlsafe_b64encode(json.dumps({"iat": 1_700_000_000, "exp": 1_700_003_600}).encode())
+            .decode()
+            .rstrip("=")
+        )
         entry = {"data_row": f"e30.{body}.sig"}
         self.assertEqual(_issued_at(entry), "2023-11-14T22:13:20Z")
         self.assertEqual(_expires_at(entry), "2023-11-14T23:13:20Z")

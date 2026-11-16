@@ -102,7 +102,7 @@ pre {
 
 #eu-country:focus {
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 0.25rem rgba(0, 102, 204, 0.25);
+  box-shadow: 0 0 0 0.25rem rgb(0 102 204 / 0.25);
   outline: 0;
 }
 
@@ -159,7 +159,7 @@ pre {
 .btn-access:focus,
 .btn-activate:focus {
   outline: 0;
-  box-shadow: 0 0 0 0.25rem rgba(0, 102, 204, 0.25);
+  box-shadow: 0 0 0 0.25rem rgb(0 102 204 / 0.25);
 }
 
 .btn-wallet {
@@ -191,7 +191,7 @@ pre {
 
 .btn-wallet:focus {
   outline: 0;
-  box-shadow: 0 0 0 0.25rem rgba(0, 102, 204, 0.25);
+  box-shadow: 0 0 0 0.25rem rgb(0 102 204 / 0.25);
 }
 
 #button-row {
@@ -244,7 +244,7 @@ pre {
 #overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgb(0 0 0 / 0.5);
   z-index: 9999;
   display: flex;
   align-items: center;
@@ -369,25 +369,25 @@ pre {
   font-size: 0.875rem;
   cursor: pointer;
   color: var(--color-primary);
-  background: rgba(255, 255, 255, 0.5);
-  border: 1px solid rgba(0, 102, 204, 0.2);
+  background: rgb(255 255 255 / 0.5);
+  border: 1px solid rgb(0 102 204 / 0.2);
   border-radius: var(--bs-border-radius);
   font-weight: 500;
   transition: background 0.15s ease-in-out, color 0.15s ease-in-out, box-shadow 0.15s ease-in-out, border-color 0.15s ease-in-out;
 }
 
 .tab.active {
-  background: rgba(0, 102, 204, 0.1);
+  background: rgb(0 102 204 / 0.1);
   color: var(--color-primary);
   font-weight: 600;
-  border-color: rgba(0, 102, 204, 0.4);
-  box-shadow: inset 0 -2px 0 var(--color-primary), 0 2px 4px rgba(0, 0, 0, 0.1);
+  border-color: rgb(0 102 204 / 0.4);
+  box-shadow: inset 0 -2px 0 var(--color-primary), 0 2px 4px rgb(0 0 0 / 0.1);
 }
 
 .tab:hover:not(.active) {
-  background: rgba(0, 102, 204, 0.05);
+  background: rgb(0 102 204 / 0.05);
   color: var(--color-primary-dark);
-  border-color: rgba(0, 102, 204, 0.3);
+  border-color: rgb(0 102 204 / 0.3);
 }
 
 .tab-content.active {
@@ -410,9 +410,9 @@ pre {
   overflow-y: hidden;
   justify-content: start;
   border-radius: var(--bs-border-radius);
-  border: 2px solid rgba(0, 102, 204, 0.3);
+  border: 2px solid rgb(0 102 204 / 0.3);
   background-color: #f3f8ff;
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
+  box-shadow: inset 0 1px 2px rgb(0 0 0 / 0.05);
   padding: var(--bs-spacer-2) var(--bs-spacer-3);
 }
 
@@ -421,7 +421,7 @@ pre {
 }
 
 #credentials::-webkit-scrollbar-track {
-  background: rgba(0, 102, 204, 0.1);
+  background: rgb(0 102 204 / 0.1);
   border-radius: var(--bs-border-radius);
 }
 
@@ -456,7 +456,7 @@ pre {
   background-color: #fff8dc;
   padding: var(--bs-spacer-1);
   border-radius: 4px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.1);
   margin-top: var(--bs-spacer-1);
   margin-bottom: var(--bs-spacer-1);
   text-align: center;
@@ -483,7 +483,7 @@ pre {
 
 .button-cred:focus {
   outline: 0;
-  box-shadow: 0 0 0 0.25rem rgba(0, 102, 204, 0.25);
+  box-shadow: 0 0 0 0.25rem rgb(0 102 204 / 0.25);
   border-radius: var(--bs-border-radius);
 }
 
@@ -503,7 +503,7 @@ pre {
   z-index: 1050;
   justify-content: center;
   align-items: center;
-  background: rgba(0, 0, 0, 0.4);
+  background: rgb(0 0 0 / 0.4);
 }
 
 #cred-popup.show {
@@ -515,7 +515,7 @@ pre {
   flex-direction: column;
   justify-content: flex-start;
   align-items: stretch;
-  background: rgba(255, 255, 255, 0.95);
+  background: rgb(255 255 255 / 0.95);
   border-radius: var(--bs-border-radius);
   padding: var(--bs-spacer-4);
   max-width: 530px;
@@ -523,7 +523,7 @@ pre {
   width: 530px;
   height: auto;
   text-align: left;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 20px 40px rgb(0 0 0 / 0.15);
   transform: translateY(-40px);
   opacity: 0;
   transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
@@ -561,7 +561,7 @@ pre {
 
 .cred-popup-close-btn:focus {
   outline: 0;
-  box-shadow: 0 0 0 0.25rem rgba(0, 102, 204, 0.25);
+  box-shadow: 0 0 0 0.25rem rgb(0 102 204 / 0.25);
   border-radius: var(--bs-border-radius);
 }
 
@@ -786,7 +786,7 @@ pre {
 #extra-info:focus {
   outline: 0;
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 0.25rem rgba(0, 102, 204, 0.25);
+  box-shadow: 0 0 0 0.25rem rgb(0 102 204 / 0.25);
 }
 
 /* === Credential Navigation === */
@@ -837,6 +837,7 @@ pre {
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
@@ -847,6 +848,7 @@ pre {
     transform: translateY(-30px);
     opacity: 0;
   }
+
   to {
     transform: translateY(0);
     opacity: 1;
@@ -855,7 +857,7 @@ pre {
 
 /* === Responsive === */
 
-@media (max-width: 480px) {
+@media (width <= 480px) {
   header h1 {
     font-size: 1.5rem;
   }

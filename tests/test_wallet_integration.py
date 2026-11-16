@@ -276,7 +276,9 @@ class WalletDemoIntegrationTests(unittest.TestCase):
         with patch("app.routes.wallet_routes.ItWalletService.present_to_verifier", present):
             response = self.client.post(
                 "/wallet/presentation",
-                json={"qrcode_data": "https://verifier.example.org/authorize?client_id=https://verifier.example.org&request_uri=https://verifier.example.org/request"},
+                json={
+                    "qrcode_data": "https://verifier.example.org/authorize?client_id=https://verifier.example.org&request_uri=https://verifier.example.org/request"
+                },
             )
         self.assertEqual(response.status_code, 200)
         payload = response.get_json()
@@ -382,7 +384,9 @@ class ProtocolHelperIntegrationTests(unittest.TestCase):
         text.reason = "OK"
         text.request = requests.Request("GET", text.url).prepare()
         with patch("app.utils.http_utils.requests.get", return_value=text):
-            self.assertEqual(request_authorize("https://issuer.example.org/authorize", "?request=1"), "header.payload.signature")
+            self.assertEqual(
+                request_authorize("https://issuer.example.org/authorize", "?request=1"), "header.payload.signature"
+            )
 
         nonce = requests.Response()
         nonce.status_code = 200
@@ -446,7 +450,10 @@ class ProtocolHelperIntegrationTests(unittest.TestCase):
         self.assertTrue(utils.check_curve_supported(private)[0])
         pair = utils.generate_pkce_pair()
         self.assertEqual(len(pair["code_verifier"]) >= 43, True)
-        self.assertEqual(utils.parse_url_to_dict("haip://?client_id=wallet&request_uri=https://rp.example.org/r")["client_id"], "wallet")
+        self.assertEqual(
+            utils.parse_url_to_dict("haip://?client_id=wallet&request_uri=https://rp.example.org/r")["client_id"],
+            "wallet",
+        )
         encoded = utils.base64url_encode(b"wallet")
         self.assertEqual(utils.base64url_decode(encoded), b"wallet")
         self.assertIn("family_name", utils.sanitize_for_logging("family_name\nRossi"))

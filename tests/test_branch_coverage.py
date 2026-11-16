@@ -259,9 +259,7 @@ class BranchCoverageTests(unittest.TestCase):
         self.client.get("/itwallet/objectTypesInMemory")
         self.client.post("/itwallet/viewObjectTypeInMemory", json={"objectType": "CredentialStore"})
         self.client.post("/itwallet/viewObjectTypeInMemory", json={"objectType": "Missing"})
-        offer = _offer_qr_svg(
-            "openid-credential-offer://?credential_offer=" + "a" * 20
-        )
+        offer = _offer_qr_svg("openid-credential-offer://?credential_offer=" + "a" * 20)
         self.client.get("/itwallet/credential-offer.svg?offer=" + offer.split("credential_offer=")[-1])
         self.client.get("/itwallet/credential-offer.svg?offer=bad")
         self.client.get("/itwallet/diagnostics")
@@ -314,10 +312,10 @@ class BranchCoverageTests(unittest.TestCase):
             ISSUER,
             {"iss": ISSUER, "metadata": {"openid_credential_issuer": {"jwks": {"keys": [SIGN_PUBLIC]}}}},
         )
-        app_state.credential_store.add_credential(ISSUER, "pid-status", token, PID_VCT, configuration_id="dc_sd_jwt_eid")
-        status = self.client.post(
-            "/wallet/credentials/status", data={"issuer": ISSUER, "credential_id": "pid-status"}
+        app_state.credential_store.add_credential(
+            ISSUER, "pid-status", token, PID_VCT, configuration_id="dc_sd_jwt_eid"
         )
+        status = self.client.post("/wallet/credentials/status", data={"issuer": ISSUER, "credential_id": "pid-status"})
         self.assertEqual(status.status_code, 302)
         self.issuer.status_byte = 1
         self.client.post("/wallet/credentials/status", data={"issuer": ISSUER, "credential_id": "pid-status"})
@@ -425,7 +423,17 @@ class BranchCoverageTests(unittest.TestCase):
             _relying_party_display,
         )
 
-        self.assertEqual(get_proxies_from_config({"use_proxy": True, "http_proxy": "http://proxy.example.org", "https_proxy": "http://proxy.example.org", "no_proxy": "example.org"})[1], ["example.org"])
+        self.assertEqual(
+            get_proxies_from_config(
+                {
+                    "use_proxy": True,
+                    "http_proxy": "http://proxy.example.org",
+                    "https_proxy": "http://proxy.example.org",
+                    "no_proxy": "example.org",
+                }
+            )[1],
+            ["example.org"],
+        )
         with self.assertRaises(ValueError):
             validate_response_mode("nope", ["query"], "wallet")
         with self.assertRaises(ValueError):
@@ -436,7 +444,10 @@ class BranchCoverageTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 parse_rp_authorization_request({}, VERIFIER)
             self.assertEqual(_client_id_discovery("https://verifier.example.org")[0], "openid_federation")
-            self.assertEqual(_client_id_discovery("openid_federation:https://verifier.example.org")[1], "https://verifier.example.org")
+            self.assertEqual(
+                _client_id_discovery("openid_federation:https://verifier.example.org")[1],
+                "https://verifier.example.org",
+            )
             with self.assertRaises(ValueError):
                 _client_id_discovery("x509_hash:")
             with self.assertRaises(ValueError):
@@ -529,7 +540,9 @@ class BranchCoverageTests(unittest.TestCase):
         self.assertIsInstance(utils.to_datetime(1_700_000_000), datetime)
         with self.assertRaises(ValueError):
             utils.to_datetime("no")
-        self.assertEqual(utils.estrai_parametro_query_string("https://verifier.example.org/a?client_id=x", "client_id"), "x")
+        self.assertEqual(
+            utils.estrai_parametro_query_string("https://verifier.example.org/a?client_id=x", "client_id"), "x"
+        )
         self.assertIsNone(utils.estrai_parametro_query_string("/relative", "client_id"))
         self.assertIn("truncated", utils.sanitize_for_logging("a\n" * 2000))
         self.assertEqual(utils.remove_str_prefix("jwtName", ["jwt"]), "Name")
@@ -585,9 +598,13 @@ class BranchCoverageTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             cborUtils._validate_mso_device_and_validity({})
         with self.assertRaises(ValueError):
-            cborUtils._check_validity_info({"signed": now, "validFrom": now + timedelta(days=1), "validUntil": now + timedelta(days=2)})
+            cborUtils._check_validity_info(
+                {"signed": now, "validFrom": now + timedelta(days=1), "validUntil": now + timedelta(days=2)}
+            )
         with self.assertRaises(Exception):
-            cborUtils.decode_and_verify_issuer_signed(utils.base64url_encode(cbor2.dumps({"nameSpaces": {}})), ["ns"], "1.0", "doc")
+            cborUtils.decode_and_verify_issuer_signed(
+                utils.base64url_encode(cbor2.dumps({"nameSpaces": {}})), ["ns"], "1.0", "doc"
+            )
 
         from app.models.config.credentials_config import (
             Credential,
@@ -608,10 +625,19 @@ class BranchCoverageTests(unittest.TestCase):
             supported_credentials={"pid": credential, "mdl": mdoc},
             internal_attributes_mappings={
                 "pid": {"person.given_name": {"sd-jwt-vc": {"element_identifier": "given_name", "subgroup": "person"}}},
-                "mdl": {"family_name": {"mdoc-cbor": {"namespace": "org.iso.18013.5.1", "element_identifier": "family_name"}}},
+                "mdl": {
+                    "family_name": {
+                        "mdoc-cbor": {"namespace": "org.iso.18013.5.1", "element_identifier": "family_name"}
+                    }
+                },
             },
         )
-        self.assertEqual(parsers.parser_credential_format_to_internal(config, "pid", {"person": {"given_name": "Mario"}})["person"]["given_name"], "Mario")
+        self.assertEqual(
+            parsers.parser_credential_format_to_internal(config, "pid", {"person": {"given_name": "Mario"}})["person"][
+                "given_name"
+            ],
+            "Mario",
+        )
         self.assertEqual(
             parsers.get_mdoc_claim(
                 {"namespace": "org.iso.18013.5.1", "element_identifier": "family_name"},
@@ -622,7 +648,13 @@ class BranchCoverageTests(unittest.TestCase):
         self.assertIsNone(parsers.get_mdoc_claim({"element_identifier": "missing"}, {"mso": {}}))
         with self.assertRaises(ValueError):
             parsers.parser_credential_format_to_internal(
-                config.model_copy(update={"supported_credentials": {"pid": credential.model_copy(update={"document_format": DocumentFormat(id="other")})}}),
+                config.model_copy(
+                    update={
+                        "supported_credentials": {
+                            "pid": credential.model_copy(update={"document_format": DocumentFormat(id="other")})
+                        }
+                    }
+                ),
                 "pid",
                 {},
             )
@@ -673,7 +705,6 @@ class BranchCoverageTests(unittest.TestCase):
         self.assertIsNone(MetadataFactory.get_model_instance("9.9.9"))
         self.assertIsNotNone(MetadataFactory.get_model_instance("1.4.7"))
 
-
     def test_remaining_diagnostic_and_protocol_branches(self):
         import jwt
 
@@ -719,12 +750,16 @@ class BranchCoverageTests(unittest.TestCase):
         credential_view._readable_header_value("alg", 1)
         credential_view._readable_header_value("crit", [1, "kid"])
         credential_view._readable_header_lines({1: -7, 99: "skip", 4: ""})
-        credential_view._cose_sign1(cbor2.CBORTag(18, [cbor2.dumps({1: -7}), {4: "kid"}, cbor2.dumps({"docType": "mDL"}), b"sig"]))
+        credential_view._cose_sign1(
+            cbor2.CBORTag(18, [cbor2.dumps({1: -7}), {4: "kid"}, cbor2.dumps({"docType": "mDL"}), b"sig"])
+        )
         self.assertIsNone(credential_view._cose_sign1("nope"))
         self.assertIsNone(credential_view._mdoc_cleartext(""))
         credential_view._mdoc_cleartext(base64url_encode(cbor2.dumps({"nameSpaces": view["nameSpaces"]})))
         credential_view._sd_disclosed("jwt~not-json~" + disclosure)
-        credential_view._walk_user_claims({"iss": "x", "person": {"given_name": "Mario"}, "elementIdentifier": "id"}, True)
+        credential_view._walk_user_claims(
+            {"iss": "x", "person": {"given_name": "Mario"}, "elementIdentifier": "id"}, True
+        )
         credential_view._issuer_item_pair(cbor2.CBORTag(24, b"\xff"))
         credential_view._namespace_pairs(
             {
@@ -759,29 +794,55 @@ class BranchCoverageTests(unittest.TestCase):
             html = '<form><input type="hidden" name="response" value="not-a-jwt"></form>'
             with self.assertRaises(ValueError):
                 service._parse_presentation_callback(html, "form_post.jwt", VERIFIER, {"keys": [SIGN_PUBLIC]})
-            parsed = service._parse_presentation_callback("https://verifier.example.org/cb?code=1", "query", VERIFIER, {})
+            parsed = service._parse_presentation_callback(
+                "https://verifier.example.org/cb?code=1", "query", VERIFIER, {}
+            )
             self.assertEqual(parsed["code"], "1")
-            query = service._PresentationFlow__parse_query_string_response("https://verifier.example.org/cb?state=rp-state", VERIFIER)
+            query = service._PresentationFlow__parse_query_string_response(
+                "https://verifier.example.org/cb?state=rp-state", VERIFIER
+            )
             self.assertEqual(query["state"], "rp-state")
             with self.assertRaises(ValueError):
                 service._PresentationFlow__parse_direct_post_jwt_response("not-jwt", VERIFIER, {"keys": [SIGN_PUBLIC]})
             with self.assertRaises(ValueError):
-                service._PresentationFlow__parse_form_post_jwt_response("<form></form>", VERIFIER, {"keys": [SIGN_PUBLIC]})
-            token = _sign({"iss": VERIFIER, "aud": "thumb", "state": "rp-state", "iat": int(time.time()), "exp": int(time.time()) + 600})
-            verified = service._PresentationFlow__validate_authentication_response(token, {"keys": [SIGN_PUBLIC]}, VERIFIER)
+                service._PresentationFlow__parse_form_post_jwt_response(
+                    "<form></form>", VERIFIER, {"keys": [SIGN_PUBLIC]}
+                )
+            token = _sign(
+                {
+                    "iss": VERIFIER,
+                    "aud": "thumb",
+                    "state": "rp-state",
+                    "iat": int(time.time()),
+                    "exp": int(time.time()) + 600,
+                }
+            )
+            verified = service._PresentationFlow__validate_authentication_response(
+                token, {"keys": [SIGN_PUBLIC]}, VERIFIER
+            )
             self.assertEqual(verified["state"], "rp-state")
             with self.assertRaises(ValueError):
-                service._PresentationFlow__validate_auth_response_claims({"aud": "thumb", "state": "rp-state"}, VERIFIER)
+                service._PresentationFlow__validate_auth_response_claims(
+                    {"aud": "thumb", "state": "rp-state"}, VERIFIER
+                )
             with self.assertRaises(ValueError):
-                service._PresentationFlow__validate_auth_response_claims({"iss": VERIFIER, "state": "rp-state"}, VERIFIER)
+                service._PresentationFlow__validate_auth_response_claims(
+                    {"iss": VERIFIER, "state": "rp-state"}, VERIFIER
+                )
             with self.assertRaises(ValueError):
-                service._PresentationFlow__validate_auth_response_claims({"iss": VERIFIER, "aud": ["other"], "state": "rp-state"}, VERIFIER)
+                service._PresentationFlow__validate_auth_response_claims(
+                    {"iss": VERIFIER, "aud": ["other"], "state": "rp-state"}, VERIFIER
+                )
             with self.assertRaises(ValueError):
-                service._PresentationFlow__validate_auth_response_claims({"iss": VERIFIER, "aud": "other", "state": "rp-state"}, VERIFIER)
+                service._PresentationFlow__validate_auth_response_claims(
+                    {"iss": VERIFIER, "aud": "other", "state": "rp-state"}, VERIFIER
+                )
             with self.assertRaises(ValueError):
                 service._PresentationFlow__validate_auth_response_claims({"iss": VERIFIER, "aud": "thumb"}, VERIFIER)
             with self.assertRaises(ValueError):
-                service._PresentationFlow__validate_auth_response_claims({"iss": VERIFIER, "aud": "thumb", "state": "other"}, VERIFIER)
+                service._PresentationFlow__validate_auth_response_claims(
+                    {"iss": VERIFIER, "aud": "thumb", "state": "other"}, VERIFIER
+                )
             with self.assertRaises(ValueError):
                 service._PresentationFlow__check_auth_response_errors({"error": "access_denied"}, VERIFIER)
             with self.assertRaises(ValueError):
@@ -804,7 +865,9 @@ class BranchCoverageTests(unittest.TestCase):
             dialog = credential_status.presentation_dialog(issues)
             self.assertIn("PID", dialog["message"])
             self.assertEqual(credential_status.presentation_dialog([]), {})
-            self.assertIn("rifiutato", credential_status.eloquent_presentation_error("invalid DCQL response", "rifiutato"))
+            self.assertIn(
+                "rifiutato", credential_status.eloquent_presentation_error("invalid DCQL response", "rifiutato")
+            )
             self.assertEqual(credential_status.presentation_error_message(RuntimeError("altro")), "altro")
             self.assertIsNone(credential_status._moment(True))
             self.assertIsNone(credential_status._moment("nope"))
@@ -812,14 +875,39 @@ class BranchCoverageTests(unittest.TestCase):
             self.assertTrue(credential_status._is_expired({"claims": {"exp": 1}}))
             self.assertEqual(credential_status.status_list_ref("not-a-jwt"), None)
             private = ec.generate_private_key(ec.SECP256R1())
-            self.assertTrue(itwalletUtils.generate_request_object_jwt(private, VERIFIER, "st", "challenge", "S256", "code", "query", "https://demo-wi.example.org/cb", "pid", [{"type": "openid_credential"}]))
-            self.assertTrue(itwalletUtils.generate_dpop_bound_access_token(private, private.public_key(), ISSUER, "sub", VERIFIER))
+            self.assertTrue(
+                itwalletUtils.generate_request_object_jwt(
+                    private,
+                    VERIFIER,
+                    "st",
+                    "challenge",
+                    "S256",
+                    "code",
+                    "query",
+                    "https://demo-wi.example.org/cb",
+                    "pid",
+                    [{"type": "openid_credential"}],
+                )
+            )
+            self.assertTrue(
+                itwalletUtils.generate_dpop_bound_access_token(private, private.public_key(), ISSUER, "sub", VERIFIER)
+            )
             self.assertEqual(itwalletUtils.get_status_description("0x01"), "Non valido")
             self.assertEqual(itwalletUtils.get_status_description("0x02"), "Sospeso")
             self.assertIsNone(itwalletUtils.generate_response_uri_request_jwe("{}", {"pid": "vp"}, "st"))
-            self.assertIsNone(itwalletUtils.generate_response_uri_request_jwe(json.dumps({"kid": "k"}), {"pid": "vp"}, "st"))
-            self.assertIsNone(itwalletUtils.generate_response_uri_request_jwe(json.dumps({"kid": "k", "kty": "EC"}), {"pid": "vp"}, "st"))
-            self.assertIsNone(itwalletUtils.generate_response_uri_request_jwe(json.dumps({"kid": "k", "kty": "oct"}), {"pid": "vp"}, "st"))
+            self.assertIsNone(
+                itwalletUtils.generate_response_uri_request_jwe(json.dumps({"kid": "k"}), {"pid": "vp"}, "st")
+            )
+            self.assertIsNone(
+                itwalletUtils.generate_response_uri_request_jwe(
+                    json.dumps({"kid": "k", "kty": "EC"}), {"pid": "vp"}, "st"
+                )
+            )
+            self.assertIsNone(
+                itwalletUtils.generate_response_uri_request_jwe(
+                    json.dumps({"kid": "k", "kty": "oct"}), {"pid": "vp"}, "st"
+                )
+            )
 
         self.assertIsNone(jwtUtils.extract_key_for_enc({"keys": []}))
         self.assertIsNone(jwtUtils.extract_key_for_enc({"keys": [dict(SIGN_PUBLIC, use="sig")]}))
@@ -844,7 +932,9 @@ class BranchCoverageTests(unittest.TestCase):
             raise RuntimeError("other")
 
         with self.assertRaises(ValueError):
-            jwtUtils.verify_with_keys({"kid": "sig"}, [{"kid": "exp"}, {"kid": "tok"}, {"kid": "other"}], "sig", _reject)
+            jwtUtils.verify_with_keys(
+                {"kid": "sig"}, [{"kid": "exp"}, {"kid": "tok"}, {"kid": "other"}], "sig", _reject
+            )
         self.assertEqual(jwtUtils.verify_with_keys(None, [{"kid": "ok"}], None, lambda key: {"ok": True})["ok"], True)
         der = encode_dss_signature(3, 4)
         der_token = "e30.e30." + base64url_encode(der)
