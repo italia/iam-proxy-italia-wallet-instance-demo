@@ -2,15 +2,19 @@
 {% from "macros/forms.html" import password_field %}
 {% block title %}{{ _('Accesso') }}{% endblock %}
 {% block content %}
-  <div class="it-wallet-title-row">
-    <div class="it-wallet-title-slot it-wallet-title-slot-start"></div>
-    <h1 class="it-wallet-title-heading mb-0" id="page-title">{{ _('Accesso') }}</h1>
-    <div class="it-wallet-title-slot it-wallet-title-slot-end"></div>
-  </div>
-  <p class="text-center mb-4 it-wallet-subtitle">{{ _('Inserisci la password della demo che hai') }} <a href="{{ password_config_url }}">{{ _('configurato nel progetto') }}</a>.</p>
-  {% include "partials/flashes.html" %}
-  <form class="wallet-access-form" action="{{ url_for('wallet_routes.wallet_access') }}" method="post">
-    <input type="hidden" name="next" value="{{ next_path }}">
-    {{ password_field("password", "password", _("Password"), _("Accedi")) }}
-  </form>
+  <header class="wallet-page-heading">
+    <div class="wallet-page-heading-copy">
+      <h1 class="h2 mb-2" id="page-title">{{ _('Accesso') }}</h1>
+      <p class="lead text-secondary mb-0">{{ _('Inserisci la password della demo che hai') }} <a href="{{ password_config_url }}" class="link-primary">{{ _('configurato nel progetto') }}</a>.</p>
+    </div>
+  </header>
+  <section class="card wallet-access-panel mx-auto">
+    <div class="card-body p-4">
+      {% include "partials/flashes.html" %}
+      <form class="wallet-access-form" action="{{ url_for('wallet_routes.wallet_access') }}" method="post">
+        <input type="hidden" name="next" value="{{ next_path }}">
+        {{ password_field("password", "password", _("Password"), _("Accedi")) }}
+      </form>
+    </div>
+  </section>
 {% endblock %}

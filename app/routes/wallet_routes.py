@@ -1,8 +1,6 @@
-import base64
 import hmac
 import json
 import logging
-import zlib
 from datetime import date, datetime, timedelta, timezone
 from urllib.parse import urlparse
 from zoneinfo import ZoneInfo
@@ -15,7 +13,6 @@ from flask_babel import gettext as _
 from app.constants import (
     APP_SETTINGS_KEY,
     JWT_PREFIX,
-    METADATA_TYPE_CREDENTIAL_ISSUER,
     MSO_MDOC_PREFIX,
     SD_JWT_PREFIX,
 )
@@ -28,6 +25,12 @@ from app.routes.itwallet_routes import (
     display_index,
     load_configured_issuers,
     lookup_attestation,
+)
+from app.service.credential_status import (
+    issuer_status_jwks,
+    presentation_error_message,
+    status_list_ref,
+    store_status_list,
 )
 from app.service.credential_view import (
     _b64url,
@@ -48,7 +51,6 @@ from app.service.credential_view import (
     _jsonable_items,
     _jsonable_tag,
     _jwt_cleartext,
-    _jwt_part_json,
     _mdoc_cleartext,
     _or_text,
     _sd_jwt_cleartext,
@@ -56,8 +58,6 @@ from app.service.credential_view import (
 from app.service.itwallet_service import ItWalletService
 from app.store import app_state, transaction_log
 from app.utils.diagnostic_log import peer_role
-from app.utils.itwalletUtils import request_status_list
-from app.utils.jwtUtils import decode_and_verify_jwt
 from app.utils.utils import (
     extract_claim,
     generate_nonce,
@@ -302,9 +302,6 @@ def wallet_home():
     )
 
 
-_STATUS_LIST_CODES = {0: "valid", 1: "revoked", 2: "suspended"}
-
-
 def _require_session():
     if session.get("authenticated"):
         return None
@@ -327,64 +324,8 @@ def wallet_credentials():
     )
 
 
-def _status_list_ref(token: str) -> tuple[str, int] | None:
-    compact = token.split("~", 1)[0]
-    parts = compact.split(".")
-    if len(parts) < 2 or not parts[1]:
-        return None
-    payload = _jwt_part_json(parts[1])
-    status = payload.get("status") if isinstance(payload, dict) else None
-    listed = status.get("status_list") if isinstance(status, dict) else None
-    if not isinstance(listed, dict) or not isinstance(listed.get("uri"), str):
-        return None
-    try:
-        index = int(listed.get("idx"))
-    except (TypeError, ValueError):
-        return None
-    return listed["uri"], index
-
-
-def _status_list_code(lst: str, bits: int, index: int) -> int:
-    if bits not in (1, 2, 4, 8) or index < 0:
-        raise ValueError("Indice di status list non valido")
-    padded = lst + "=" * (-len(lst) % 4)
-    raw = zlib.decompress(base64.urlsafe_b64decode(padded))
-    total = (len(raw) * 8) // bits
-    if index >= total:
-        raise ValueError("Indice di status list fuori dall'elenco")
-    jump = bits * index
-    return (raw[jump // 8] >> (jump % 8)) & ((1 << bits) - 1)
-
-
 def _credentials_page():
     return redirect(url_for("wallet_routes.wallet_credentials"))
-
-
-def _issuer_status_jwks(stored_issuer):
-    ec = app_state.ec_store.get(stored_issuer)
-    if not isinstance(ec, dict):
-        return None
-    return extract_claim(ec, f"metadata.{METADATA_TYPE_CREDENTIAL_ISSUER}.jwks")
-
-
-def _require_status_list(claims, status_uri):
-    if not isinstance(claims, dict):
-        raise ValueError("La status list non contiene l'elenco degli stati")
-    if claims.get("sub") != status_uri:
-        raise ValueError("Il subject della status list non coincide con l'URI dell'attestazione")
-    status_list = claims.get("status_list")
-    if isinstance(status_list, dict) and isinstance(status_list.get("lst"), str):
-        return status_list
-    raise ValueError("La status list non contiene l'elenco degli stati")
-
-
-def _store_status_list(credential_id, status_uri, status_idx, jwks, service):
-    token = request_status_list(status_uri, proxies=service.proxies, no_proxy_domains=service.no_proxy_domains)
-    claims = decode_and_verify_jwt(token, jwks)
-    status_list = _require_status_list(claims, status_uri)
-    code = _status_list_code(status_list["lst"], int(status_list.get("bits") or 1), status_idx)
-    app_state.credential_store.update_status(credential_id, token, _STATUS_LIST_CODES.get(code, str(code)))
-    return code, claims
 
 
 _STATUS_ZONE = ZoneInfo("Europe/Rome")
@@ -438,7 +379,7 @@ def _flash_status_result(code: int, name: str, claims: dict | None = None) -> No
         if checked and expires:
             flash(
                 _(
-                    "La credenziale %(name)s è valida e non risulta essere stata revocata al %(checked)s "
+                    "La credenziale %(name)s non risulta essere stata revocata al %(checked)s "
                     "e lo stato va ricontrollato entro il %(expires)s."
                 )
                 % {"name": name, "checked": checked, "expires": expires},
@@ -447,13 +388,13 @@ def _flash_status_result(code: int, name: str, claims: dict | None = None) -> No
             return
         if checked:
             flash(
-                _("La credenziale %(name)s è valida e non risulta essere stata revocata al %(checked)s.")
+                _("La credenziale %(name)s non risulta essere stata revocata al %(checked)s.")
                 % {"name": name, "checked": checked},
                 "success",
             )
             return
         flash(
-            _("La credenziale %(name)s è valida e non risulta essere stata revocata.") % {"name": name},
+            _("La credenziale %(name)s non risulta essere stata revocata.") % {"name": name},
             "success",
         )
         return
@@ -496,11 +437,11 @@ def credential_status():
     if not isinstance(token, str):
         flash(_("La credenziale %(name)s non è stata trovata.") % {"name": name}, "error")
         return _credentials_page()
-    listed = _status_list_ref(token)
+    listed = status_list_ref(token)
     if not listed:
         flash(_("La credenziale %(name)s non contiene una status list.") % {"name": name}, "error")
         return _credentials_page()
-    jwks = _issuer_status_jwks(stored_issuer)
+    jwks = issuer_status_jwks(stored_issuer)
     if not isinstance(jwks, dict):
         flash(
             _("La credenziale %(name)s non può essere verificata perché l'issuer non pubblica l'endpoint di stato.")
@@ -511,7 +452,7 @@ def credential_status():
     service = ItWalletService(session)
     peer = peer_role.set("credential_issuer")
     try:
-        code, claims = _store_status_list(credential_id, listed[0], listed[1], jwks, service)
+        code, claims = store_status_list(credential_id, listed[0], listed[1], jwks, service)
         _flash_status_result(code, name, claims)
     except Exception as exc:
         _flash_status_failure(exc, name)
@@ -762,6 +703,7 @@ def presentation_phase():
         return jsonify({"success": False, "error_message": f"Exception :{e}."}), 400
     relying_party = session.get("rp_display")
     transaction_id = session.get("rp_transaction_id")
+    warning = session.get("presentation_dialog")
     return jsonify(
         {
             "success": True,
@@ -769,6 +711,7 @@ def presentation_phase():
             "data": credentials,
             "relying_party": relying_party if isinstance(relying_party, dict) else {},
             "transaction_id": transaction_id if isinstance(transaction_id, str) else "",
+            "credential_warning": warning if isinstance(warning, dict) else {},
         }
     ), 200
 
@@ -788,7 +731,7 @@ def authorization_phase():
         return jsonify(result), status_code
     except Exception as e:
         logger.error(f"Error, message: {e}")
-        return jsonify({"success": False, "error_message": str(e)}), 400
+        return jsonify({"success": False, "error_message": presentation_error_message(e)}), 400
 
 
 def _clear_session():

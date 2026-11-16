@@ -1,20 +1,18 @@
 {% extends "base.html" %}
 {% block title %}{% if stale %}{{ _('Emissione') }}{% else %}{{ _('Completato') }}{% endif %}{% endblock %}
 {% block content %}
-  <div class="it-wallet-title-row">
-    <div class="it-wallet-title-slot it-wallet-title-slot-start"></div>
-    <h1 class="it-wallet-title-heading mb-0" id="page-title">{% if stale %}{{ _('Emissione') }}{% else %}{{ _('Completato') }}{% endif %}</h1>
-    <div class="it-wallet-title-slot it-wallet-title-slot-end"></div>
-  </div>
+  <header class="wallet-page-heading">
+    <div class="wallet-page-heading-copy">
+      <h1 class="h2 mb-2" id="page-title">{% if stale %}{{ _('Emissione') }}{% else %}{{ _('Completato') }}{% endif %}</h1>
+    </div>
+  </header>
   {% if stale %}
   <div class="alert alert-warning" role="alert">
     <p class="mb-0">{{ _('Questa risposta appartiene a una richiesta di rilascio precedente.') }}</p>
   </div>
-  <p class="text-center">
-    <a class="btn btn-primary" href="{{ url_for('wallet_routes.wallet_home') }}">{{ _('Emissione') }}</a>
-  </p>
+  <a class="btn btn-primary" href="{{ url_for('wallet_routes.wallet_home') }}">{{ _('Emissione') }}</a>
   {% else %}
-  <p class="text-center it-wallet-subtitle">{{ _('Accesso completato. Torno al wallet per salvare l\'attestazione.') }}</p>
+  <p class="alert alert-info" role="status">{{ _('Accesso completato. Torno al wallet per salvare l\'attestato.') }}</p>
   <script>
     if (window.opener) {
       window.opener.postMessage({ event: "wallet_flow_complete" }, window.location.origin);

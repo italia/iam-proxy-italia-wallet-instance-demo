@@ -4,15 +4,17 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='wallet.css') }}">
 {% endblock %}
 {% block content %}
-  <div class="it-wallet-title-row it-wallet-title-centered">
-    <div class="it-wallet-title-slot it-wallet-title-slot-start"></div>
-    <h1 class="it-wallet-title-heading mb-0" id="page-title">{{ _('Presentazione') }}</h1>
-    <div class="it-wallet-title-slot it-wallet-title-slot-end"></div>
-  </div>
-  <p class="text-center mb-4">{{ _("Inquadra il QR del verificatore per presentare un'attestazione già ottenuta.") }}</p>
-  <div class="text-center">
-    <button type="button" class="btn btn-primary" onclick="openQrPopup()">{{ _('Presenta') }}</button>
-  </div>
+  <header class="wallet-page-heading">
+    <div class="wallet-page-heading-copy">
+      <h1 class="h2 mb-2" id="page-title">{{ _('Presentazione') }}</h1>
+    </div>
+  </header>
+  <section class="card presentation-start-panel mb-4" aria-label="{{ _('Presentazione') }}">
+    <div class="card-body d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3 p-4">
+      <p class="lead text-secondary mb-0">{{ _("Inquadra il QR del verificatore per presentare un attestato già ottenuto.") }}</p>
+      <button type="button" class="btn btn-primary flex-shrink-0" onclick="openQrPopup()">{{ _('Presenta') }}</button>
+    </div>
+  </section>
   <div id="result"></div>
   <div id="overlay" style="display:none;" role="status" aria-live="polite">
     <div class="loader"></div>

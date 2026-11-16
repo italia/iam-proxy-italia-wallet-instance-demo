@@ -6,7 +6,45 @@ function markCurrentCredential() {
   link.setAttribute("aria-current", "true");
 }
 
+function credentialTimeZone() {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+  } catch (_) {
+    return "UTC";
+  }
+}
+
+function formatCredentialInstant(iso) {
+  const value = new Date(iso);
+  if (Number.isNaN(value.getTime())) return `${iso} (UTC)`;
+  const timeZone = credentialTimeZone();
+  try {
+    const formatted = new Intl.DateTimeFormat(undefined, {
+      dateStyle: "long",
+      timeStyle: "short",
+      timeZone,
+    }).format(value);
+    return `${formatted} (${timeZone})`;
+  } catch (_) {
+    const formatted = new Intl.DateTimeFormat(undefined, {
+      dateStyle: "long",
+      timeStyle: "short",
+      timeZone: "UTC",
+    }).format(value);
+    return `${formatted} (UTC)`;
+  }
+}
+
+function renderCredentialInstants() {
+  document.querySelectorAll("[data-credential-instant]").forEach((node) => {
+    const iso = node.getAttribute("data-credential-instant");
+    if (!iso) return;
+    node.textContent = formatCredentialInstant(iso);
+  });
+}
+
 markCurrentCredential();
+renderCredentialInstants();
 
 document.getElementById("credential-persistence-dismiss")?.addEventListener("click", () => {
   localStorage.setItem("wallet-hide-credential-persistence", "1");

@@ -167,7 +167,7 @@ class ItWalletService(IssuanceFlow, PresentationFlow):
         except ValueError as exc:
             logger.error("Wallet provider non disponibile: %s", sanitize_for_logging(str(exc)))
             raise ValueError(
-                "Non trovo il wallet provider della demo nel trust anchor. Senza di esso il wallet non può ottenere l'attestazione."
+                "Non trovo il wallet provider della demo nel trust anchor. Senza di esso il wallet non può ottenere l'attestato."
             ) from exc
 
         found = app_state.ec_store.all_values(query)

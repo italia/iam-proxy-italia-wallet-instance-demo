@@ -4,12 +4,12 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='wallet.css') }}">
 {% endblock %}
 {% block content %}
-  <div class="it-wallet-title-row it-wallet-title-centered">
-    <div class="it-wallet-title-slot it-wallet-title-slot-start"></div>
-    <h1 class="it-wallet-title-heading mb-0" id="page-title">{{ _('Storico Azioni HTTP') }}</h1>
-    <div class="it-wallet-title-slot it-wallet-title-slot-end"></div>
-  </div>
-  <p class="text-center mb-4">{{ _('Richieste e risposte verso i credential issuer e i verificatori.') }}</p>
+  <header class="wallet-page-heading">
+    <div class="wallet-page-heading-copy">
+      <h1 class="h2 mb-2" id="page-title">{{ _('Storico Azioni HTTP') }}</h1>
+      <p class="lead text-secondary mb-0">{{ _('Richieste e risposte verso i credential issuer e i verificatori.') }}</p>
+    </div>
+  </header>
   <div class="diagnostic-layout">
     <nav id="diagnostic-nav" class="diagnostic-nav" aria-label="{{ _('Elenco degli scambi') }}">
       <h2 class="h6" id="diagnostic-nav-title">{{ _('Azioni') }}</h2>
@@ -18,17 +18,23 @@
       </div>
     </nav>
     <div class="diagnostic-log-column">
-      <div class="diagnostic-toolbar">
-        <label class="diagnostic-select-all">
-          <input type="checkbox" id="diagnostic-select-all">
-          <span>{{ _('Seleziona tutti') }}</span>
-        </label>
-        <button type="button" id="diagnostic-remove" class="btn btn-outline-primary btn-sm" disabled>{{ _('Rimuovi selezionati') }}</button>
-        <button type="button" id="diagnostic-export-text" class="btn btn-primary btn-sm" disabled>{{ _('Esporta testo') }}</button>
-        <button type="button" id="diagnostic-export-json" class="btn btn-primary btn-sm" disabled>{{ _('Esporta JSON') }}</button>
+      <div class="card diagnostic-toolbar-panel mb-3">
+        <div class="card-body py-3">
+          <div class="diagnostic-toolbar">
+            <label class="diagnostic-select-all">
+              <input type="checkbox" id="diagnostic-select-all">
+              <span>{{ _('Seleziona tutti') }}</span>
+            </label>
+            <button type="button" id="diagnostic-remove" class="btn btn-outline-primary btn-sm" disabled>{{ _('Rimuovi selezionati') }}</button>
+            <button type="button" id="diagnostic-export-text" class="btn btn-primary btn-sm" disabled>{{ _('Esporta testo') }}</button>
+            <button type="button" id="diagnostic-export-json" class="btn btn-primary btn-sm" disabled>{{ _('Esporta JSON') }}</button>
+          </div>
+        </div>
       </div>
-      <div id="diagnostic-log">
-        <p class="mb-0">{{ _('Nessuno scambio registrato.') }}</p>
+      <div class="card diagnostic-log-panel">
+        <div id="diagnostic-log" class="card-body">
+          <p class="mb-0">{{ _('Nessuno scambio registrato.') }}</p>
+        </div>
       </div>
     </div>
   </div>
