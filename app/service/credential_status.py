@@ -2,51 +2,20 @@
 
 import base64
 import logging
-import time
 import zlib
-from datetime import datetime, timezone
 
-import cbor2
 from flask import session
 from flask_babel import gettext as _
 
 from app.constants import METADATA_TYPE_CREDENTIAL_ISSUER
-from app.service.credential_view import _jwt_part_json
+from app.service.credential_view import _is_expired, _jwt_part_json, _mdoc_mso
 from app.store import app_state
 from app.utils.diagnostic_log import peer_role
 from app.utils.itwalletUtils import request_status_list
 from app.utils.jwtUtils import decode_and_verify_jwt
-from app.utils.utils import base64url_decode, extract_claim, sanitize_for_logging
+from app.utils.utils import extract_claim, sanitize_for_logging
 
 logger = logging.getLogger(__name__)
-
-
-def _mdoc_mso_payload(payload) -> dict | None:
-    try:
-        body = cbor2.loads(payload) if isinstance(payload, (bytes, bytearray)) else payload
-    except Exception:
-        return None
-    if isinstance(body, cbor2.CBORTag):
-        try:
-            body = cbor2.loads(body.value) if isinstance(body.value, (bytes, bytearray)) else body.value
-        except Exception:
-            return None
-    return body if isinstance(body, dict) else None
-
-
-def _mdoc_mso(token: str) -> dict | None:
-    try:
-        issuer_signed = cbor2.loads(base64url_decode(token.strip()))
-    except Exception:
-        return None
-    if not isinstance(issuer_signed, dict):
-        return None
-    auth = issuer_signed.get("issuerAuth")
-    if isinstance(auth, cbor2.CBORTag):
-        auth = auth.value
-    if not isinstance(auth, (list, tuple)) or len(auth) < 3:
-        return None
-    return _mdoc_mso_payload(auth[2])
 
 
 def status_list_ref(token: str) -> tuple[str, int] | None:
@@ -129,45 +98,6 @@ def store_status_list(credential_id, status_uri, status_idx, jwks, service):
         credential_id, token, {0: "valid", 1: "revoked", 2: "suspended"}.get(code, str(code))
     )
     return code, claims
-
-
-def _moment(value) -> int | None:
-    if isinstance(value, bool):
-        return None
-    if isinstance(value, (int, float)) and value > 0:
-        return int(value)
-    if isinstance(value, str) and value:
-        try:
-            parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
-        except ValueError:
-            return None
-        if parsed.tzinfo is None:
-            parsed = parsed.replace(tzinfo=timezone.utc)
-        return int(parsed.timestamp())
-    return None
-
-
-def _expiry_moment(entry: dict) -> int | None:
-    token = entry.get("data_row")
-    if isinstance(token, str):
-        parts = token.split("~", 1)[0].split(".")
-        if len(parts) >= 2 and parts[1]:
-            payload = _jwt_part_json(parts[1])
-            moment = _moment(payload.get("exp") if isinstance(payload, dict) else None)
-            if moment is not None:
-                return moment
-    claims = entry.get("claims") if isinstance(entry.get("claims"), dict) else {}
-    moment = _moment(claims.get("exp"))
-    if moment is not None:
-        return moment
-    mobile = claims.get("mso") if isinstance(claims.get("mso"), dict) else {}
-    validity = mobile.get("validityInfo") if isinstance(mobile.get("validityInfo"), dict) else {}
-    return _moment(validity.get("validUntil"))
-
-
-def _is_expired(entry: dict) -> bool:
-    moment = _expiry_moment(entry)
-    return moment is not None and moment <= int(time.time())
 
 
 def _issuer_for(credential_key: str) -> str:

@@ -869,10 +869,15 @@ class BranchCoverageTests(unittest.TestCase):
                 "rifiutato", credential_status.eloquent_presentation_error("invalid DCQL response", "rifiutato")
             )
             self.assertEqual(credential_status.presentation_error_message(RuntimeError("altro")), "altro")
-            self.assertIsNone(credential_status._moment(True))
-            self.assertIsNone(credential_status._moment("nope"))
-            self.assertIsNotNone(credential_status._moment("2024-01-02T00:00:00Z"))
-            self.assertTrue(credential_status._is_expired({"claims": {"exp": 1}}))
+            self.assertIsNone(credential_view._claim_moment(True))
+            self.assertIsNone(credential_view._claim_moment("nope"))
+            self.assertIsNotNone(credential_view._claim_moment("2024-01-02T00:00:00Z"))
+            self.assertTrue(credential_view._is_expired({"claims": {"exp": 1}}))
+            self.assertTrue(
+                credential_view._is_expired(
+                    {"claims": {"mso": {"validityInfo": {"validUntil": "2020-01-01T00:00:00Z"}}}}
+                )
+            )
             self.assertEqual(credential_status.status_list_ref("not-a-jwt"), None)
             private = ec.generate_private_key(ec.SECP256R1())
             self.assertTrue(

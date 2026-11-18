@@ -567,61 +567,101 @@ def _token_payload(token) -> dict:
     return payload if isinstance(payload, dict) else {}
 
 
+def _mdoc_mso_payload(payload) -> dict | None:
+    try:
+        body = cbor2.loads(payload) if isinstance(payload, (bytes, bytearray)) else payload
+    except Exception:
+        return None
+    if isinstance(body, cbor2.CBORTag):
+        try:
+            body = cbor2.loads(body.value) if isinstance(body.value, (bytes, bytearray)) else body.value
+        except Exception:
+            return None
+    return body if isinstance(body, dict) else None
+
+
+def _mdoc_mso(token: str) -> dict | None:
+    if not isinstance(token, str) or not token.strip():
+        return None
+    try:
+        issuer_signed = cbor2.loads(_b64url(token.strip()))
+    except Exception:
+        return None
+    if not isinstance(issuer_signed, dict):
+        return None
+    auth = issuer_signed.get("issuerAuth")
+    if isinstance(auth, cbor2.CBORTag):
+        auth = auth.value
+    if not isinstance(auth, (list, tuple)) or len(auth) < 3:
+        return None
+    return _mdoc_mso_payload(auth[2])
+
+
 def _validity_info(claims: dict) -> dict:
     mobile = claims.get("mso") if isinstance(claims.get("mso"), dict) else {}
     validity = mobile.get("validityInfo") if isinstance(mobile.get("validityInfo"), dict) else {}
     return validity if isinstance(validity, dict) else {}
 
 
+def _entry_validity_info(entry: dict) -> dict:
+    claims = entry.get("claims") if isinstance(entry.get("claims"), dict) else {}
+    validity = _validity_info(claims)
+    if validity:
+        return validity
+    mso = _mdoc_mso(entry.get("data_row") if isinstance(entry.get("data_row"), str) else "")
+    if not isinstance(mso, dict):
+        return {}
+    validity = mso.get("validityInfo")
+    return validity if isinstance(validity, dict) else {}
+
+
+def _first_moment(*values) -> int | None:
+    for value in values:
+        moment = _claim_moment(value)
+        if moment is not None:
+            return moment
+    return None
+
+
 def _issued_at(entry: dict) -> str:
     payload = _token_payload(entry.get("data_row"))
     claims = entry.get("claims") if isinstance(entry.get("claims"), dict) else {}
-    validity = _validity_info(claims)
-    for value in (
-        payload.get("iat"),
-        claims.get("iat"),
-        validity.get("signed"),
-        validity.get("validFrom"),
-        claims.get("issuance_date"),
-    ):
-        iso = _iso_utc(_claim_moment(value))
-        if iso:
-            return iso
-    return ""
+    validity = _entry_validity_info(entry)
+    return _iso_utc(
+        _first_moment(
+            payload.get("iat"),
+            claims.get("iat"),
+            validity.get("validFrom"),
+            claims.get("issuance_date"),
+        )
+    )
 
 
 def _expires_at(entry: dict) -> str:
     payload = _token_payload(entry.get("data_row"))
     claims = entry.get("claims") if isinstance(entry.get("claims"), dict) else {}
-    validity = _validity_info(claims)
-    for value in (
-        payload.get("exp"),
-        claims.get("exp"),
-        validity.get("validUntil"),
-        claims.get("date_of_expiry"),
-        claims.get("expiry_date"),
-    ):
-        iso = _iso_utc(_claim_moment(value))
-        if iso:
-            return iso
-    return ""
+    validity = _entry_validity_info(entry)
+    return _iso_utc(
+        _first_moment(
+            payload.get("exp"),
+            claims.get("exp"),
+            validity.get("validUntil"),
+            claims.get("date_of_expiry"),
+            claims.get("expiry_date"),
+        )
+    )
+
+
+def _expiry_moment(entry: dict) -> int | None:
+    payload = _token_payload(entry.get("data_row"))
+    claims = entry.get("claims") if isinstance(entry.get("claims"), dict) else {}
+    validity = _entry_validity_info(entry)
+    return _first_moment(payload.get("exp"), claims.get("exp"), validity.get("validUntil"))
 
 
 def _is_expired(entry: dict) -> bool:
-    payload = _token_payload(entry.get("data_row"))
-    claims = entry.get("claims") if isinstance(entry.get("claims"), dict) else {}
-    validity = _validity_info(claims)
-    for value in (
-        payload.get("exp"),
-        claims.get("exp"),
-        validity.get("validUntil"),
-        claims.get("date_of_expiry"),
-        claims.get("expiry_date"),
-    ):
-        moment = _claim_moment(value)
-        if moment:
-            return datetime.now(timezone.utc).timestamp() > moment
-    return False
+    moment = _expiry_moment(entry)
+    return moment is not None and moment <= int(datetime.now(timezone.utc).timestamp())
 
 
 def _held_view(issuer, group, credential_id, entry, index) -> dict:

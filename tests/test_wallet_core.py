@@ -266,6 +266,14 @@ class CredentialValidityDatesTests(unittest.TestCase):
             entries = (
                 {"data_row": f"e30.{body}.sig"},
                 {"claims": {"mso": {"validityInfo": {"validUntil": moment.isoformat()}}}},
+                {
+                    "data_row": _mdoc_issuer_signed(
+                        {
+                            "docType": "org.iso.18013.5.1.mDL",
+                            "validityInfo": {"validUntil": moment},
+                        }
+                    )
+                },
             )
             for entry in entries:
                 with self.subTest(entry=entry):
@@ -292,7 +300,8 @@ class CredentialValidityDatesTests(unittest.TestCase):
             "claims": {
                 "mso": {
                     "validityInfo": {
-                        "signed": "2026-11-10T10:00:00Z",
+                        "signed": "2026-11-10T09:00:00Z",
+                        "validFrom": "2026-11-10T10:00:00Z",
                         "validUntil": "2026-11-10T11:00:00+00:00",
                     }
                 }
@@ -300,6 +309,19 @@ class CredentialValidityDatesTests(unittest.TestCase):
         }
         self.assertEqual(_issued_at(entry), "2026-11-10T10:00:00Z")
         self.assertEqual(_expires_at(entry), "2026-11-10T11:00:00Z")
+
+        token = _mdoc_issuer_signed(
+            {
+                "docType": "org.iso.18013.5.1.mDL",
+                "validityInfo": {
+                    "validFrom": datetime.datetime(2026, 11, 10, 10, 0, tzinfo=datetime.timezone.utc),
+                    "validUntil": datetime.datetime(2026, 11, 10, 11, 0, tzinfo=datetime.timezone.utc),
+                },
+            }
+        )
+        from_token = {"data_row": token}
+        self.assertEqual(_issued_at(from_token), "2026-11-10T10:00:00Z")
+        self.assertEqual(_expires_at(from_token), "2026-11-10T11:00:00Z")
 
 
 class HeldAttributeTests(unittest.TestCase):
@@ -462,6 +484,28 @@ class PresentationValidityTests(unittest.TestCase):
         token = _sd_jwt({"exp": 1})
         app_state.credential_store.add_credential(issuer, key, token, "urn:it-wallet:eid:1")
         item = {"format": "dc+sd-jwt", "meta": {"vct_values": ["urn:it-wallet:eid:1"]}}
+        try:
+            issues = collect_presentation_issues([item], SimpleNamespace())
+        finally:
+            app_state.credential_store.remove_held(issuer, key)
+        self.assertEqual(len(issues), 1)
+        self.assertTrue(issues[0]["expired"])
+        self.assertFalse(issues[0]["revoked"])
+        self.assertFalse(issues[0]["status_unknown"])
+
+    def test_expired_mdoc_is_reported_before_presentation(self):
+        from types import SimpleNamespace
+
+        from app.service.credential_status import collect_presentation_issues
+        from app.store import app_state
+
+        issuer = "https://issuer.example.org"
+        key = "mdl-expired"
+        doctype = "org.iso.18013.5.1.mDL"
+        past = datetime.datetime(2020, 1, 1, tzinfo=datetime.timezone.utc)
+        token = _mdoc_issuer_signed({"docType": doctype, "validityInfo": {"validUntil": past}})
+        app_state.credential_store.add_credential(issuer, key, token, doctype)
+        item = {"format": "mso_mdoc", "meta": {"doctype_value": doctype}}
         try:
             issues = collect_presentation_issues([item], SimpleNamespace())
         finally:
