@@ -53,7 +53,13 @@ pip-audit:
 
 npm-audit:
 	@echo "--- npm audit (package-lock.json) ---"
-	npm audit --package-lock-only
+	@echo ""
+	@echo "##############################################################################"
+	@echo "#  ⚠️  WARNING: GHSA-fc5q-39xc-vjpf (picomatch) IS WHITELISTED  ⚠️          #"
+	@echo "#  No patched release exists. Stylelint is a devDependency.                 #"
+	@echo "##############################################################################"
+	@echo ""
+	python3 scripts/npm_audit.py
 
 html: node_modules/.bin/htmlhint
 	@echo "--- HTML (HTMLHint) ---"
