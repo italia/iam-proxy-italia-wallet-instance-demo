@@ -2,15 +2,13 @@
 
 import base64
 import logging
-import time
 import zlib
-from datetime import datetime, timezone
 
 from flask import session
 from flask_babel import gettext as _
 
 from app.constants import METADATA_TYPE_CREDENTIAL_ISSUER
-from app.service.credential_view import _jwt_part_json
+from app.service.credential_view import _is_expired, _jwt_part_json, _mdoc_mso
 from app.store import app_state
 from app.utils.diagnostic_log import peer_role
 from app.utils.itwalletUtils import request_status_list
@@ -21,12 +19,16 @@ logger = logging.getLogger(__name__)
 
 
 def status_list_ref(token: str) -> tuple[str, int] | None:
+    if not isinstance(token, str) or not token.strip():
+        return None
     compact = token.split("~", 1)[0]
     parts = compact.split(".")
-    if len(parts) < 2 or not parts[1]:
-        return None
-    payload = _jwt_part_json(parts[1])
-    return _listed_status(payload if isinstance(payload, dict) else None)
+    if len(parts) >= 2 and parts[1]:
+        payload = _jwt_part_json(parts[1])
+        listed = _listed_status(payload if isinstance(payload, dict) else None)
+        if listed:
+            return listed
+    return _listed_status(_mdoc_mso(compact))
 
 
 def _listed_status(payload) -> tuple[str, int] | None:
@@ -39,6 +41,22 @@ def _listed_status(payload) -> tuple[str, int] | None:
     except (TypeError, ValueError):
         return None
     return listed["uri"], index
+
+
+def status_list_from_entry(entry) -> tuple[str, int] | None:
+    if not isinstance(entry, dict):
+        return None
+    token = entry.get("data_row")
+    if isinstance(token, str):
+        listed = status_list_ref(token)
+        if listed:
+            return listed
+    claims = entry.get("claims") if isinstance(entry.get("claims"), dict) else None
+    listed = _listed_status(claims)
+    if listed:
+        return listed
+    mso = claims.get("mso") if isinstance(claims, dict) else None
+    return _listed_status(mso)
 
 
 def status_list_code(lst: str, bits: int, index: int) -> int:
@@ -82,45 +100,6 @@ def store_status_list(credential_id, status_uri, status_idx, jwks, service):
     return code, claims
 
 
-def _moment(value) -> int | None:
-    if isinstance(value, bool):
-        return None
-    if isinstance(value, (int, float)) and value > 0:
-        return int(value)
-    if isinstance(value, str) and value:
-        try:
-            parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
-        except ValueError:
-            return None
-        if parsed.tzinfo is None:
-            parsed = parsed.replace(tzinfo=timezone.utc)
-        return int(parsed.timestamp())
-    return None
-
-
-def _expiry_moment(entry: dict) -> int | None:
-    token = entry.get("data_row")
-    if isinstance(token, str):
-        parts = token.split("~", 1)[0].split(".")
-        if len(parts) >= 2 and parts[1]:
-            payload = _jwt_part_json(parts[1])
-            moment = _moment(payload.get("exp") if isinstance(payload, dict) else None)
-            if moment is not None:
-                return moment
-    claims = entry.get("claims") if isinstance(entry.get("claims"), dict) else {}
-    moment = _moment(claims.get("exp"))
-    if moment is not None:
-        return moment
-    mobile = claims.get("mso") if isinstance(claims.get("mso"), dict) else {}
-    validity = mobile.get("validityInfo") if isinstance(mobile.get("validityInfo"), dict) else {}
-    return _moment(validity.get("validUntil"))
-
-
-def _is_expired(entry: dict) -> bool:
-    moment = _expiry_moment(entry)
-    return moment is not None and moment <= int(time.time())
-
-
 def _issuer_for(credential_key: str) -> str:
     store = app_state.credential_store.get_store() or {}
     for issuer, group in store.items():
@@ -155,11 +134,7 @@ def _credential_name(key: str, entry: dict) -> str:
 
 
 def _revocation(entry: dict, issuer: str, credential_key: str, service) -> str:
-    token = entry.get("data_row")
-    listed = status_list_ref(token) if isinstance(token, str) else None
-    if not listed:
-        claims = entry.get("claims") if isinstance(entry.get("claims"), dict) else None
-        listed = _listed_status(claims)
+    listed = status_list_from_entry(entry)
     if not listed:
         return "absent"
     jwks = issuer_status_jwks(issuer)
