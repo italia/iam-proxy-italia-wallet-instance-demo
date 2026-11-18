@@ -149,6 +149,8 @@ def _mso_to_json(mso: dict) -> dict:
         "deviceKeyInfo": _decode_cose_key(device_key_info.get("deviceKey")),
         "validityInfo": mso.get("validityInfo"),
     }
+    if mso.get("status") is not None:
+        _dict["status"] = mso.get("status")
     return _make_json_serializable(_dict)
 
 

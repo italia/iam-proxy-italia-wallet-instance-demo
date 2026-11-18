@@ -29,7 +29,7 @@ from app.routes.itwallet_routes import (
 from app.service.credential_status import (
     issuer_status_jwks,
     presentation_error_message,
-    status_list_ref,
+    status_list_from_entry,
     store_status_list,
 )
 from app.service.credential_view import (
@@ -433,11 +433,10 @@ def credential_status():
     load_configured_issuers()
     stored_issuer, entry = _find_held_credential(issuer, credential_id)
     name = _credential_name(credential_id, entry)
-    token = entry.get("data_row") if isinstance(entry, dict) else None
-    if not isinstance(token, str):
+    if not isinstance(entry, dict) or not isinstance(entry.get("data_row"), str):
         flash(_("La credenziale %(name)s non è stata trovata.") % {"name": name}, "error")
         return _credentials_page()
-    listed = status_list_ref(token)
+    listed = status_list_from_entry(entry)
     if not listed:
         flash(_("La credenziale %(name)s non contiene una status list.") % {"name": name}, "error")
         return _credentials_page()

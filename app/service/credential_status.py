@@ -6,6 +6,7 @@ import time
 import zlib
 from datetime import datetime, timezone
 
+import cbor2
 from flask import session
 from flask_babel import gettext as _
 
@@ -15,18 +16,50 @@ from app.store import app_state
 from app.utils.diagnostic_log import peer_role
 from app.utils.itwalletUtils import request_status_list
 from app.utils.jwtUtils import decode_and_verify_jwt
-from app.utils.utils import extract_claim, sanitize_for_logging
+from app.utils.utils import base64url_decode, extract_claim, sanitize_for_logging
 
 logger = logging.getLogger(__name__)
 
 
+def _mdoc_mso_payload(payload) -> dict | None:
+    try:
+        body = cbor2.loads(payload) if isinstance(payload, (bytes, bytearray)) else payload
+    except Exception:
+        return None
+    if isinstance(body, cbor2.CBORTag):
+        try:
+            body = cbor2.loads(body.value) if isinstance(body.value, (bytes, bytearray)) else body.value
+        except Exception:
+            return None
+    return body if isinstance(body, dict) else None
+
+
+def _mdoc_mso(token: str) -> dict | None:
+    try:
+        issuer_signed = cbor2.loads(base64url_decode(token.strip()))
+    except Exception:
+        return None
+    if not isinstance(issuer_signed, dict):
+        return None
+    auth = issuer_signed.get("issuerAuth")
+    if isinstance(auth, cbor2.CBORTag):
+        auth = auth.value
+    if not isinstance(auth, (list, tuple)) or len(auth) < 3:
+        return None
+    return _mdoc_mso_payload(auth[2])
+
+
 def status_list_ref(token: str) -> tuple[str, int] | None:
+    if not isinstance(token, str) or not token.strip():
+        return None
     compact = token.split("~", 1)[0]
     parts = compact.split(".")
-    if len(parts) < 2 or not parts[1]:
-        return None
-    payload = _jwt_part_json(parts[1])
-    return _listed_status(payload if isinstance(payload, dict) else None)
+    if len(parts) >= 2 and parts[1]:
+        payload = _jwt_part_json(parts[1])
+        listed = _listed_status(payload if isinstance(payload, dict) else None)
+        if listed:
+            return listed
+    return _listed_status(_mdoc_mso(compact))
 
 
 def _listed_status(payload) -> tuple[str, int] | None:
@@ -39,6 +72,22 @@ def _listed_status(payload) -> tuple[str, int] | None:
     except (TypeError, ValueError):
         return None
     return listed["uri"], index
+
+
+def status_list_from_entry(entry) -> tuple[str, int] | None:
+    if not isinstance(entry, dict):
+        return None
+    token = entry.get("data_row")
+    if isinstance(token, str):
+        listed = status_list_ref(token)
+        if listed:
+            return listed
+    claims = entry.get("claims") if isinstance(entry.get("claims"), dict) else None
+    listed = _listed_status(claims)
+    if listed:
+        return listed
+    mso = claims.get("mso") if isinstance(claims, dict) else None
+    return _listed_status(mso)
 
 
 def status_list_code(lst: str, bits: int, index: int) -> int:
@@ -155,11 +204,7 @@ def _credential_name(key: str, entry: dict) -> str:
 
 
 def _revocation(entry: dict, issuer: str, credential_key: str, service) -> str:
-    token = entry.get("data_row")
-    listed = status_list_ref(token) if isinstance(token, str) else None
-    if not listed:
-        claims = entry.get("claims") if isinstance(entry.get("claims"), dict) else None
-        listed = _listed_status(claims)
+    listed = status_list_from_entry(entry)
     if not listed:
         return "absent"
     jwks = issuer_status_jwks(issuer)

@@ -385,6 +385,15 @@ def _sd_jwt(payload: dict) -> str:
     return f"e30.{body}.sig"
 
 
+def _mdoc_issuer_signed(mso: dict, tagged: bool = True) -> str:
+    payload = cbor2.dumps(cbor2.CBORTag(24, cbor2.dumps(mso))) if tagged else cbor2.dumps(mso)
+    issuer_signed = {
+        "nameSpaces": {},
+        "issuerAuth": [b"", {}, payload, b"\x00"],
+    }
+    return base64.urlsafe_b64encode(cbor2.dumps(issuer_signed)).decode().rstrip("=")
+
+
 class PresentationValidityTests(unittest.TestCase):
     def test_status_list_code_reads_the_index(self):
         import zlib
@@ -395,6 +404,52 @@ class PresentationValidityTests(unittest.TestCase):
         listed = base64.urlsafe_b64encode(zlib.compress(raw)).decode().rstrip("=")
         self.assertEqual(status_list_code(listed, 1, 0), 1)
         self.assertEqual(status_list_code(listed, 1, 1), 0)
+
+    def test_status_list_ref_reads_mdoc_mso(self):
+        from app.service.credential_status import status_list_from_entry, status_list_ref
+
+        status = {
+            "status_list": {
+                "uri": "https://iam-proxy-italia.example.org/OpenID4VCI/status/2",
+                "idx": 2,
+            }
+        }
+        mso = {"docType": "org.iso.18013.5.1.mDL", "status": status}
+        token = _mdoc_issuer_signed(mso)
+        self.assertEqual(
+            status_list_ref(token),
+            ("https://iam-proxy-italia.example.org/OpenID4VCI/status/2", 2),
+        )
+        self.assertEqual(
+            status_list_ref(_mdoc_issuer_signed(mso, tagged=False)),
+            ("https://iam-proxy-italia.example.org/OpenID4VCI/status/2", 2),
+        )
+        self.assertEqual(
+            status_list_from_entry({"data_row": token}),
+            ("https://iam-proxy-italia.example.org/OpenID4VCI/status/2", 2),
+        )
+        self.assertEqual(
+            status_list_from_entry({"data_row": "not-a-token", "claims": {"mso": {"status": status}}}),
+            ("https://iam-proxy-italia.example.org/OpenID4VCI/status/2", 2),
+        )
+
+    def test_mso_to_json_keeps_status(self):
+        from app.utils.cborUtils import _mso_to_json
+
+        status = {"status_list": {"uri": "https://issuer.example.org/status", "idx": 0}}
+        rendered = _mso_to_json(
+            {
+                "docType": "org.iso.18013.5.1.mDL",
+                "version": "1.0",
+                "digestAlgorithm": "SHA-256",
+                "deviceKeyInfo": {
+                    "deviceKey": {1: 2, 3: -7, -1: 1, -2: b"\x01" * 32, -3: b"\x02" * 32},
+                },
+                "validityInfo": {},
+                "status": status,
+            }
+        )
+        self.assertEqual(rendered["status"], status)
 
     def test_expired_credential_is_reported_before_presentation(self):
         from types import SimpleNamespace
