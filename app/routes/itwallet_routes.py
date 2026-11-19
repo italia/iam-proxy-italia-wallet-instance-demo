@@ -373,6 +373,7 @@ def _clear_session():
         "session_id": session.get("session_id"),
         "authenticated": session.get("authenticated"),
         "issuance_requests": session.get("issuance_requests"),
+        "lang": session.get("lang"),
     }
 
     # Pulisce la sessione
