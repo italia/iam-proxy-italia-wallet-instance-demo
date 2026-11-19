@@ -353,6 +353,8 @@ const DIAGNOSTIC_PURPOSES = [
   ["credential", "Rilascio dell'attestato"],
   ["request_uri", "Request URI"],
   ["request-uri", "Request URI"],
+  ["response_uri", "Response URI di presentazione"],
+  ["response-uri", "Response URI di presentazione"],
   ["direct_post", "Risposta di presentazione"],
   ["authorize", "Autorizzazione"],
   ["list", "Elenco di federazione"],

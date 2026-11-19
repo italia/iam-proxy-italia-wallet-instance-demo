@@ -36,6 +36,7 @@ JS_MESSAGES = (
     "Rilascio dell'attestato",
     "Status List",
     "Request URI",
+    "Response URI di presentazione",
     "Risposta di presentazione",
     "Autorizzazione",
     "Elenco di federazione",
