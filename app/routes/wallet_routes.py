@@ -587,13 +587,22 @@ def _rome_moment(created):
     return parsed.astimezone(ZoneInfo("Europe/Rome")).replace(tzinfo=None)
 
 
+_DASHBOARD_TONE = {
+    "in_corso": "warning",
+    "interrotta": "warning",
+    "fallita": "error",
+}
+
+
 def _dashboard_row(record: dict, labels: dict) -> dict:
     relying_party = record.get("rp") if isinstance(record.get("rp"), dict) else {}
     moment = _rome_moment(record.get("created"))
+    outcome = record.get("outcome") if isinstance(record.get("outcome"), str) else ""
     return {
         "id": record.get("id"),
         "name": relying_party.get("name") or relying_party.get("client_id") or "",
-        "outcome": labels.get(record.get("outcome"), record.get("outcome") or ""),
+        "outcome": labels.get(outcome, outcome),
+        "tone": _DASHBOARD_TONE.get(outcome, ""),
         "created_label": format_datetime(moment, "d MMMM yyyy, HH:mm") if moment else "",
         "record": record,
     }
@@ -703,6 +712,7 @@ def presentation_phase():
     relying_party = session.get("rp_display")
     transaction_id = session.get("rp_transaction_id")
     warning = session.get("presentation_dialog")
+    authorization_request = getattr(it_wallet_service, "last_authorization_request", None)
     return jsonify(
         {
             "success": True,
@@ -711,6 +721,7 @@ def presentation_phase():
             "relying_party": relying_party if isinstance(relying_party, dict) else {},
             "transaction_id": transaction_id if isinstance(transaction_id, str) else "",
             "credential_warning": warning if isinstance(warning, dict) else {},
+            "authorization_request": authorization_request if isinstance(authorization_request, dict) else {},
         }
     ), 200
 

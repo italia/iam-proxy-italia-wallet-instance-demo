@@ -2,6 +2,7 @@
 
 import base64
 import logging
+import re
 import zlib
 
 from flask import session
@@ -270,7 +271,26 @@ def remember_presentation_dialog(items, service) -> dict:
     return dialog
 
 
+def _missing_claims_from_message(message: str) -> str:
+    match = re.search(r"Missing claims:\s*(.+?)(?:\s*\(HTTP Status code:|\s*$)", message)
+    if not match:
+        return ""
+    return match.group(1).strip(" .;")
+
+
+def missing_claims_presentation_error(message: str) -> str:
+    claims = _missing_claims_from_message(message)
+    if not claims:
+        return ""
+    return _("Il verificatore ha rifiutato la presentazione perché mancano gli attributi richiesti: %(claims)s.") % {
+        "claims": claims
+    }
+
+
 def eloquent_presentation_error(message: str, failure: str) -> str:
+    missing = missing_claims_presentation_error(message)
+    if missing:
+        return missing
     if failure and "invalid DCQL response" in message:
         return failure
     return message

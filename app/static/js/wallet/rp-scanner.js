@@ -98,8 +98,14 @@ function bindQrSelection() {
 
 async function captureScreen() {
   const basic = { video: true, audio: false };
+  const options = { ...basic, selfBrowserSurface: "exclude" };
+  if (typeof CaptureController === "function") {
+    const controller = new CaptureController();
+    controller.setFocusBehavior("no-focus-change");
+    options.controller = controller;
+  }
   try {
-    return await navigator.mediaDevices.getDisplayMedia({ ...basic, selfBrowserSurface: "exclude" });
+    return await navigator.mediaDevices.getDisplayMedia(options);
   } catch (err) {
     if (err && (err.name === "NotAllowedError" || err.name === "AbortError")) throw err;
     return navigator.mediaDevices.getDisplayMedia(basic);
@@ -233,6 +239,17 @@ function handleQrFileUpload(event) {
   reader.readAsDataURL(file);
 }
 
+function presentationErrorMessage(err) {
+  const detail = String(err && err.message ? err.message : err || "");
+  if (detail.includes("request object already issued")) {
+    return t("Questa richiesta di presentazione è già stata usata. Genera un nuovo QR Code sul verificatore e riprova.");
+  }
+  if (detail.includes("cannot find the session associated to the state")) {
+    return t("La sessione di presentazione non è più disponibile. Genera un nuovo QR Code sul verificatore e riprova.");
+  }
+  return t("Non riesco a inviare i dati:") + " " + detail;
+}
+
 async function processQrPresentation(qrData) {
   try {
     const response = await executeFetch("/wallet/presentation", "POST", { qrcode_data: qrData });
@@ -247,7 +264,7 @@ async function processQrPresentation(qrData) {
     apriPresentationPopup(response_json);
   } catch (err) {
     console.error("Errore durante la presentazione del wallet:", err);
-    alert(t("Non riesco a inviare i dati:") + " " + err.message);
+    alert(presentationErrorMessage(err));
   }
 }
 

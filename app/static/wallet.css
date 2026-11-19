@@ -517,7 +517,7 @@ pre {
   align-items: stretch;
   background: rgb(255 255 255 / 0.95);
   border-radius: var(--bs-border-radius);
-  padding: var(--bs-spacer-4);
+  padding: 1.5rem;
   max-width: 530px;
   min-height: 410px;
   width: 530px;
@@ -537,15 +537,15 @@ pre {
 
 .cred-popup-close-btn {
   position: absolute;
-  top: 0;
-  right: 0;
+  top: 1rem;
+  right: 1rem;
   background: transparent;
   border: none;
   font-size: 1.5rem;
   cursor: pointer;
   color: var(--bs-body-color);
   transition: color 0.15s ease-in-out;
-  padding: var(--bs-spacer-2) var(--bs-spacer-1);
+  padding: 0.5rem;
   width: auto;
   height: auto;
   display: flex;
@@ -569,10 +569,9 @@ pre {
   font-size: 1.25rem;
   font-weight: 700;
   text-align: left;
-  margin-bottom: var(--bs-spacer-3);
+  margin: 0 0 1rem;
   width: 100%;
-  margin-top: 0;
-  padding-right: var(--bs-spacer-5);
+  padding-right: 2.5rem;
 }
 
 #cred-popup-body {
@@ -865,7 +864,12 @@ pre {
   .cred-popup-content {
     width: 90vw;
     max-width: 100%;
-    padding: var(--bs-spacer-3);
+    padding: 1.25rem;
+  }
+
+  .cred-popup-close-btn {
+    top: 0.75rem;
+    right: 0.75rem;
   }
 
   #credentials {
@@ -880,10 +884,15 @@ pre {
 
 /* === Issuance and wallet pages === */
 
-.issuance-setup {
-  border-color: var(--bs-border-color);
+.issuance-setup,
+#issuer-catalog:not(:empty) {
+  border: 1px solid var(--bs-border-color);
   border-radius: var(--bs-border-radius-lg, 0.5rem);
   background-color: var(--bs-gray-100, #f8f9fa);
+}
+
+#issuer-catalog:not(:empty) {
+  padding: 1.5rem;
 }
 
 .issuance-setup .card-body {
@@ -902,6 +911,21 @@ pre {
 .catalog-section .form-select,
 .catalog-section .obtain-one {
   min-height: 2.75rem;
+}
+
+.issuance-setup .form-select,
+.catalog-section .form-select {
+  border: 0;
+  border-bottom: 1px solid hsl(210deg 17% 44%);
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.issuance-setup .form-select:focus,
+.catalog-section .form-select:focus {
+  border-bottom-color: #0066cc;
+  outline: 0;
+  box-shadow: none;
 }
 
 .catalog-section {
@@ -964,6 +988,51 @@ pre {
   min-width: 0;
   margin: 0;
   overflow-wrap: anywhere;
+}
+
+.dashboard-interaction {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.35rem;
+}
+
+.dashboard-interaction > div {
+  min-width: 0;
+}
+
+.dashboard-status-icon {
+  flex: 0 0 auto;
+  width: 1.125rem;
+  height: 1.125rem;
+  margin-top: 0.2rem;
+  fill: currentcolor;
+}
+
+.dashboard-outcome {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.dashboard-outcome .dashboard-status-icon {
+  margin-top: 0;
+}
+
+.dashboard-interaction.is-warning,
+.dashboard-interaction.is-warning a,
+.dashboard-outcome.is-warning {
+  color: #a66300;
+}
+
+.dashboard-interaction.is-error,
+.dashboard-interaction.is-error a,
+.dashboard-outcome.is-error {
+  color: var(--color-danger);
+}
+
+.dashboard-interaction a:hover,
+.dashboard-interaction a:focus-visible {
+  text-decoration: underline;
 }
 
 .dashboard-claims-list {

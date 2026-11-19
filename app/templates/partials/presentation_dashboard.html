@@ -1,3 +1,11 @@
+{% macro status_icon(tone) %}
+  {% if tone == 'error' or tone == 'warning' %}
+    <svg class="icon dashboard-status-icon" aria-hidden="true">
+      <use href="{{ url_for('static', filename='svg/sprites.svg') }}#{% if tone == 'error' %}it-error{% else %}it-warning{% endif %}"></use>
+    </svg>
+  {% endif %}
+{% endmacro %}
+
 {% macro attestation_list(items) %}
   <ul class="dashboard-claims-list">
     {% for item in items %}
@@ -52,15 +60,18 @@
           <h3 class="h6">{{ _('Interazioni') }}</h3>
           <ul class="list-unstyled mb-0">
             {% for row in records %}
-              <li class="mb-3">
-                <label>
-                  <input type="checkbox" name="ids" value="{{ row.id }}">
-                  <a href="{{ url_for('wallet_routes.wallet_dashboard', id=row.id) }}"{% if selected and selected.id == row.id %} aria-current="true"{% endif %}>{{ row.name }}</a>
-                </label>
-                <p class="mb-0 small">
-                  {% if row.created_label %}{{ row.created_label }}{% endif %}
-                  {{ row.outcome }}
-                </p>
+              <li class="mb-3{% if row.tone %} dashboard-interaction is-{{ row.tone }}{% endif %}">
+                {{ status_icon(row.tone) }}
+                <div>
+                  <label>
+                    <input type="checkbox" name="ids" value="{{ row.id }}">
+                    <a href="{{ url_for('wallet_routes.wallet_dashboard', id=row.id) }}"{% if selected and selected.id == row.id %} aria-current="true"{% endif %}>{{ row.name }}</a>
+                  </label>
+                  <p class="mb-0 small">
+                    {% if row.created_label %}{{ row.created_label }}{% endif %}
+                    {{ row.outcome }}
+                  </p>
+                </div>
               </li>
             {% endfor %}
           </ul>
@@ -82,7 +93,7 @@
                 {% endif %}
                 <dl class="dashboard-metadata">
                   <dt>{{ _('Esito') }}</dt>
-                  <dd>{{ selected.outcome }}</dd>
+                  <dd{% if selected.tone %} class="dashboard-outcome is-{{ selected.tone }}"{% endif %}>{{ status_icon(selected.tone) }}{{ selected.outcome }}</dd>
                   {% if rp.client_name %}
                     <dt>{{ _('Nome') }}</dt>
                     <dd>{{ rp.client_name }}</dd>

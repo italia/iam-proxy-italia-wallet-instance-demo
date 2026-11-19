@@ -526,6 +526,12 @@ msgstr "No valid QR code was found in this image. Try a sharper picture."
 msgid "Non riesco a inviare i dati:"
 msgstr "The wallet could not send the data:"
 
+msgid "Questa richiesta di presentazione è già stata usata. Genera un nuovo QR Code sul verificatore e riprova."
+msgstr "This presentation request has already been used. Generate a new QR code on the verifier and try again."
+
+msgid "La sessione di presentazione non è più disponibile. Genera un nuovo QR Code sul verificatore e riprova."
+msgstr "The presentation session is no longer available. Generate a new QR code on the verifier and try again."
+
 msgid "Accesso completato."
 msgstr "Sign-in completed."
 
@@ -732,6 +738,18 @@ msgstr "Attestations already obtained: metadata, attributes, the attestation, an
 
 msgid "Attributi"
 msgstr "Attributes"
+
+msgid "Obbligatorio"
+msgstr "Required"
+
+msgid "Opzionale"
+msgstr "Optional"
+
+msgid "Mostra richiesta del verificatore"
+msgstr "Show verifier request"
+
+msgid "Nascondi richiesta del verificatore"
+msgstr "Hide verifier request"
 
 msgid "Nessun attributo dell'utente."
 msgstr "No user attributes."
@@ -945,6 +963,9 @@ msgstr "The verifier rejected the presentation because the credential %(name)s h
 
 msgid "Il verificatore ha rifiutato la presentazione perché la credenziale %(name)s è scaduta e risulta sospesa."
 msgstr "The verifier rejected the presentation because the credential %(name)s has expired and is suspended."
+
+msgid "Il verificatore ha rifiutato la presentazione perché mancano gli attributi richiesti: %(claims)s."
+msgstr "The verifier rejected the presentation because the required attributes are missing: %(claims)s."
 
 msgid "Seleziona un Attestato disponibile"
 msgstr "Select an available credential"

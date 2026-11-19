@@ -32,7 +32,7 @@ function catalogSectionHtml(section, sectionIndex) {
       <div class="card-header">
         <div class="d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-2">
           <h2 class="h5 mb-0">${escapeCatalogText(section.name || section.uri || section.issuer || "")}</h2>
-          <span class="badge bg-primary align-self-start align-self-sm-center">${escapeCatalogText(offeredAttestationsLabel((section.attestations || []).length))}</span>
+          <span class="badge bg-success align-self-start align-self-sm-center">${escapeCatalogText(offeredAttestationsLabel((section.attestations || []).length))}</span>
         </div>
       </div>
       <div class="card-body">
