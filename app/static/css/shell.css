@@ -882,6 +882,16 @@ html.it-wallet-html body.it-wallet-body {
   min-width: 0;
 }
 
+.wallet-page-heading--center {
+  justify-content: center;
+  text-align: center;
+}
+
+.wallet-page-heading--center .lead {
+  margin-left: auto;
+  margin-right: auto;
+}
+
 .wallet-page-heading .lead {
   max-width: 48rem;
   font-size: 1.125rem;
@@ -969,9 +979,11 @@ html.it-wallet-html body.it-wallet-body {
 
 .wallet-access-panel {
   width: min(100%, 42rem);
-  border-color: var(--bs-border-color);
-  border-radius: var(--bs-border-radius-lg, 0.5rem);
-  box-shadow: var(--bs-box-shadow-sm);
+  padding: 2.5rem 1.5rem;
+  border: 1px solid hsl(210, 4%, 78%);
+  border-radius: 4px;
+  background-color: hsl(0, 0%, 96%);
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
 }
 
 .wallet-access-form .input-group {

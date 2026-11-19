@@ -2,19 +2,17 @@
 {% from "macros/forms.html" import password_field %}
 {% block title %}{{ _('Accesso') }}{% endblock %}
 {% block content %}
-  <header class="wallet-page-heading">
+  <header class="wallet-page-heading wallet-page-heading--center">
     <div class="wallet-page-heading-copy">
       <h1 class="h2 mb-2" id="page-title">{{ _('Accesso') }}</h1>
       <p class="lead text-secondary mb-0">{{ _('Inserisci la password della demo che hai') }} <a href="{{ password_config_url }}" class="link-primary">{{ _('configurato nel progetto') }}</a>.</p>
     </div>
   </header>
-  <section class="card wallet-access-panel mx-auto">
-    <div class="card-body p-4">
-      {% include "partials/flashes.html" %}
-      <form class="wallet-access-form" action="{{ url_for('wallet_routes.wallet_access') }}" method="post">
-        <input type="hidden" name="next" value="{{ next_path }}">
-        {{ password_field("password", "password", _("Password"), _("Accedi")) }}
-      </form>
-    </div>
+  <section class="wallet-access-panel mx-auto">
+    {% include "partials/flashes.html" %}
+    <form class="wallet-access-form" action="{{ url_for('wallet_routes.wallet_access') }}" method="post">
+      <input type="hidden" name="next" value="{{ next_path }}">
+      {{ password_field("password", "password", _("Password"), _("Accedi")) }}
+    </form>
   </section>
 {% endblock %}
