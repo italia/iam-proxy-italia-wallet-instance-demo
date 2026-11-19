@@ -1151,6 +1151,78 @@ html.it-wallet-html body.it-wallet-body {
   padding-left: 1.1rem;
 }
 
+.presentation-claim-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.presentation-claim-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.presentation-claim-item .form-check-input {
+  margin-top: 0.2rem;
+  flex: 0 0 auto;
+}
+
+.presentation-claim-item .form-check-label {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.6rem;
+  color: #17324d;
+}
+
+.presentation-claim-name {
+  font-family: "Roboto Mono", ui-monospace, monospace;
+  font-size: 0.9rem;
+}
+
+.presentation-claim-badge {
+  display: inline-block;
+  padding: 0.1rem 0.45rem;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.presentation-claim-badge-required {
+  background: #e6f0fa;
+  color: #004d99;
+}
+
+.presentation-claim-badge-optional {
+  background: #f2f2f2;
+  color: #5b6f82;
+}
+
+.presentation-request-collapse {
+  margin-top: 0.75rem;
+}
+
+.presentation-request-json {
+  margin: 0;
+  padding: 0.85rem 1rem;
+  max-height: 18rem;
+  overflow: auto;
+  border: 1px solid #d9e6f2;
+  border-radius: 0.35rem;
+  background: #f5f7fa;
+  color: #17324d;
+  font-family: "Roboto Mono", ui-monospace, monospace;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 .presentation-rp img {
   display: block;
   max-height: 2.5rem;

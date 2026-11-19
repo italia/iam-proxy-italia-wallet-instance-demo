@@ -15,6 +15,20 @@
           <h6>{{ _('Attestati richiesti') }}</h6>
           <div id="presentation-credentials" class="presentation-fields"></div>
         </section>
+        <section class="presentation-section">
+          <button
+            id="presentation-request-toggle"
+            class="btn btn-outline-secondary btn-sm"
+            type="button"
+            data-bs-toggle="collapse"
+            data-bs-target="#presentation-request-collapse"
+            aria-expanded="false"
+            aria-controls="presentation-request-collapse"
+          >{{ _('Mostra richiesta del verificatore') }}</button>
+          <div id="presentation-request-collapse" class="collapse presentation-request-collapse">
+            <pre id="presentation-request-json" class="presentation-request-json"></pre>
+          </div>
+        </section>
       </div>
       <div class="modal-footer justify-content-center">
         <button id="presentation-confirm" class="btn btn-primary btn-sm" type="button" data-bs-dismiss="modal" onclick="authorizationProcess()">{{ _('Conferma') }}</button>

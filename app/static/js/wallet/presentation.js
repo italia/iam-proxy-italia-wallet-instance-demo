@@ -1,7 +1,7 @@
 let presentationTransactionId = "";
 let presentationRelyingParty = {};
 let presentationConfirmed = false;
-let presentationReissueMessage = "";
+let presentationAuthorizationRequest = {};
 
 function presentationRow(label, value) {
   if (!value || (Array.isArray(value) && !value.length)) return null;
@@ -21,6 +21,8 @@ function presentationRow(label, value) {
       list.appendChild(entry);
     });
     content.appendChild(list);
+  } else if (value instanceof Node) {
+    content.appendChild(value);
   } else {
     content.textContent = value;
   }
@@ -38,6 +40,36 @@ function claimPath(claim) {
   if (typeof claim === "string") return claim;
   if (claim && Array.isArray(claim.path)) return claim.path.filter(Boolean).join(".");
   return "";
+}
+
+function claimId(claim, index) {
+  if (claim && typeof claim.id === "string" && claim.id) return claim.id;
+  return claimPath(claim) || String(index);
+}
+
+function requiredClaimIds(credential) {
+  const claims = credential.claims || [];
+  const claimSets = credential.claim_sets;
+  if (!Array.isArray(claimSets) || !claimSets.length) {
+    return claims.map(function (claim, index) {
+      return claimId(claim, index);
+    });
+  }
+  let required = null;
+  claimSets.forEach(function (set) {
+    if (!Array.isArray(set)) return;
+    const ids = new Set(set.filter(Boolean));
+    if (required === null) {
+      required = ids;
+      return;
+    }
+    required = new Set(
+      Array.from(required).filter(function (id) {
+        return ids.has(id);
+      })
+    );
+  });
+  return required ? Array.from(required) : [];
 }
 
 function renderRelyingParty(rp) {
@@ -61,21 +93,83 @@ function renderRelyingParty(rp) {
   ]);
 }
 
+function claimSelectionList(credential, credIndex) {
+  const claims = credential.claims || [];
+  if (!claims.length) return null;
+  const required = new Set(requiredClaimIds(credential));
+  const list = document.createElement("ul");
+  list.className = "presentation-claim-list";
+  claims.forEach(function (claim, claimIndex) {
+    const id = claimId(claim, claimIndex);
+    const path = claimPath(claim) || id;
+    const mandatory = required.has(id);
+    const item = document.createElement("li");
+    item.className = "presentation-claim-item";
+    const inputId = `presentation-claim-${credIndex}-${claimIndex}`;
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    input.className = "form-check-input";
+    input.id = inputId;
+    input.checked = mandatory;
+    input.disabled = mandatory;
+    input.dataset.claimId = id;
+    const label = document.createElement("label");
+    label.className = "form-check-label";
+    label.htmlFor = inputId;
+    const name = document.createElement("span");
+    name.className = "presentation-claim-name";
+    name.textContent = path;
+    const badge = document.createElement("span");
+    badge.className = mandatory ? "presentation-claim-badge presentation-claim-badge-required" : "presentation-claim-badge presentation-claim-badge-optional";
+    badge.textContent = mandatory ? t("Obbligatorio") : t("Opzionale");
+    label.append(name, badge);
+    item.append(input, label);
+    list.appendChild(item);
+  });
+  return list;
+}
+
 function renderRequestedAttestations(credentials) {
   const box = document.getElementById("presentation-credentials");
   if (!box) return;
   box.replaceChildren();
-  (credentials || []).forEach(function (credential) {
+  (credentials || []).forEach(function (credential, credIndex) {
     const block = document.createElement("div");
     block.className = "presentation-credential";
-    const paths = (credential.claims || []).map(claimPath).filter(Boolean);
     appendPresentationRows(block, [
       presentationRow("Identificativo", credential.id || ""),
       presentationRow("Formato", credential.format || ""),
-      presentationRow("Attributi", paths),
+      presentationRow("Attributi", claimSelectionList(credential, credIndex)),
     ]);
     box.appendChild(block);
   });
+}
+
+function prettyPresentationJson(value) {
+  try {
+    return JSON.stringify(value, null, 2);
+  } catch (err) {
+    return String(value || "");
+  }
+}
+
+function setPresentationRequestToggle(expanded) {
+  const toggle = document.getElementById("presentation-request-toggle");
+  if (!toggle) return;
+  toggle.setAttribute("aria-expanded", expanded ? "true" : "false");
+  toggle.textContent = expanded ? t("Nascondi richiesta del verificatore") : t("Mostra richiesta del verificatore");
+}
+
+function renderAuthorizationRequest(payload) {
+  const pre = document.getElementById("presentation-request-json");
+  const collapse = document.getElementById("presentation-request-collapse");
+  if (pre) {
+    pre.textContent = payload && Object.keys(payload).length ? prettyPresentationJson(payload) : "";
+  }
+  if (collapse) {
+    collapse.classList.remove("show");
+  }
+  setPresentationRequestToggle(false);
 }
 
 function showPresentationWarning(warning) {
@@ -84,7 +178,6 @@ function showPresentationWarning(warning) {
   const continueButton = document.getElementById("presentation-continue");
   const reissueButton = document.getElementById("presentation-reissue");
   const blocked = Boolean(warning && warning.message);
-  presentationReissueMessage = blocked ? String(warning.reissue || "") : "";
   if (box) {
     box.textContent = blocked ? warning.message : "";
     box.classList.toggle("d-none", !blocked);
@@ -94,13 +187,26 @@ function showPresentationWarning(warning) {
   reissueButton?.classList.toggle("d-none", !blocked);
 }
 
+function selectedCredentialsPresenting() {
+  return (credentialsPresenting || []).map(function (credential, credIndex) {
+    const claims = credential.claims || [];
+    const selected = claims.filter(function (claim, claimIndex) {
+      const input = document.getElementById(`presentation-claim-${credIndex}-${claimIndex}`);
+      return !input || input.checked;
+    });
+    return Object.assign({}, credential, { claims: selected });
+  });
+}
+
 function apriPresentationPopup(response_json) {
   credentialsPresenting = response_json.data;
   presentationRelyingParty = response_json.relying_party || {};
   presentationTransactionId = response_json.transaction_id || "";
+  presentationAuthorizationRequest = response_json.authorization_request || {};
   presentationConfirmed = false;
   renderRelyingParty(presentationRelyingParty);
   renderRequestedAttestations(credentialsPresenting);
+  renderAuthorizationRequest(presentationAuthorizationRequest);
   showPresentationWarning(response_json.credential_warning || {});
   const presentationModalComponent = document.getElementById("presentation-modal");
   if (!presentationModalComponent) return;
@@ -129,9 +235,8 @@ function chiudiPresentationPopup() {
 }
 
 function requestNewIssuance() {
-  const text = presentationReissueMessage;
   chiudiPresentationPopup();
-  showPresentationResult(false, text, "warning");
+  window.location.assign("/wallet/home");
 }
 
 async function authorizationProcess() {
@@ -139,7 +244,9 @@ async function authorizationProcess() {
   let succeeded = false;
   let reason = "";
   try {
-    const response = await executeFetch("/wallet/authorization", "POST", { credentialsPresenting: credentialsPresenting });
+    const response = await executeFetch("/wallet/authorization", "POST", {
+      credentialsPresenting: selectedCredentialsPresenting(),
+    });
     const body = await response.json().catch(() => ({}));
     succeeded = response.ok && body?.success === true;
     if (!succeeded) {
@@ -156,6 +263,14 @@ async function authorizationProcess() {
 
 document.getElementById("presentation-modal")?.addEventListener("hide.bs.modal", () => {
   interruptPresentation();
+});
+
+document.getElementById("presentation-request-collapse")?.addEventListener("shown.bs.collapse", () => {
+  setPresentationRequestToggle(true);
+});
+
+document.getElementById("presentation-request-collapse")?.addEventListener("hidden.bs.collapse", () => {
+  setPresentationRequestToggle(false);
 });
 
 function showPresentationResult(success, reason, tone) {

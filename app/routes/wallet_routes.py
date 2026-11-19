@@ -712,6 +712,7 @@ def presentation_phase():
     relying_party = session.get("rp_display")
     transaction_id = session.get("rp_transaction_id")
     warning = session.get("presentation_dialog")
+    authorization_request = getattr(it_wallet_service, "last_authorization_request", None)
     return jsonify(
         {
             "success": True,
@@ -720,6 +721,7 @@ def presentation_phase():
             "relying_party": relying_party if isinstance(relying_party, dict) else {},
             "transaction_id": transaction_id if isinstance(transaction_id, str) else "",
             "credential_warning": warning if isinstance(warning, dict) else {},
+            "authorization_request": authorization_request if isinstance(authorization_request, dict) else {},
         }
     ), 200
 
