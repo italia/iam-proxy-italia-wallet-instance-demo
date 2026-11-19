@@ -244,8 +244,11 @@ class WalletDemoIntegrationTests(unittest.TestCase):
 
         english = self.client.get("/wallet/lang/en?next=/wallet/access", follow_redirects=True)
         self.assertIn("Sign in", english.get_data(as_text=True))
+        reset = self.client.get("/itwallet/reset")
+        self.assertEqual(reset.status_code, 200)
         present = self.client.get("/wallet/present")
         present_body = present.get_data(as_text=True)
+        self.assertIn("Presentation", present_body)
         self.assertIn("modal-lg", present_body)
         self.assertIn("presentation-credentials", present_body)
         self.assertIn('id="qr-scanner-modal"', present_body)

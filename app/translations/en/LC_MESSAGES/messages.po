@@ -217,6 +217,9 @@ msgstr "Status List"
 msgid "Request URI"
 msgstr "Request URI"
 
+msgid "Response URI di presentazione"
+msgstr "Presentation Response URI"
+
 msgid "Risposta di presentazione"
 msgstr "Presentation response"
 

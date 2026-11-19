@@ -1,7 +1,7 @@
 import io
 import json
 import logging
-from urllib.parse import quote, urlparse
+from urllib.parse import quote, urlparse, urlunsplit
 
 import pyqrcode
 from flask import Blueprint, Response, current_app, g, jsonify, request, session, url_for
@@ -272,13 +272,37 @@ def _federation_source(entity_id: str) -> str:
     return f"{base}{OID_FED_WELL_KNOWN_PATH}"
 
 
-def _metadata_source(entity_id: str, discovery: str) -> str:
+def _rfc_credential_issuer_metadata_url(issuer_url: str) -> str:
+    """OpenID4VCI §12.2.2: insert well-known between host and path."""
+    parts = urlparse((issuer_url or "").strip())
+    path = parts.path.rstrip("/")
+    return urlunsplit((parts.scheme, parts.netloc, f"{_DIRECT_WELL_KNOWN}{path}", "", ""))
+
+
+def _legacy_credential_issuer_metadata_url(issuer_url: str) -> str:
+    """Suffix append used by SATOSA frontend-prefixed mounts."""
+    return f"{(issuer_url or '').strip().rstrip('/')}{_DIRECT_WELL_KNOWN}"
+
+
+def _direct_metadata_urls(issuer_url: str) -> list[str]:
+    rfc = _rfc_credential_issuer_metadata_url(issuer_url)
+    legacy = _legacy_credential_issuer_metadata_url(issuer_url)
+    if rfc == legacy:
+        return [rfc]
+    return [rfc, legacy]
+
+
+def _metadata_source(entity_id: str, discovery: str, ec_payload: dict | None = None) -> str:
+    if isinstance(ec_payload, dict):
+        stored = str(ec_payload.get("_wallet_metadata_source") or "").strip()
+        if stored:
+            return stored
     if discovery != _DISCOVERY_DIRECT:
         return _federation_source(entity_id)
-    base = (entity_id or "").strip().rstrip("/")
-    if base.endswith(_DIRECT_WELL_KNOWN):
+    base = (entity_id or "").strip()
+    if base.endswith(_DIRECT_WELL_KNOWN) or "/.well-known/openid-credential-issuer/" in base:
         return base
-    return f"{base}{_DIRECT_WELL_KNOWN}"
+    return _rfc_credential_issuer_metadata_url(base)
 
 
 def _stored_discovery(ec_payload) -> str:
@@ -326,7 +350,7 @@ def _catalog_section(issuer: str, attestations: list[dict], ec_payload: dict | N
         "issuer": issuer,
         "name": name,
         "uri": uri,
-        "source": _metadata_source(issuer, _stored_discovery(ec_payload)),
+        "source": _metadata_source(issuer, _stored_discovery(ec_payload), ec_payload),
         "attestations": attestations,
     }
 
@@ -361,19 +385,38 @@ def _parse_direct_metadata(response) -> dict:
 
 
 def _direct_issuer_payload(service: ItWalletService, issuer_url: str) -> dict:
-    metadata = http_request_with_retry(
-        "GET",
-        f"{issuer_url.rstrip('/')}{_DIRECT_WELL_KNOWN}",
-        headers={"Accept": "application/json"},
-        proxies=service.proxies,
-        no_proxy_domains=service.no_proxy_domains,
-        parse_response=_parse_direct_metadata,
-    )
+    last_error: Exception | None = None
+    metadata = None
+    used_url = ""
+    urls = _direct_metadata_urls(issuer_url)
+    for index, metadata_url in enumerate(urls):
+        try:
+            metadata = http_request_with_retry(
+                "GET",
+                metadata_url,
+                headers={"Accept": "application/json"},
+                proxies=service.proxies,
+                no_proxy_domains=service.no_proxy_domains,
+                parse_response=_parse_direct_metadata,
+                max_retries=1 if index < len(urls) - 1 else 3,
+            )
+            used_url = metadata_url
+            break
+        except Exception as exc:
+            last_error = exc
+            logger.info(
+                "Direct issuer metadata miss at %s: %s",
+                sanitize_for_logging(metadata_url),
+                sanitize_for_logging(str(exc)),
+            )
+    if metadata is None:
+        raise last_error or RuntimeError("credential issuer metadata unavailable")
     issuer = str(metadata.get("credential_issuer") or issuer_url).strip()
     return {
         "iss": issuer,
         "metadata": {METADATA_TYPE_CREDENTIAL_ISSUER: metadata},
         "_wallet_discovery": _DISCOVERY_DIRECT,
+        "_wallet_metadata_source": used_url,
     }
 
 

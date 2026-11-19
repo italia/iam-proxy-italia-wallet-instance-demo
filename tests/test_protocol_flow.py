@@ -151,7 +151,6 @@ class LocalIssuer:
 
     def _access_token(self):
         thumb = self._thumb()
-        bound = base64.urlsafe_b64encode(thumb.encode()).decode().rstrip("=")
         now = _now()
         return _sign(
             {
@@ -160,7 +159,7 @@ class LocalIssuer:
                 "client_id": thumb,
                 "iat": now,
                 "exp": now + 600,
-                "cnf": {"jkt": bound},
+                "cnf": {"jkt": thumb},
             }
         )
 
@@ -270,6 +269,11 @@ class LocalIssuer:
             return _Response({"redirect_uri": VERIFIER + "/callback"}, "application/json")
         if path.endswith("/callback"):
             return _Response(self._callback(), "text/html")
+        parsed_path = urlparse(path).path
+        if parsed_path == "/.well-known/openid-credential-issuer" or parsed_path.startswith(
+            "/.well-known/openid-credential-issuer/"
+        ):
+            return _Response(self._metadata(ISSUER)["openid_credential_issuer"], "application/json")
         if path.endswith("/.well-known/openid-credential-issuer"):
             return _Response(self._metadata(ISSUER)["openid_credential_issuer"], "application/json")
         raise AssertionError(f"unexpected {method} {url}")
