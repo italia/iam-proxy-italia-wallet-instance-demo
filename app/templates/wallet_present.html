@@ -9,10 +9,10 @@
       <h1 class="h2 mb-2" id="page-title">{{ _('Presentazione') }}</h1>
       <p class="lead text-secondary mb-0">{{ _("Inquadra il QR del verificatore per presentare un attestato già ottenuto.") }}</p>
     </div>
-    <div class="wallet-page-heading-actions">
-      <button type="button" class="btn btn-primary" onclick="openQrPopup()">{{ _('Presenta') }}</button>
-    </div>
   </header>
+  <section class="mb-4" aria-label="{{ _('Presentazione') }}">
+    <button type="button" class="btn btn-primary" onclick="openQrPopup()">{{ _('Presenta') }}</button>
+  </section>
   <div id="result"></div>
   <div id="overlay" style="display:none;" role="status" aria-live="polite">
     <div class="loader"></div>
