@@ -21,7 +21,6 @@ Key components:
 - SD-JWT and mDL (ISO 18013-5) credential formats are supported
 """
 
-import base64
 import json
 import logging
 import os
@@ -983,12 +982,11 @@ class IssuanceFlow:
 
         try:
             dpop_bound_access_token_claims = decode_and_verify_jwt(dpop_bound_access_token, authorization_server_jwks)
-            expected_jkt = base64.urlsafe_b64encode(wallet_key_thumbprint.encode()).decode("utf-8").rstrip("=")
             validate_access_token(
                 dpop_bound_access_token_claims,
                 authorization_server_url,
                 wallet_key_thumbprint,
-                expected_jkt,
+                wallet_key_thumbprint,
             )
             logger.info(
                 f"The access token is valid: {json.dumps(dpop_bound_access_token_claims, indent=2, ensure_ascii=False)} "

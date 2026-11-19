@@ -151,7 +151,6 @@ class LocalIssuer:
 
     def _access_token(self):
         thumb = self._thumb()
-        bound = base64.urlsafe_b64encode(thumb.encode()).decode().rstrip("=")
         now = _now()
         return _sign(
             {
@@ -160,7 +159,7 @@ class LocalIssuer:
                 "client_id": thumb,
                 "iat": now,
                 "exp": now + 600,
-                "cnf": {"jkt": bound},
+                "cnf": {"jkt": thumb},
             }
         )
 
