@@ -79,6 +79,7 @@ JS_MESSAGES = (
     "Non trovo un QR valido in questa immagine. Riprova con un'immagine più nitida.",
     "Non riesco a inviare i dati:",
     "Questa richiesta di presentazione è già stata usata. Genera un nuovo QR Code sul verificatore e riprova.",
+    "La sessione di presentazione non è più disponibile. Genera un nuovo QR Code sul verificatore e riprova.",
     "Accesso completato.",
     "Accesso completato presso {name}.",
     "Consulta la Dashboard Presentazioni per i dettagli dell'avvenuta presentazione.",

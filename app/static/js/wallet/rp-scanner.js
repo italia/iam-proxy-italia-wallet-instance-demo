@@ -244,6 +244,9 @@ function presentationErrorMessage(err) {
   if (detail.includes("request object already issued")) {
     return t("Questa richiesta di presentazione è già stata usata. Genera un nuovo QR Code sul verificatore e riprova.");
   }
+  if (detail.includes("cannot find the session associated to the state")) {
+    return t("La sessione di presentazione non è più disponibile. Genera un nuovo QR Code sul verificatore e riprova.");
+  }
   return t("Non riesco a inviare i dati:") + " " + detail;
 }
 
