@@ -583,5 +583,57 @@ class PresentationValidityTests(unittest.TestCase):
         self.assertEqual(eloquent_presentation_error("altro errore", dialog["failure"]), "altro errore")
 
 
+class CatalogDiscoveryTests(unittest.TestCase):
+    def test_rfc_and_legacy_metadata_urls(self):
+        from app.service.catalog import (
+            _direct_metadata_urls,
+            _legacy_credential_issuer_metadata_url,
+            _rfc_credential_issuer_metadata_url,
+        )
+
+        path_scoped = "https://issuer.example.org/issuers/eu-pid-device-bound"
+        self.assertEqual(
+            _rfc_credential_issuer_metadata_url(path_scoped),
+            "https://issuer.example.org/.well-known/openid-credential-issuer/issuers/eu-pid-device-bound",
+        )
+        self.assertEqual(
+            _legacy_credential_issuer_metadata_url(path_scoped),
+            "https://issuer.example.org/issuers/eu-pid-device-bound/.well-known/openid-credential-issuer",
+        )
+        self.assertEqual(
+            _direct_metadata_urls(path_scoped),
+            [
+                "https://issuer.example.org/.well-known/openid-credential-issuer/issuers/eu-pid-device-bound",
+                "https://issuer.example.org/issuers/eu-pid-device-bound/.well-known/openid-credential-issuer",
+            ],
+        )
+        host_only = "https://issuer.example.org"
+        self.assertEqual(
+            _direct_metadata_urls(host_only),
+            ["https://issuer.example.org/.well-known/openid-credential-issuer"],
+        )
+
+    def test_direct_issuer_falls_back_to_legacy_suffix(self):
+        from app.service.catalog import _direct_issuer_payload
+
+        path_scoped = "https://issuer.example.org/OpenID4VCI"
+        rfc = "https://issuer.example.org/.well-known/openid-credential-issuer/OpenID4VCI"
+        legacy = "https://issuer.example.org/OpenID4VCI/.well-known/openid-credential-issuer"
+        metadata = {"credential_issuer": path_scoped, "credential_configurations_supported": {}}
+
+        def fake_get(method, url, **kwargs):
+            if url == rfc:
+                raise RuntimeError(f"Errore ritornato dall'endpoint {url}: (HTTP Status code: 404)")
+            if url == legacy:
+                return metadata
+            raise AssertionError(f"unexpected url {url}")
+
+        service = type("Svc", (), {"proxies": None, "no_proxy_domains": None})()
+        with patch("app.service.catalog.http_request_with_retry", side_effect=fake_get):
+            payload = _direct_issuer_payload(service, path_scoped)
+        self.assertEqual(payload["_wallet_metadata_source"], legacy)
+        self.assertEqual(payload["iss"], path_scoped)
+
+
 if __name__ == "__main__":
     unittest.main()
