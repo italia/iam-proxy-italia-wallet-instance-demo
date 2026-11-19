@@ -269,9 +269,7 @@ class PresentationFlow:
         self.session["rp_display"] = display
         self.session["rp_transaction_id"] = transaction_id
         try:
-            self.last_authorization_request = json.loads(
-                json.dumps(request_uri_response_jwt_payload, default=str)
-            )
+            self.last_authorization_request = json.loads(json.dumps(request_uri_response_jwt_payload, default=str))
         except (TypeError, ValueError):
             self.last_authorization_request = {}
         from app.service.credential_status import remember_presentation_dialog

@@ -282,9 +282,9 @@ def missing_claims_presentation_error(message: str) -> str:
     claims = _missing_claims_from_message(message)
     if not claims:
         return ""
-    return _(
-        "Il verificatore ha rifiutato la presentazione perché mancano gli attributi richiesti: %(claims)s."
-    ) % {"claims": claims}
+    return _("Il verificatore ha rifiutato la presentazione perché mancano gli attributi richiesti: %(claims)s.") % {
+        "claims": claims
+    }
 
 
 def eloquent_presentation_error(message: str, failure: str) -> str:
