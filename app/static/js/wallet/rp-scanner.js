@@ -98,8 +98,14 @@ function bindQrSelection() {
 
 async function captureScreen() {
   const basic = { video: true, audio: false };
+  const options = { ...basic, selfBrowserSurface: "exclude" };
+  if (typeof CaptureController === "function") {
+    const controller = new CaptureController();
+    controller.setFocusBehavior("no-focus-change");
+    options.controller = controller;
+  }
   try {
-    return await navigator.mediaDevices.getDisplayMedia({ ...basic, selfBrowserSurface: "exclude" });
+    return await navigator.mediaDevices.getDisplayMedia(options);
   } catch (err) {
     if (err && (err.name === "NotAllowedError" || err.name === "AbortError")) throw err;
     return navigator.mediaDevices.getDisplayMedia(basic);

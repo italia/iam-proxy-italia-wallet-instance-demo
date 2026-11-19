@@ -916,7 +916,7 @@ pre {
 .issuance-setup .form-select,
 .catalog-section .form-select {
   border: 0;
-  border-bottom: 1px solid hsl(210, 17%, 44%);
+  border-bottom: 1px solid hsl(210deg 17% 44%);
   border-radius: 0;
   box-shadow: none;
 }
