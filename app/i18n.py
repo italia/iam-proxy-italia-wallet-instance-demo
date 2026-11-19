@@ -78,6 +78,7 @@ JS_MESSAGES = (
     "Non riesco a catturare lo schermo.",
     "Non trovo un QR valido in questa immagine. Riprova con un'immagine più nitida.",
     "Non riesco a inviare i dati:",
+    "Questa richiesta di presentazione è già stata usata. Genera un nuovo QR Code sul verificatore e riprova.",
     "Accesso completato.",
     "Accesso completato presso {name}.",
     "Consulta la Dashboard Presentazioni per i dettagli dell'avvenuta presentazione.",

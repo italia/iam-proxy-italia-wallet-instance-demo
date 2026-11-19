@@ -587,13 +587,22 @@ def _rome_moment(created):
     return parsed.astimezone(ZoneInfo("Europe/Rome")).replace(tzinfo=None)
 
 
+_DASHBOARD_TONE = {
+    "in_corso": "warning",
+    "interrotta": "warning",
+    "fallita": "error",
+}
+
+
 def _dashboard_row(record: dict, labels: dict) -> dict:
     relying_party = record.get("rp") if isinstance(record.get("rp"), dict) else {}
     moment = _rome_moment(record.get("created"))
+    outcome = record.get("outcome") if isinstance(record.get("outcome"), str) else ""
     return {
         "id": record.get("id"),
         "name": relying_party.get("name") or relying_party.get("client_id") or "",
-        "outcome": labels.get(record.get("outcome"), record.get("outcome") or ""),
+        "outcome": labels.get(outcome, outcome),
+        "tone": _DASHBOARD_TONE.get(outcome, ""),
         "created_label": format_datetime(moment, "d MMMM yyyy, HH:mm") if moment else "",
         "record": record,
     }

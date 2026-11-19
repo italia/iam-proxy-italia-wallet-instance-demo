@@ -239,6 +239,14 @@ function handleQrFileUpload(event) {
   reader.readAsDataURL(file);
 }
 
+function presentationErrorMessage(err) {
+  const detail = String(err && err.message ? err.message : err || "");
+  if (detail.includes("request object already issued")) {
+    return t("Questa richiesta di presentazione è già stata usata. Genera un nuovo QR Code sul verificatore e riprova.");
+  }
+  return t("Non riesco a inviare i dati:") + " " + detail;
+}
+
 async function processQrPresentation(qrData) {
   try {
     const response = await executeFetch("/wallet/presentation", "POST", { qrcode_data: qrData });
@@ -253,7 +261,7 @@ async function processQrPresentation(qrData) {
     apriPresentationPopup(response_json);
   } catch (err) {
     console.error("Errore durante la presentazione del wallet:", err);
-    alert(t("Non riesco a inviare i dati:") + " " + err.message);
+    alert(presentationErrorMessage(err));
   }
 }
 

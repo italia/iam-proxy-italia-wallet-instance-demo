@@ -526,6 +526,9 @@ msgstr "No valid QR code was found in this image. Try a sharper picture."
 msgid "Non riesco a inviare i dati:"
 msgstr "The wallet could not send the data:"
 
+msgid "Questa richiesta di presentazione è già stata usata. Genera un nuovo QR Code sul verificatore e riprova."
+msgstr "This presentation request has already been used. Generate a new QR code on the verifier and try again."
+
 msgid "Accesso completato."
 msgstr "Sign-in completed."
 

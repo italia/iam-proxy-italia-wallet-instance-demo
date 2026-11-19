@@ -990,6 +990,51 @@ pre {
   overflow-wrap: anywhere;
 }
 
+.dashboard-interaction {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.35rem;
+}
+
+.dashboard-interaction > div {
+  min-width: 0;
+}
+
+.dashboard-status-icon {
+  flex: 0 0 auto;
+  width: 1.125rem;
+  height: 1.125rem;
+  margin-top: 0.2rem;
+  fill: currentcolor;
+}
+
+.dashboard-outcome {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.dashboard-outcome .dashboard-status-icon {
+  margin-top: 0;
+}
+
+.dashboard-interaction.is-warning,
+.dashboard-interaction.is-warning a,
+.dashboard-outcome.is-warning {
+  color: #a66300;
+}
+
+.dashboard-interaction.is-error,
+.dashboard-interaction.is-error a,
+.dashboard-outcome.is-error {
+  color: var(--color-danger);
+}
+
+.dashboard-interaction a:hover,
+.dashboard-interaction a:focus-visible {
+  text-decoration: underline;
+}
+
 .dashboard-claims-list {
   padding-left: 1.25rem;
 }
