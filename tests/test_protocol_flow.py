@@ -276,6 +276,12 @@ class LocalIssuer:
             return _Response(self._metadata(ISSUER)["openid_credential_issuer"], "application/json")
         if path.endswith("/.well-known/openid-credential-issuer"):
             return _Response(self._metadata(ISSUER)["openid_credential_issuer"], "application/json")
+        if parsed_path == "/.well-known/oauth-authorization-server" or parsed_path.startswith(
+            "/.well-known/oauth-authorization-server/"
+        ):
+            return _Response(self._metadata(ISSUER)["oauth_authorization_server"], "application/json")
+        if path.endswith("/.well-known/oauth-authorization-server"):
+            return _Response(self._metadata(ISSUER)["oauth_authorization_server"], "application/json")
         raise AssertionError(f"unexpected {method} {url}")
 
 

@@ -258,6 +258,7 @@ class BranchCoverageTests(unittest.TestCase):
         self.client.delete("/itwallet/issuerCatalog", json={})
         self.client.delete("/itwallet/issuerCatalog", json={"issuer": "https://missing.example.org"})
         self.client.delete("/itwallet/issuerCatalog", json={"issuer": ISSUER})
+        self.client.post("/itwallet/issuerCatalog", json={"issuerUrl": ISSUER, "discovery": "openid-federation"})
         self.client.get("/itwallet/credentialSupported")
         self.client.get("/itwallet/objectTypesInMemory")
         self.client.post("/itwallet/viewObjectTypeInMemory", json={"objectType": "CredentialStore"})

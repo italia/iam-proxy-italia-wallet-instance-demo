@@ -442,6 +442,9 @@ msgstr "Enter an http or https URL."
 msgid "Impossibile leggere i metadata di questo issuer."
 msgstr "The wallet cannot read this issuer's metadata."
 
+msgid "Impossibile leggere i metadata dell'authorization server."
+msgstr "The wallet cannot read this authorization server's metadata."
+
 msgid "La richiesta HTTP verso %(endpoint)s per %(purpose)s è fallita: %(detail)s."
 msgstr "The HTTP request to %(endpoint)s for %(purpose)s failed: %(detail)s."
 
@@ -453,6 +456,9 @@ msgstr "download the OpenID Federation entity list"
 
 msgid "scaricare i metadata OpenID4VCI dell'issuer"
 msgstr "download the issuer OpenID4VCI metadata"
+
+msgid "scaricare i metadata OAuth Authorization Server"
+msgstr "download the OAuth Authorization Server metadata"
 
 msgid "inviare la pushed authorization request"
 msgstr "send the pushed authorization request"
