@@ -484,6 +484,24 @@ def _issuer_catalog_post():
     return _store_discovered_issuer(issuer_url, discovery)
 
 
+def _issuer_catalog_delete():
+    body = request.get_json(silent=True) or {}
+    issuer = (body.get("issuer") or "").strip()
+    if not issuer:
+        return jsonify({"success": False, "message": _("Indica l'issuer da rimuovere.")}), 400
+    for key in list(app_state.ec_store.keys()):
+        payload = app_state.ec_store.get(key)
+        if not isinstance(payload, dict):
+            continue
+        if key != issuer and payload.get("iss") != issuer:
+            continue
+        if not _attestations_from_ec(payload):
+            continue
+        app_state.ec_store.remove(key)
+        return jsonify({"success": True}), 200
+    return jsonify({"success": False, "message": _("Issuer non trovato nel catalogo.")}), 404
+
+
 def _require_param(value: str | None, msg: str) -> str:
     """Return value or raise ValueError with msg."""
     if not value:

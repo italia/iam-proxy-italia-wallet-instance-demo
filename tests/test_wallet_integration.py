@@ -319,6 +319,15 @@ class WalletDemoIntegrationTests(unittest.TestCase):
         catalog = self.client.get("/itwallet/issuerCatalog")
         self.assertTrue(catalog.get_json()["success"])
         self.assertEqual(self.client.post("/itwallet/issuerCatalog", json={}).status_code, 400)
+        self.assertEqual(self.client.delete("/itwallet/issuerCatalog", json={}).status_code, 400)
+        self.assertEqual(
+            self.client.delete("/itwallet/issuerCatalog", json={"issuer": "https://missing.example.org"}).status_code,
+            404,
+        )
+        deleted = self.client.delete("/itwallet/issuerCatalog", json={"issuer": _ISSUER})
+        self.assertTrue(deleted.get_json()["success"])
+        self.assertFalse(app_state.ec_store.exists(_ISSUER))
+        self.assertEqual(self.client.get("/itwallet/issuerCatalog").get_json()["data"], [])
         supported = self.client.get("/itwallet/credentialSupported")
         self.assertTrue(supported.get_json()["success"])
         types = self.client.get("/itwallet/objectTypesInMemory")

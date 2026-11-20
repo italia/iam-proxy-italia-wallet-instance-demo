@@ -34,6 +34,7 @@ from app.service.catalog import (
     _fetch_issuer_payload,
     _format_label,
     _held_credential_ids,
+    _issuer_catalog_delete,
     _issuer_catalog_post,
     _italian_display,
     _localized_display,
@@ -140,11 +141,13 @@ def credential_offer_qr():
     return Response(svg, mimetype="image/svg+xml")
 
 
-@wallet_api_bp.route("/issuerCatalog", methods=["GET", "POST"])
+@wallet_api_bp.route("/issuerCatalog", methods=["GET", "POST", "DELETE"])
 def issuer_catalog():
-    """List attestations from credential issuer metadata, or load another issuer URL."""
+    """List attestations from credential issuer metadata, load another issuer URL, or remove one."""
     if request.method == "GET":
         return jsonify({"success": True, "data": _catalog_sections()}), 200
+    if request.method == "DELETE":
+        return _issuer_catalog_delete()
     return _issuer_catalog_post()
 
 

@@ -847,6 +847,12 @@ msgstr "Remove"
 msgid "Rimuovi {name}"
 msgstr "Remove {name}"
 
+msgid "Indica l'issuer da rimuovere."
+msgstr "Specify the issuer to remove."
+
+msgid "Issuer non trovato nel catalogo."
+msgstr "Issuer not found in the catalog."
+
 msgid "Rimuovere questa attestato?"
 msgstr "Remove this attestation?"
 

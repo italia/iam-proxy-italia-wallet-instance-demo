@@ -27,12 +27,19 @@ function catalogSectionHtml(section, sectionIndex) {
     }),
   ].join("");
   const selectId = `issuer-select-${sectionIndex}`;
+  const displayName = section.name || section.uri || section.issuer || "";
+  const sprite = document.body?.dataset?.iconSprite || "/static/svg/sprites.svg";
   return `
     <article class="card catalog-section mb-4" data-issuer="${escapeCatalogText(section.issuer)}">
       <div class="card-header">
         <div class="d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-2">
-          <h2 class="h5 mb-0">${escapeCatalogText(section.name || section.uri || section.issuer || "")}</h2>
-          <span class="badge bg-success align-self-start align-self-sm-center">${escapeCatalogText(offeredAttestationsLabel((section.attestations || []).length))}</span>
+          <h2 class="h5 mb-0">${escapeCatalogText(displayName)}</h2>
+          <div class="d-flex align-items-center gap-2 align-self-start align-self-sm-center">
+            <span class="badge bg-success">${escapeCatalogText(offeredAttestationsLabel((section.attestations || []).length))}</span>
+            <button type="button" class="credential-nav-remove remove-issuer" aria-label="${escapeCatalogText(t("Rimuovi {name}", { name: displayName }))}">
+              <svg class="icon" aria-hidden="true"><use href="${escapeCatalogText(sprite)}#it-delete"></use></svg>
+            </button>
+          </div>
         </div>
       </div>
       <div class="card-body">
@@ -636,7 +643,21 @@ document.getElementById("issuer-catalog")?.addEventListener("change", (event) =>
   }
 });
 
+async function removeCatalogIssuer(card) {
+  const issuer = card?.dataset?.issuer || "";
+  if (!issuer) return;
+  const response = await executeFetch("/itwallet/issuerCatalog", "DELETE", { issuer });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || !data.success) return;
+  card.remove();
+}
+
 document.getElementById("issuer-catalog")?.addEventListener("click", (event) => {
+  const removeButton = event.target.closest(".remove-issuer");
+  if (removeButton) {
+    removeCatalogIssuer(removeButton.closest(".catalog-section"));
+    return;
+  }
   const button = event.target.closest(".obtain-one");
   if (!button) return;
   const card = button.closest(".catalog-section");
