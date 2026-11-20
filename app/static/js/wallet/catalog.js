@@ -324,6 +324,19 @@ function exchangeTabs(specs) {
   return block;
 }
 
+function certificateSideLabel(side) {
+  if (side === "request") return t("Richiesta");
+  if (side === "response") return t("Risposta");
+  return side || "";
+}
+
+function certificateTabLabel(item) {
+  const side = certificateSideLabel(item.side);
+  const locator = item.locator || "x5c";
+  const parts = [side, locator, t("Certificato")].filter(Boolean);
+  return parts.join(" · ");
+}
+
 function exchangeArtifacts(entry) {
   const specs = [
     { label: t("Richiesta HTTP"), text: entry.request_http || "" },
@@ -337,6 +350,10 @@ function exchangeArtifacts(entry) {
     const where = item.path || "JWT";
     specs.push({ label: `${where} · ${t("Header")}`, text: pretty(decoded.header) });
     specs.push({ label: `${where} · ${t("Payload")}`, text: pretty(decoded.payload) });
+  });
+  (entry.certificates || []).forEach((item) => {
+    if (!item || !item.text) return;
+    specs.push({ label: certificateTabLabel(item), text: item.text });
   });
   return exchangeTabs(specs);
 }
@@ -478,7 +495,7 @@ function syncDiagnosticToolbar() {
 function diagnosticText(entries) {
   return entries.map((entry) => {
     const purpose = t(diagnosticPurpose(entry.url));
-    return [
+    const parts = [
       `${purpose} · ${diagnosticStamp(entry)}`,
       diagnosticPeerName(entry.peer),
       entry.url || "",
@@ -488,7 +505,12 @@ function diagnosticText(entries) {
       "",
       t("Risposta HTTP"),
       entry.response_http || "",
-    ].join("\n");
+    ];
+    (entry.certificates || []).forEach((item) => {
+      if (!item || !item.text) return;
+      parts.push("", certificateTabLabel(item), item.text);
+    });
+    return parts.join("\n");
   }).join("\n\n---\n\n");
 }
 

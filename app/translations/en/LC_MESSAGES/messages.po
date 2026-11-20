@@ -700,6 +700,9 @@ msgstr "Disclosure"
 msgid "Payload"
 msgstr "Payload"
 
+msgid "Certificato"
+msgstr "Certificate"
+
 msgid "Notazione diagnostica"
 msgstr "Diagnostic notation"
 

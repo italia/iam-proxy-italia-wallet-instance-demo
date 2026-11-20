@@ -175,6 +175,56 @@ class HttpHistoryTests(unittest.TestCase):
         self.assertEqual(entry["response_http"], response_http)
         self.assertEqual(entry["request"]["body"]["grant"], "code")
         self.assertEqual(entry["response"]["access_token"], "tok")
+        self.assertEqual(entry["certificates"], [])
+        remove_entries([entry["id"]])
+
+    def test_http_history_decodes_x5c_and_cose_x5chain(self):
+        from cryptography import x509
+        from cryptography.hazmat.primitives import hashes, serialization
+        from cryptography.hazmat.primitives.asymmetric import ec
+        from cryptography.x509.oid import NameOID
+
+        from app.utils.diagnostic_log import list_entries, record_exchange, remove_entries
+        from app.utils.utils import base64url_encode
+
+        key = ec.generate_private_key(ec.SECP256R1())
+        name = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "issuer.example.org")])
+        now = datetime.datetime.now(datetime.timezone.utc)
+        certificate = (
+            x509.CertificateBuilder()
+            .subject_name(name)
+            .issuer_name(name)
+            .public_key(key.public_key())
+            .serial_number(7)
+            .not_valid_before(now)
+            .not_valid_after(now + datetime.timedelta(days=1))
+            .sign(key, hashes.SHA256())
+        )
+        der = certificate.public_bytes(serialization.Encoding.DER)
+        x5c = base64.b64encode(der).decode("ascii")
+        header = base64url_encode(json.dumps({"alg": "ES256", "x5c": [x5c]}).encode())
+        payload = base64url_encode(json.dumps({"iss": "https://issuer.example.org"}).encode())
+        jwt_token = f"{header}.{payload}.sig"
+        mdoc = base64url_encode(cbor2.dumps({"issuerAuth": [b"", {33: der}, cbor2.dumps({"docType": "pid"}), b"\x00"]}))
+
+        record_exchange(
+            method="POST",
+            url="https://issuer.example.org/credential",
+            request_headers={"Content-Type": "application/json"},
+            request_body={"assertion": jwt_token},
+            status=200,
+            response_body={"credential": mdoc},
+            request_http="POST /credential HTTP/1.1\n",
+            response_http="HTTP/1.1 200 OK\n",
+        )
+        stored = [entry for entry in list_entries() if entry.get("url") == "https://issuer.example.org/credential"]
+        self.assertTrue(stored)
+        entry = stored[-1]
+        texts = [item["text"] for item in entry["certificates"]]
+        self.assertTrue(any("Subject: CN=issuer.example.org" in text for text in texts))
+        self.assertTrue(any("-----BEGIN CERTIFICATE-----" in text for text in texts))
+        self.assertTrue(any(item["locator"].endswith("x5c") for item in entry["certificates"]))
+        self.assertTrue(any("x5chain" in item["locator"] for item in entry["certificates"]))
         remove_entries([entry["id"]])
 
 

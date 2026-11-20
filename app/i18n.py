@@ -111,6 +111,7 @@ JS_MESSAGES = (
     "Fonte",
     "Header",
     "Payload",
+    "Certificato",
     "Payload cifrato: serve la chiave del destinatario per leggerlo.",
 )
 
