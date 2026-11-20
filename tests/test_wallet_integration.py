@@ -396,9 +396,7 @@ class ProtocolHelperIntegrationTests(unittest.TestCase):
                 {"metadata": {"oauth_authorization_server": {"require_signed_request_object": True}}}
             )
         )
-        self.assertFalse(
-            requires_signed_request_object({"metadata": {"oauth_authorization_server": {}}})
-        )
+        self.assertFalse(requires_signed_request_object({"metadata": {"oauth_authorization_server": {}}}))
         self.assertFalse(
             requires_signed_request_object(
                 {"metadata": {"oauth_authorization_server": {"require_signed_request_object": False}}}

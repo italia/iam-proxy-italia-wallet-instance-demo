@@ -142,31 +142,43 @@ def _claim_entries(config: dict) -> list[dict]:
     return entries
 
 
-def load_configured_issuers() -> str | None:
-    """Fetch each configured issuer into ec_store. Returns an Italian error, or None."""
-    urls = configured_issuer_urls()
-    if not urls:
-        return "Nessun credential issuer è configurato."
+def _known_issuer_urls() -> set:
     known = set()
     for key in app_state.ec_store.keys():
         payload = app_state.ec_store.get(key)
         if isinstance(payload, dict):
             known.add(payload.get("iss") or key)
+    return known
+
+
+def _load_one_configured_issuer(service: ItWalletService, url: str) -> str | None:
+    try:
+        ec_payload = _fetch_issuer_payload(service, url, _DISCOVERY_FEDERATION)
+        if not _attestations_from_ec(ec_payload):
+            return "Questo indirizzo non pubblica attestazioni ottenibili."
+        app_state.ec_store.add(ec_payload.get("iss") or url, ec_payload)
+    except AuthorizationServerMetadataError as exc:
+        logger.error("❌ %s", sanitize_for_logging(str(exc)))
+        return "Impossibile leggere i metadata dell'authorization server."
+    except Exception as exc:
+        logger.error("❌ %s", sanitize_for_logging(str(exc)))
+        return "Impossibile leggere i metadata di questo issuer."
+    return None
+
+
+def load_configured_issuers() -> str | None:
+    """Fetch each configured issuer into ec_store. Returns an Italian error, or None."""
+    urls = configured_issuer_urls()
+    if not urls:
+        return "Nessun credential issuer è configurato."
+    known = _known_issuer_urls()
     service = ItWalletService(session)
     for url in urls:
         if url in known:
             continue
-        try:
-            ec_payload = _fetch_issuer_payload(service, url, _DISCOVERY_FEDERATION)
-            if not _attestations_from_ec(ec_payload):
-                return "Questo indirizzo non pubblica attestazioni ottenibili."
-            app_state.ec_store.add(ec_payload.get("iss") or url, ec_payload)
-        except AuthorizationServerMetadataError as exc:
-            logger.error("❌ %s", sanitize_for_logging(str(exc)))
-            return "Impossibile leggere i metadata dell'authorization server."
-        except Exception as exc:
-            logger.error("❌ %s", sanitize_for_logging(str(exc)))
-            return "Impossibile leggere i metadata di questo issuer."
+        error = _load_one_configured_issuer(service, url)
+        if error:
+            return error
     return None
 
 
@@ -463,9 +475,7 @@ def _fetch_direct_authorization_server_metadata(service: ItWalletService, as_id:
     if metadata is None:
         if isinstance(last_error, HttpExchangeError):
             raise last_error
-        raise AuthorizationServerMetadataError(
-            "authorization server metadata unavailable"
-        ) from last_error
+        raise AuthorizationServerMetadataError("authorization server metadata unavailable") from last_error
     return metadata
 
 
@@ -473,9 +483,7 @@ def _fetch_federation_authorization_server_metadata(service: ItWalletService, as
     try:
         as_ec = service._entity_configuration_management(as_id, [METADATA_TYPE_AUTHORIZATION_SERVER])
     except Exception as exc:
-        raise AuthorizationServerMetadataError(
-            "authorization server metadata unavailable"
-        ) from exc
+        raise AuthorizationServerMetadataError("authorization server metadata unavailable") from exc
     as_meta = (as_ec.get("metadata") or {}).get(METADATA_TYPE_AUTHORIZATION_SERVER)
     if not isinstance(as_meta, dict) or not as_meta:
         raise AuthorizationServerMetadataError("authorization server metadata unavailable")

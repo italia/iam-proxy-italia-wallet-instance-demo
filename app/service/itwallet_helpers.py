@@ -90,9 +90,7 @@ def get_trust_root_and_eaa_provider_ec(
 def _credential_configuration_path(credential_configuration_id: str, *suffix: str) -> str:
     """JMESPath to a credential configuration field; quotes ids that contain hyphens or similar."""
     quoted_id = quote_jmespath_key(credential_configuration_id)
-    path = (
-        f"metadata.{METADATA_TYPE_CREDENTIAL_ISSUER}.credential_configurations_supported.{quoted_id}"
-    )
+    path = f"metadata.{METADATA_TYPE_CREDENTIAL_ISSUER}.credential_configurations_supported.{quoted_id}"
     if suffix:
         path = f"{path}.{'.'.join(suffix)}"
     return path

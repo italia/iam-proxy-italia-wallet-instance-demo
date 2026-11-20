@@ -276,16 +276,16 @@ class IssuerConfigurationTests(unittest.TestCase):
                             "scope": "pid",
                             "format": "vc+sd-jwt",
                             "doctype": "eu.europa.ec.eudi.pid.1",
-                            "credential_metadata": {
-                                "claims": [{"path": ["eu.europa.ec.eudi.pid.1", "family_name"]}]
-                            },
+                            "credential_metadata": {"claims": [{"path": ["eu.europa.ec.eudi.pid.1", "family_name"]}]},
                         }
                     }
                 }
             },
         }
         self.assertEqual(quote_jmespath_key(_HYPHENATED_CREDENTIAL_ID), f'"{_HYPHENATED_CREDENTIAL_ID}"')
-        self.assertIn(quote_jmespath_key(_HYPHENATED_CREDENTIAL_ID), _credential_configuration_path(_HYPHENATED_CREDENTIAL_ID))
+        self.assertIn(
+            quote_jmespath_key(_HYPHENATED_CREDENTIAL_ID), _credential_configuration_path(_HYPHENATED_CREDENTIAL_ID)
+        )
         self.assertEqual(credential_configuration_scope(configuration, _HYPHENATED_CREDENTIAL_ID), "pid")
         self.assertEqual(credential_configuration_format(configuration, _HYPHENATED_CREDENTIAL_ID), "vc+sd-jwt")
         self.assertEqual(
@@ -335,10 +335,13 @@ class HttpExchangeErrorTests(unittest.TestCase):
     def test_connection_failure_includes_endpoint_and_purpose(self):
         purpose = "scaricare i metadata OpenID4VCI dell'issuer"
         url = "https://issuer.example.org/.well-known/openid-credential-issuer"
-        with patch(
-            "app.utils.http_utils.requests.get",
-            side_effect=requests.ConnectionError("refused"),
-        ), patch("app.utils.http_utils.time.sleep"):
+        with (
+            patch(
+                "app.utils.http_utils.requests.get",
+                side_effect=requests.ConnectionError("refused"),
+            ),
+            patch("app.utils.http_utils.time.sleep"),
+        ):
             with self.assertRaises(HttpExchangeError) as raised:
                 http_request_with_retry("GET", url, purpose=purpose, max_retries=1, retry_delay=0)
         self.assertIn(url, str(raised.exception))
@@ -804,9 +807,7 @@ class CatalogDiscoveryTests(unittest.TestCase):
         ci_metadata = {
             "credential_issuer": issuer,
             "authorization_servers": [as_id],
-            "credential_configurations_supported": {
-                "eu.europa.ec.eudi.pid.1": {"format": "dc+sd-jwt", "scope": "pid"}
-            },
+            "credential_configurations_supported": {"eu.europa.ec.eudi.pid.1": {"format": "dc+sd-jwt", "scope": "pid"}},
         }
         as_metadata = {
             "issuer": as_id,
@@ -835,9 +836,7 @@ class CatalogDiscoveryTests(unittest.TestCase):
         as_url = "https://issuer.example.org/.well-known/oauth-authorization-server"
         ci_metadata = {
             "credential_issuer": issuer,
-            "credential_configurations_supported": {
-                "eu.europa.ec.eudi.pid.1": {"format": "dc+sd-jwt", "scope": "pid"}
-            },
+            "credential_configurations_supported": {"eu.europa.ec.eudi.pid.1": {"format": "dc+sd-jwt", "scope": "pid"}},
         }
         as_metadata = {
             "issuer": issuer,
@@ -869,9 +868,7 @@ class CatalogDiscoveryTests(unittest.TestCase):
         as_url = "https://issuer.example.org/.well-known/oauth-authorization-server"
         ci_metadata = {
             "credential_issuer": issuer,
-            "credential_configurations_supported": {
-                "eu.europa.ec.eudi.pid.1": {"format": "dc+sd-jwt", "scope": "pid"}
-            },
+            "credential_configurations_supported": {"eu.europa.ec.eudi.pid.1": {"format": "dc+sd-jwt", "scope": "pid"}},
         }
 
         def fake_get(method, url, **kwargs):

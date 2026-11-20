@@ -129,6 +129,25 @@ def _looks_like_cose_sign1(value) -> bool:
     return isinstance(value, (list, tuple)) and len(value) >= 3 and isinstance(value[1], dict)
 
 
+def _collect_cose_sign1(body, side: str, locator: str, found: list[dict], seen: set) -> None:
+    chain = _x5chain_from_cose_headers(body[0], body[1])
+    if chain:
+        _append_decoded_chain(found, side=side, locator=f"{locator}.x5chain", members=chain)
+    _collect_from_cbor(body[2], side, f"{locator}.payload", found, seen)
+
+
+def _collect_from_cbor_dict(value: dict, side: str, locator: str, found: list[dict], seen: set) -> None:
+    if "issuerAuth" in value:
+        _collect_from_cbor(value.get("issuerAuth"), side, f"{locator}.issuerAuth", found, seen)
+    if _COSE_X5CHAIN in value:
+        _append_decoded_chain(found, side=side, locator=f"{locator}.x5chain", members=value.get(_COSE_X5CHAIN))
+    for key_name, item in value.items():
+        if key_name in ("issuerAuth", _COSE_X5CHAIN):
+            continue
+        child = f"{locator}.{key_name}" if locator else str(key_name)
+        _collect_from_cbor(item, side, child, found, seen)
+
+
 def _collect_from_cbor(value, side: str, locator: str, found: list[dict], seen: set) -> None:
     key = (side, locator, id(value))
     if key in seen:
@@ -137,32 +156,17 @@ def _collect_from_cbor(value, side: str, locator: str, found: list[dict], seen: 
 
     if isinstance(value, cbor2.CBORTag):
         if value.tag in (18, 98) and _looks_like_cose_sign1(value):
-            body = value.value
-            chain = _x5chain_from_cose_headers(body[0], body[1])
-            if chain:
-                _append_decoded_chain(found, side=side, locator=f"{locator}.x5chain", members=chain)
-            _collect_from_cbor(body[2], side, f"{locator}.payload", found, seen)
+            _collect_cose_sign1(value.value, side, locator, found, seen)
             return
         _collect_from_cbor(value.value, side, locator, found, seen)
         return
 
     if _looks_like_cose_sign1(value):
-        chain = _x5chain_from_cose_headers(value[0], value[1])
-        if chain:
-            _append_decoded_chain(found, side=side, locator=f"{locator}.x5chain", members=chain)
-        _collect_from_cbor(value[2], side, f"{locator}.payload", found, seen)
+        _collect_cose_sign1(value, side, locator, found, seen)
         return
 
     if isinstance(value, dict):
-        if "issuerAuth" in value:
-            _collect_from_cbor(value.get("issuerAuth"), side, f"{locator}.issuerAuth", found, seen)
-        if _COSE_X5CHAIN in value:
-            _append_decoded_chain(found, side=side, locator=f"{locator}.x5chain", members=value.get(_COSE_X5CHAIN))
-        for key_name, item in value.items():
-            if key_name in ("issuerAuth", _COSE_X5CHAIN):
-                continue
-            child = f"{locator}.{key_name}" if locator else str(key_name)
-            _collect_from_cbor(item, side, child, found, seen)
+        _collect_from_cbor_dict(value, side, locator, found, seen)
         return
 
     if isinstance(value, (list, tuple)):
@@ -203,20 +207,52 @@ def _jwt_candidates(text: str) -> list[str]:
     return tokens
 
 
+def _header_looks_like_jwt(header: dict) -> bool:
+    return bool(header.get("alg") or header.get("typ") or header.get("kid") or header.get("x5c"))
+
+
+def _collect_from_dict(value: dict, side: str, locator: str, found: list[dict], seen: set) -> None:
+    if "x5c" in value:
+        path = f"{locator}.x5c" if locator else "x5c"
+        _append_decoded_chain(found, side=side, locator=path, members=value.get("x5c"))
+    if _COSE_X5CHAIN in value or "x5chain" in value:
+        path = f"{locator}.x5chain" if locator else "x5chain"
+        members = value.get(_COSE_X5CHAIN, value.get("x5chain"))
+        _append_decoded_chain(found, side=side, locator=path, members=members)
+    for key, item in value.items():
+        if key in ("x5c", "x5chain", _COSE_X5CHAIN):
+            continue
+        child = f"{locator}.{key}" if locator else str(key)
+        _collect_from_value(item, side, child, found, seen)
+
+
+def _collect_from_bytes(value: bytes, side: str, locator: str, found: list[dict], seen: set) -> None:
+    try:
+        decoded = cbor2.loads(value)
+    except Exception:
+        text = certificate_text(value)
+        if text and locator:
+            found.append({"side": side, "locator": locator, "text": text})
+        return
+    _collect_from_cbor(decoded, side, locator or "cbor", found, seen)
+
+
+def _collect_from_jwt_text(text: str, side: str, locator: str, found: list[dict]) -> bool:
+    jwt_found = False
+    for token in _jwt_candidates(text):
+        header = _jwt_header(token)
+        if not header or not _header_looks_like_jwt(header):
+            continue
+        jwt_found = True
+        token_locator = locator or "JWT"
+        if header.get("x5c"):
+            _append_decoded_chain(found, side=side, locator=f"{token_locator}.x5c", members=header.get("x5c"))
+    return jwt_found
+
+
 def _collect_from_value(value, side: str, locator: str, found: list[dict], seen: set) -> None:
     if isinstance(value, dict):
-        if "x5c" in value:
-            path = f"{locator}.x5c" if locator else "x5c"
-            _append_decoded_chain(found, side=side, locator=path, members=value.get("x5c"))
-        if _COSE_X5CHAIN in value or "x5chain" in value:
-            path = f"{locator}.x5chain" if locator else "x5chain"
-            members = value.get(_COSE_X5CHAIN, value.get("x5chain"))
-            _append_decoded_chain(found, side=side, locator=path, members=members)
-        for key, item in value.items():
-            if key in ("x5c", "x5chain", _COSE_X5CHAIN):
-                continue
-            child = f"{locator}.{key}" if locator else str(key)
-            _collect_from_value(item, side, child, found, seen)
+        _collect_from_dict(value, side, locator, found, seen)
         return
 
     if isinstance(value, (list, tuple)):
@@ -226,14 +262,7 @@ def _collect_from_value(value, side: str, locator: str, found: list[dict], seen:
         return
 
     if isinstance(value, (bytes, bytearray)):
-        try:
-            decoded = cbor2.loads(bytes(value))
-        except Exception:
-            text = certificate_text(bytes(value))
-            if text and locator:
-                found.append({"side": side, "locator": locator, "text": text})
-            return
-        _collect_from_cbor(decoded, side, locator or "cbor", found, seen)
+        _collect_from_bytes(bytes(value), side, locator, found, seen)
         return
 
     if not isinstance(value, str):
@@ -243,18 +272,7 @@ def _collect_from_value(value, side: str, locator: str, found: list[dict], seen:
     if not text:
         return
 
-    jwt_found = False
-    for token in _jwt_candidates(text):
-        header = _jwt_header(token)
-        if not header:
-            continue
-        if not (header.get("alg") or header.get("typ") or header.get("kid") or header.get("x5c")):
-            continue
-        jwt_found = True
-        token_locator = locator or "JWT"
-        if header.get("x5c"):
-            _append_decoded_chain(found, side=side, locator=f"{token_locator}.x5c", members=header.get("x5c"))
-    if jwt_found:
+    if _collect_from_jwt_text(text, side, locator, found):
         return
     _try_cbor_string(text, side, locator or "cbor", found, seen)
 
