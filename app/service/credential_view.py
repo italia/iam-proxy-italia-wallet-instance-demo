@@ -269,24 +269,20 @@ def _header_map(value) -> dict:
 
 
 def _certificate_subject(data: bytes) -> str | None:
-    if len(data) < 16:
-        return None
-    try:
-        from cryptography import x509
+    from app.utils.x509Utils import certificate_subject
 
-        certificate = x509.load_der_x509_certificate(bytes(data))
-    except Exception:
-        return None
-    return certificate.subject.rfc4514_string()
+    return certificate_subject(data)
 
 
 def _x5chain_text(value) -> str:
+    from app.utils.x509Utils import certificate_subject
+
     items = value if isinstance(value, (list, tuple)) else [value]
     subjects = []
     for item in items:
         if not isinstance(item, (bytes, bytearray)):
             continue
-        subject = _certificate_subject(bytes(item))
+        subject = certificate_subject(bytes(item))
         if subject:
             subjects.append(subject)
     return ", ".join(subjects)

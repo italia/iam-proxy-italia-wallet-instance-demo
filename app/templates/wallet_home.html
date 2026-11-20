@@ -60,10 +60,15 @@
           <div class="card-header">
             <div class="d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-2">
               <h2 class="h5 mb-0">{{ section.name or section.uri }}</h2>
-              {% set offered = section.attestations|length %}
-              <span class="badge bg-success align-self-start align-self-sm-center">
-                {% if offered == 1 %}{{ _('1 attestato disponibile') }}{% else %}{{ _('{count} attestati disponibili').format(count=offered) }}{% endif %}
-              </span>
+              <div class="d-flex align-items-center gap-2 align-self-start align-self-sm-center">
+                {% set offered = section.attestations|length %}
+                <span class="badge bg-success">
+                  {% if offered == 1 %}{{ _('1 attestato disponibile') }}{% else %}{{ _('{count} attestati disponibili').format(count=offered) }}{% endif %}
+                </span>
+                <button type="button" class="credential-nav-remove remove-issuer" aria-label="{{ _('Rimuovi {name}').format(name=section.name or section.uri or section.issuer) }}">
+                  <svg class="icon" aria-hidden="true"><use href="{{ url_for('static', filename='svg/sprites.svg') }}#it-delete"></use></svg>
+                </button>
+              </div>
             </div>
           </div>
           <div class="card-body">

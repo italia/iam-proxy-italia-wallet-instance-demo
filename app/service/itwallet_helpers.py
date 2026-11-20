@@ -12,7 +12,7 @@ from flask import current_app
 
 from app.constants import METADATA_TYPE_CREDENTIAL_ISSUER, METADATA_TYPE_FEDERATION_ENTITY
 from app.store import app_state
-from app.utils.utils import extract_claim, sanitize_for_logging
+from app.utils.utils import extract_claim, quote_jmespath_key, sanitize_for_logging
 
 logger = logging.getLogger(__name__)
 
@@ -71,11 +71,8 @@ def get_trust_root_and_eaa_provider_ec(
 
     if not trust_root_url:
         raise ValueError("Non è configurato il trust anchor della demo, quindi non posso chiedere l'attestato.")
-    query = (
-        f"metadata.{METADATA_TYPE_CREDENTIAL_ISSUER}.credential_configurations_supported.{credential_configuration_id}"
-    )
 
-    ec_list = app_state.ec_store.all_values(query)
+    ec_list = app_state.ec_store.all_values(_credential_configuration_path(credential_configuration_id))
 
     if not ec_list:
         raise ValueError("Nessun issuer configurato rilascia l'attestato selezionato. Ricarica la pagina e riprova.")
@@ -90,13 +87,18 @@ def get_trust_root_and_eaa_provider_ec(
     return trust_root_url, eaa_url, ec
 
 
+def _credential_configuration_path(credential_configuration_id: str, *suffix: str) -> str:
+    """JMESPath to a credential configuration field; quotes ids that contain hyphens or similar."""
+    quoted_id = quote_jmespath_key(credential_configuration_id)
+    path = f"metadata.{METADATA_TYPE_CREDENTIAL_ISSUER}.credential_configurations_supported.{quoted_id}"
+    if suffix:
+        path = f"{path}.{'.'.join(suffix)}"
+    return path
+
+
 def credential_configuration_scope(entity_configuration: dict, credential_configuration_id: str) -> str:
     """Scope dichiarato dalla Credential Configuration nell'Entity Configuration dell'issuer."""
-    query = (
-        f"metadata.{METADATA_TYPE_CREDENTIAL_ISSUER}.credential_configurations_supported."
-        f"{credential_configuration_id}.scope"
-    )
-    scope = extract_claim(entity_configuration, query)
+    scope = extract_claim(entity_configuration, _credential_configuration_path(credential_configuration_id, "scope"))
     if not isinstance(scope, str) or not scope:
         raise ValueError("La configurazione dell'issuer non dichiara lo scope di questo attestato.")
     return scope
@@ -104,11 +106,9 @@ def credential_configuration_scope(entity_configuration: dict, credential_config
 
 def credential_configuration_format(entity_configuration: dict, credential_configuration_id: str) -> str:
     """Formato dichiarato dalla Credential Configuration nell'Entity Configuration dell'issuer."""
-    query = (
-        f"metadata.{METADATA_TYPE_CREDENTIAL_ISSUER}.credential_configurations_supported."
-        f"{credential_configuration_id}.format"
+    credential_format = extract_claim(
+        entity_configuration, _credential_configuration_path(credential_configuration_id, "format")
     )
-    credential_format = extract_claim(entity_configuration, query)
     if not isinstance(credential_format, str) or not credential_format:
         raise ValueError("La configurazione dell'issuer non dichiara il formato di questo attestato.")
     return credential_format
@@ -116,11 +116,9 @@ def credential_configuration_format(entity_configuration: dict, credential_confi
 
 def credential_configuration_doctype(entity_configuration: dict, credential_configuration_id: str) -> str:
     """Doctype dichiarato dalla Credential Configuration nell'Entity Configuration dell'issuer."""
-    query = (
-        f"metadata.{METADATA_TYPE_CREDENTIAL_ISSUER}.credential_configurations_supported."
-        f"{credential_configuration_id}.doctype"
+    doctype = extract_claim(
+        entity_configuration, _credential_configuration_path(credential_configuration_id, "doctype")
     )
-    doctype = extract_claim(entity_configuration, query)
     if not isinstance(doctype, str) or not doctype:
         raise ValueError("La configurazione dell'issuer non dichiara il doctype di questo attestato.")
     return doctype
@@ -128,11 +126,10 @@ def credential_configuration_doctype(entity_configuration: dict, credential_conf
 
 def credential_configuration_namespaces(entity_configuration: dict, credential_configuration_id: str) -> list[str]:
     """Namespace distinti, primo elemento di credential_metadata.claims[].path."""
-    query = (
-        f"metadata.{METADATA_TYPE_CREDENTIAL_ISSUER}.credential_configurations_supported."
-        f"{credential_configuration_id}.credential_metadata.claims"
+    claims = extract_claim(
+        entity_configuration,
+        _credential_configuration_path(credential_configuration_id, "credential_metadata", "claims"),
     )
-    claims = extract_claim(entity_configuration, query)
     namespaces = []
     if isinstance(claims, list):
         for claim in claims:

@@ -46,6 +46,7 @@ JS_MESSAGES = (
     "eudiw lotl non è ancora implementato.",
     "Seleziona una modalità di discovery.",
     "Impossibile leggere i metadata di questo issuer.",
+    "Impossibile leggere i metadata dell'authorization server.",
     "Richiesta in corso...",
     "Ti sto portando all'issuer per scegliere l'identità digitale. Al termine torni qui e l'attestato viene salvato.",
     "Per il rilascio di {name}, non sarà condiviso alcun dato con l'issuer.",
@@ -111,6 +112,7 @@ JS_MESSAGES = (
     "Fonte",
     "Header",
     "Payload",
+    "Certificato",
     "Payload cifrato: serve la chiave del destinatario per leggerlo.",
 )
 

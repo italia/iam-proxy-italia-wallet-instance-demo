@@ -28,6 +28,7 @@ class BaseService:
         proxies: dict = None,
         no_proxy_domains: list[str] = None,
         parse_response=None,
+        purpose: str = "chiamare l'endpoint remoto",
     ):
         logger.debug(f"Entering method: __well_known_path. Params [url: {url}, type_endpoint: {type_endpoint}]")
         url = url.rstrip("/") + type_endpoint
@@ -35,6 +36,7 @@ class BaseService:
         return http_request_with_retry(
             "GET",
             url,
+            purpose=purpose,
             headers=headers,
             max_retries=retries,
             retry_delay=delay,

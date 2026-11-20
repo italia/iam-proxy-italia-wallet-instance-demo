@@ -13,6 +13,34 @@ from app.utils.utils import sanitize_for_logging
 
 logger = logging.getLogger(__name__)
 
+HTTP_FAILURE_MSGID = "La richiesta HTTP verso %(endpoint)s per %(purpose)s è fallita: %(detail)s."
+
+
+class HttpExchangeError(RuntimeError):
+    """HTTP request/response failure with endpoint URL and purpose for the user."""
+
+    def __init__(self, endpoint: str, purpose: str, detail: str, status: int | None = None):
+        self.endpoint = endpoint
+        self.purpose = purpose
+        self.detail = detail
+        self.status = status
+        super().__init__(self.as_msgid_string())
+
+    def as_msgid_string(self) -> str:
+        return HTTP_FAILURE_MSGID % {
+            "endpoint": self.endpoint,
+            "purpose": self.purpose,
+            "detail": self.detail,
+        }
+
+    def localized(self, translate: Callable[[str], str] | None = None) -> str:
+        t = translate or (lambda message: message)
+        return t(HTTP_FAILURE_MSGID) % {
+            "endpoint": self.endpoint,
+            "purpose": t(self.purpose),
+            "detail": self.detail,
+        }
+
 
 def _should_use_proxy(url: str, proxies: dict | None, no_proxy_domains: list[str] | None) -> bool:
     """Determine if proxy should be used for the given URL."""
@@ -111,9 +139,14 @@ def _execute_request(method: str, url: str, req_kwargs: dict) -> requests.Respon
     return requests.post(url, **req_kwargs)
 
 
+def _http_failure(url: str, purpose: str, detail: str, status: int | None = None) -> HttpExchangeError:
+    return HttpExchangeError(endpoint=url, purpose=purpose, detail=detail, status=status)
+
+
 def _process_response(
     response: requests.Response,
     url: str,
+    purpose: str,
     parse_response: Callable[[requests.Response], Any] | None,
     handle_redirect: Callable[[requests.Response], Any] | None,
 ) -> Any:
@@ -122,9 +155,8 @@ def _process_response(
         return handle_redirect(response)
     if not response.ok:
         error_str = _extract_error_from_response(response)
-        raise RuntimeError(
-            f"Errore ritornato dall'endpoint {url}: {error_str} (HTTP Status code: {response.status_code})"
-        )
+        detail = f"{error_str} (HTTP {response.status_code})" if error_str else f"HTTP {response.status_code}"
+        raise _http_failure(url, purpose, detail, status=response.status_code)
     if parse_response:
         return parse_response(response)
     return response
@@ -134,6 +166,7 @@ def http_request_with_retry(
     method: str,
     url: str,
     *,
+    purpose: str,
     headers: dict | None = None,
     data: dict | None = None,
     json_body: dict | None = None,
@@ -172,15 +205,15 @@ def http_request_with_retry(
                 sanitize_for_logging(str(ce)),
             )
             if attempt >= max_retries:
-                raise ConnectionError(
-                    f"Impossibile stabilire la connessione verso {url} dopo ripetuti tentativi"
+                raise _http_failure(
+                    url, purpose, "impossibile stabilire la connessione dopo ripetuti tentativi"
                 ) from ce
             time.sleep(retry_delay)
             continue
         except requests.RequestException as exc:
             _record_http(method, url, req_kwargs, error=exc)
-            raise
+            raise _http_failure(url, purpose, str(exc)) from exc
         _record_http(method, url, req_kwargs, response=response)
-        return _process_response(response, url, parse_response, handle_redirect)
+        return _process_response(response, url, purpose, parse_response, handle_redirect)
 
-    raise RuntimeError(f"Richiesta fallita verso {url} dopo {max_retries} tentativi")
+    raise _http_failure(url, purpose, f"richiesta fallita dopo {max_retries} tentativi")

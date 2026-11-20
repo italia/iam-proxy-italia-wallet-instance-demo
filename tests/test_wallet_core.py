@@ -8,17 +8,24 @@ import cbor2
 import requests
 
 from app.constants import (
+    METADATA_TYPE_AUTHORIZATION_SERVER,
     METADATA_TYPE_CREDENTIAL_ISSUER,
     METADATA_TYPE_FEDERATION_ENTITY,
     METADATA_TYPE_WALLET_PROVIDER,
 )
 from app.service.itwallet_helpers import (
+    _credential_configuration_path,
     credential_configuration_doctype,
+    credential_configuration_format,
     credential_configuration_namespaces,
+    credential_configuration_scope,
     validate_ec,
 )
 from app.store.credential_store import CredentialStore
+from app.store.entity_config_store import EntityConfigurationStore
+from app.utils.http_utils import HttpExchangeError, http_request_with_retry
 from app.utils.itwalletUtils import request_status_list
+from app.utils.utils import quote_jmespath_key
 
 _ISSUER = "https://issuer.example.org"
 _FEDERATION = METADATA_TYPE_FEDERATION_ENTITY
@@ -175,7 +182,60 @@ class HttpHistoryTests(unittest.TestCase):
         self.assertEqual(entry["response_http"], response_http)
         self.assertEqual(entry["request"]["body"]["grant"], "code")
         self.assertEqual(entry["response"]["access_token"], "tok")
+        self.assertEqual(entry["certificates"], [])
         remove_entries([entry["id"]])
+
+    def test_http_history_decodes_x5c_and_cose_x5chain(self):
+        from cryptography import x509
+        from cryptography.hazmat.primitives import hashes, serialization
+        from cryptography.hazmat.primitives.asymmetric import ec
+        from cryptography.x509.oid import NameOID
+
+        from app.utils.diagnostic_log import list_entries, record_exchange, remove_entries
+        from app.utils.utils import base64url_encode
+
+        key = ec.generate_private_key(ec.SECP256R1())
+        name = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "issuer.example.org")])
+        now = datetime.datetime.now(datetime.timezone.utc)
+        certificate = (
+            x509.CertificateBuilder()
+            .subject_name(name)
+            .issuer_name(name)
+            .public_key(key.public_key())
+            .serial_number(7)
+            .not_valid_before(now)
+            .not_valid_after(now + datetime.timedelta(days=1))
+            .sign(key, hashes.SHA256())
+        )
+        der = certificate.public_bytes(serialization.Encoding.DER)
+        x5c = base64.b64encode(der).decode("ascii")
+        header = base64url_encode(json.dumps({"alg": "ES256", "x5c": [x5c]}).encode())
+        payload = base64url_encode(json.dumps({"iss": "https://issuer.example.org"}).encode())
+        jwt_token = f"{header}.{payload}.sig"
+        mdoc = base64url_encode(cbor2.dumps({"issuerAuth": [b"", {33: der}, cbor2.dumps({"docType": "pid"}), b"\x00"]}))
+
+        record_exchange(
+            method="POST",
+            url="https://issuer.example.org/credential",
+            request_headers={"Content-Type": "application/json"},
+            request_body={"assertion": jwt_token},
+            status=200,
+            response_body={"credential": mdoc},
+            request_http="POST /credential HTTP/1.1\n",
+            response_http="HTTP/1.1 200 OK\n",
+        )
+        stored = [entry for entry in list_entries() if entry.get("url") == "https://issuer.example.org/credential"]
+        self.assertTrue(stored)
+        entry = stored[-1]
+        texts = [item["text"] for item in entry["certificates"]]
+        self.assertTrue(any("Subject: CN=issuer.example.org" in text for text in texts))
+        self.assertTrue(any("-----BEGIN CERTIFICATE-----" in text for text in texts))
+        self.assertTrue(any(item["locator"].endswith("x5c") for item in entry["certificates"]))
+        self.assertTrue(any("x5chain" in item["locator"] for item in entry["certificates"]))
+        remove_entries([entry["id"]])
+
+
+_HYPHENATED_CREDENTIAL_ID = "urn:eu.europa.ec.eudi:pid:1.sd-jwt.key-attestation-required"
 
 
 class IssuerConfigurationTests(unittest.TestCase):
@@ -206,12 +266,86 @@ class IssuerConfigurationTests(unittest.TestCase):
             ["org.iso.18013.5.1"],
         )
 
+    def test_hyphenated_credential_configuration_id_is_readable(self):
+        configuration = {
+            "iss": _ISSUER,
+            "metadata": {
+                METADATA_TYPE_CREDENTIAL_ISSUER: {
+                    "credential_configurations_supported": {
+                        _HYPHENATED_CREDENTIAL_ID: {
+                            "scope": "pid",
+                            "format": "vc+sd-jwt",
+                            "doctype": "eu.europa.ec.eudi.pid.1",
+                            "credential_metadata": {"claims": [{"path": ["eu.europa.ec.eudi.pid.1", "family_name"]}]},
+                        }
+                    }
+                }
+            },
+        }
+        self.assertEqual(quote_jmespath_key(_HYPHENATED_CREDENTIAL_ID), f'"{_HYPHENATED_CREDENTIAL_ID}"')
+        self.assertIn(
+            quote_jmespath_key(_HYPHENATED_CREDENTIAL_ID), _credential_configuration_path(_HYPHENATED_CREDENTIAL_ID)
+        )
+        self.assertEqual(credential_configuration_scope(configuration, _HYPHENATED_CREDENTIAL_ID), "pid")
+        self.assertEqual(credential_configuration_format(configuration, _HYPHENATED_CREDENTIAL_ID), "vc+sd-jwt")
+        self.assertEqual(
+            credential_configuration_doctype(configuration, _HYPHENATED_CREDENTIAL_ID),
+            "eu.europa.ec.eudi.pid.1",
+        )
+        self.assertEqual(
+            credential_configuration_namespaces(configuration, _HYPHENATED_CREDENTIAL_ID),
+            ["eu.europa.ec.eudi.pid.1"],
+        )
+        store = EntityConfigurationStore(cleanup_interval=3600)
+        store.add(_ISSUER, configuration)
+        matched = store.all_values(_credential_configuration_path(_HYPHENATED_CREDENTIAL_ID))
+        self.assertEqual(len(matched), 1)
+        self.assertEqual(matched[0]["iss"], _ISSUER)
+
     def test_missing_doctype_stops_the_read(self):
         configuration = {
             "metadata": {METADATA_TYPE_CREDENTIAL_ISSUER: {"credential_configurations_supported": {"mso_mdoc_mDL": {}}}}
         }
         with self.assertRaises(ValueError):
             credential_configuration_doctype(configuration, "mso_mdoc_mDL")
+
+
+class HttpExchangeErrorTests(unittest.TestCase):
+    def test_non_ok_response_includes_endpoint_and_purpose(self):
+        failed = requests.Response()
+        failed.status_code = 503
+        failed.headers["Content-Type"] = "text/plain"
+        failed._content = b"down"
+        failed.url = "https://issuer.example.org/.well-known/openid-federation"
+        failed.reason = "Unavailable"
+        failed.request = requests.Request("GET", failed.url).prepare()
+        purpose = "scaricare la entity configuration OpenID Federation"
+        with patch("app.utils.http_utils.requests.get", return_value=failed):
+            with self.assertRaises(HttpExchangeError) as raised:
+                http_request_with_retry("GET", failed.url, purpose=purpose, max_retries=1, retry_delay=0)
+        error = raised.exception
+        self.assertEqual(error.endpoint, failed.url)
+        self.assertEqual(error.purpose, purpose)
+        self.assertIn(failed.url, str(error))
+        self.assertIn(purpose, str(error))
+        self.assertIn("HTTP 503", str(error))
+        self.assertIn(failed.url, error.localized())
+        self.assertIn(purpose, error.localized())
+
+    def test_connection_failure_includes_endpoint_and_purpose(self):
+        purpose = "scaricare i metadata OpenID4VCI dell'issuer"
+        url = "https://issuer.example.org/.well-known/openid-credential-issuer"
+        with (
+            patch(
+                "app.utils.http_utils.requests.get",
+                side_effect=requests.ConnectionError("refused"),
+            ),
+            patch("app.utils.http_utils.time.sleep"),
+        ):
+            with self.assertRaises(HttpExchangeError) as raised:
+                http_request_with_retry("GET", url, purpose=purpose, max_retries=1, retry_delay=0)
+        self.assertIn(url, str(raised.exception))
+        self.assertIn(purpose, str(raised.exception))
 
 
 class ValidateEcTests(unittest.TestCase):
@@ -633,6 +767,192 @@ class CatalogDiscoveryTests(unittest.TestCase):
             payload = _direct_issuer_payload(service, path_scoped)
         self.assertEqual(payload["_wallet_metadata_source"], legacy)
         self.assertEqual(payload["iss"], path_scoped)
+
+    def test_rfc_and_legacy_as_metadata_urls(self):
+        from app.service.catalog import (
+            _direct_as_metadata_urls,
+            _legacy_oauth_as_metadata_url,
+            _rfc_oauth_as_metadata_url,
+        )
+
+        path_scoped = "https://as.example.org/tenants/pid"
+        self.assertEqual(
+            _rfc_oauth_as_metadata_url(path_scoped),
+            "https://as.example.org/.well-known/oauth-authorization-server/tenants/pid",
+        )
+        self.assertEqual(
+            _legacy_oauth_as_metadata_url(path_scoped),
+            "https://as.example.org/tenants/pid/.well-known/oauth-authorization-server",
+        )
+        self.assertEqual(
+            _direct_as_metadata_urls(path_scoped),
+            [
+                "https://as.example.org/.well-known/oauth-authorization-server/tenants/pid",
+                "https://as.example.org/tenants/pid/.well-known/oauth-authorization-server",
+            ],
+        )
+        host_only = "https://as.example.org"
+        self.assertEqual(
+            _direct_as_metadata_urls(host_only),
+            ["https://as.example.org/.well-known/oauth-authorization-server"],
+        )
+
+    def test_direct_fetch_attaches_external_as_metadata(self):
+        from app.service.catalog import _DISCOVERY_DIRECT, _fetch_issuer_payload
+
+        issuer = "https://issuer.example.org/issuers/eu-pid-device-bound"
+        as_id = "https://as.example.org"
+        ci_url = "https://issuer.example.org/.well-known/openid-credential-issuer/issuers/eu-pid-device-bound"
+        as_url = "https://as.example.org/.well-known/oauth-authorization-server"
+        ci_metadata = {
+            "credential_issuer": issuer,
+            "authorization_servers": [as_id],
+            "credential_configurations_supported": {"eu.europa.ec.eudi.pid.1": {"format": "dc+sd-jwt", "scope": "pid"}},
+        }
+        as_metadata = {
+            "issuer": as_id,
+            "authorization_endpoint": "https://as.example.org/authorize",
+            "pushed_authorization_request_endpoint": "https://as.example.org/par",
+            "token_endpoint": "https://as.example.org/token",
+        }
+
+        def fake_get(method, url, **kwargs):
+            if url == ci_url:
+                return ci_metadata
+            if url == as_url:
+                return as_metadata
+            raise AssertionError(f"unexpected url {url}")
+
+        service = type("Svc", (), {"proxies": None, "no_proxy_domains": None})()
+        with patch("app.service.catalog.http_request_with_retry", side_effect=fake_get):
+            payload = _fetch_issuer_payload(service, issuer, _DISCOVERY_DIRECT)
+        self.assertEqual(payload["metadata"][METADATA_TYPE_AUTHORIZATION_SERVER], as_metadata)
+
+    def test_direct_fetch_falls_back_to_credential_issuer_as_id(self):
+        from app.service.catalog import _DISCOVERY_DIRECT, _fetch_issuer_payload
+
+        issuer = "https://issuer.example.org"
+        ci_url = "https://issuer.example.org/.well-known/openid-credential-issuer"
+        as_url = "https://issuer.example.org/.well-known/oauth-authorization-server"
+        ci_metadata = {
+            "credential_issuer": issuer,
+            "credential_configurations_supported": {"eu.europa.ec.eudi.pid.1": {"format": "dc+sd-jwt", "scope": "pid"}},
+        }
+        as_metadata = {
+            "issuer": issuer,
+            "authorization_endpoint": "https://issuer.example.org/authorize",
+            "token_endpoint": "https://issuer.example.org/token",
+        }
+
+        def fake_get(method, url, **kwargs):
+            if url == ci_url:
+                return ci_metadata
+            if url == as_url:
+                return as_metadata
+            raise AssertionError(f"unexpected url {url}")
+
+        service = type("Svc", (), {"proxies": None, "no_proxy_domains": None})()
+        with patch("app.service.catalog.http_request_with_retry", side_effect=fake_get):
+            payload = _fetch_issuer_payload(service, issuer, _DISCOVERY_DIRECT)
+        self.assertEqual(payload["metadata"][METADATA_TYPE_AUTHORIZATION_SERVER], as_metadata)
+
+    def test_direct_fetch_fails_when_as_metadata_missing(self):
+        from app.service.catalog import (
+            _DISCOVERY_DIRECT,
+            AuthorizationServerMetadataError,
+            _fetch_issuer_payload,
+        )
+
+        issuer = "https://issuer.example.org"
+        ci_url = "https://issuer.example.org/.well-known/openid-credential-issuer"
+        as_url = "https://issuer.example.org/.well-known/oauth-authorization-server"
+        ci_metadata = {
+            "credential_issuer": issuer,
+            "credential_configurations_supported": {"eu.europa.ec.eudi.pid.1": {"format": "dc+sd-jwt", "scope": "pid"}},
+        }
+
+        def fake_get(method, url, **kwargs):
+            if url == ci_url:
+                return ci_metadata
+            if url == as_url:
+                raise RuntimeError("as missing")
+            raise AssertionError(f"unexpected url {url}")
+
+        service = type("Svc", (), {"proxies": None, "no_proxy_domains": None})()
+        with patch("app.service.catalog.http_request_with_retry", side_effect=fake_get):
+            with self.assertRaises(AuthorizationServerMetadataError):
+                _fetch_issuer_payload(service, issuer, _DISCOVERY_DIRECT)
+
+    def test_attach_skips_when_as_metadata_present(self):
+        from app.service.catalog import (
+            _DISCOVERY_DIRECT,
+            _attach_authorization_server_metadata,
+        )
+
+        payload = {
+            "iss": "https://issuer.example.org",
+            "metadata": {
+                METADATA_TYPE_CREDENTIAL_ISSUER: {
+                    "credential_issuer": "https://issuer.example.org",
+                    "authorization_servers": ["https://as.example.org"],
+                },
+                METADATA_TYPE_AUTHORIZATION_SERVER: {
+                    "issuer": "https://issuer.example.org",
+                    "authorization_endpoint": "https://issuer.example.org/authorize",
+                },
+            },
+        }
+        service = type("Svc", (), {"proxies": None, "no_proxy_domains": None})()
+        with patch("app.service.catalog.http_request_with_retry") as mocked:
+            _attach_authorization_server_metadata(service, payload, _DISCOVERY_DIRECT)
+            mocked.assert_not_called()
+
+    def test_federation_fetch_attaches_as_from_federation_ec(self):
+        from app.service.catalog import _DISCOVERY_FEDERATION, _fetch_issuer_payload
+
+        issuer = "https://issuer.example.org"
+        as_id = "https://as.example.org"
+        ci_ec = {
+            "iss": issuer,
+            "metadata": {
+                METADATA_TYPE_CREDENTIAL_ISSUER: {
+                    "credential_issuer": issuer,
+                    "authorization_servers": [as_id],
+                    "credential_configurations_supported": {
+                        "eu.europa.ec.eudi.pid.1": {"format": "dc+sd-jwt", "scope": "pid"}
+                    },
+                }
+            },
+        }
+        as_meta = {
+            "issuer": as_id,
+            "authorization_endpoint": "https://as.example.org/authorize",
+            "token_endpoint": "https://as.example.org/token",
+        }
+        as_ec = {"iss": as_id, "metadata": {METADATA_TYPE_AUTHORIZATION_SERVER: as_meta}}
+
+        def fake_ec(_svc, url, expectedMetadataTypes, expected_hint=None):
+            if url == issuer:
+                self.assertEqual(expectedMetadataTypes, [METADATA_TYPE_CREDENTIAL_ISSUER])
+                return dict(ci_ec)
+            if url == as_id:
+                self.assertEqual(expectedMetadataTypes, [METADATA_TYPE_AUTHORIZATION_SERVER])
+                return dict(as_ec)
+            raise AssertionError(f"unexpected entity {url}")
+
+        service = type(
+            "Svc",
+            (),
+            {
+                "proxies": None,
+                "no_proxy_domains": None,
+                "_entity_configuration_management": fake_ec,
+            },
+        )()
+        with patch("app.service.catalog.http_request_with_retry") as mocked_http:
+            payload = _fetch_issuer_payload(service, issuer, _DISCOVERY_FEDERATION)
+            mocked_http.assert_not_called()
+        self.assertEqual(payload["metadata"][METADATA_TYPE_AUTHORIZATION_SERVER], as_meta)
 
 
 if __name__ == "__main__":

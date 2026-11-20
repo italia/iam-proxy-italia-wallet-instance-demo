@@ -10,6 +10,8 @@ from datetime import datetime, timezone
 from functools import wraps
 from urllib.parse import urlsplit
 
+from app.utils.x509Utils import certificates_from_exchange
+
 logger = logging.getLogger(__name__)
 
 peer_role: contextvars.ContextVar[str | None] = contextvars.ContextVar("diagnostic_peer", default=None)
@@ -174,9 +176,15 @@ def record_exchange(
     logger.info("diagnosi %s", json.dumps(entry, ensure_ascii=False, default=str))
 
 
+def _with_certificates(entry: dict) -> dict:
+    enriched = dict(entry)
+    enriched["certificates"] = certificates_from_exchange(entry)
+    return enriched
+
+
 def list_entries() -> list[dict]:
     with _lock:
-        return list(_entries)
+        return [_with_certificates(entry) for entry in _entries]
 
 
 def remove_entries(ids: list[str]) -> int:

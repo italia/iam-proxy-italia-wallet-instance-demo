@@ -16,9 +16,10 @@ from app.constants import (
     CREDENTIAL_INVALID,
     CREDENTIAL_SUSPENDED,
     CREDENTIAL_VALID,
+    METADATA_TYPE_AUTHORIZATION_SERVER,
 )
 from app.utils.http_utils import _parse_json_response, http_request_with_retry
-from app.utils.utils import base64url_encode, sanitize_for_logging
+from app.utils.utils import base64url_encode, extract_claim, sanitize_for_logging
 
 logger = logging.getLogger(__name__)
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -56,16 +57,53 @@ def _parse_jwt_response(expected_ct: str):
     return parser
 
 
+def requires_signed_request_object(entity_configuration: dict) -> bool:
+    """True only when oauth_authorization_server.require_signed_request_object is true."""
+    return (
+        extract_claim(
+            entity_configuration,
+            f"metadata.{METADATA_TYPE_AUTHORIZATION_SERVER}.require_signed_request_object",
+        )
+        is True
+    )
+
+
+def build_par_cleartext_params(
+    client_id: str,
+    state: str,
+    code_challenge: str,
+    code_challenge_method: str,
+    response_type: str,
+    redirect_uri: str,
+    scope: str,
+    authorization_details: list | None = None,
+) -> dict:
+    """Form body for an unsigned PAR (JAR not required by the Authorization Server)."""
+    data = {
+        "client_id": client_id,
+        "state": state,
+        "code_challenge": code_challenge,
+        "code_challenge_method": code_challenge_method,
+        "response_type": response_type,
+        "redirect_uri": redirect_uri,
+        "scope": scope,
+    }
+    if authorization_details is not None:
+        data["authorization_details"] = json.dumps(authorization_details)
+    return data
+
+
 def request_as_par(
     url: str,
     wallet_attestation_jwt: str,
     wallet_attestation_dpop_jwt: str,
-    request_object_jwt: str,
+    request_object_jwt: str | None,
     client_id: str,
     max_retries: int = 3,
     retry_delay: float = 1.0,
     proxies: dict = None,
     no_proxy_domains: list[str] = None,
+    par_params: dict | None = None,
 ) -> dict:
     """
     Invia una richiesta POST /as/par con retry in caso di errore di connessione.
@@ -75,9 +113,11 @@ def request_as_par(
         url: endpoint URL
         wallet_attestation_jwt: attestazione del client firmata da inserire nell'header OAuth-Client-Attestation della richiesta
         wallet_attestation_dpop_jwt: DPoP JWT firmato da inserire nell'header OAuth-Client-Attestation-PoP della richiesta
-        request_object_jwt: JWT firmato da fornire nel paylod della richiesta
+        request_object_jwt: JWT firmato (JAR) quando require_signed_request_object è true; None in chiaro
+        client_id: client_id del wallet
         max_retries: Numero massimo di tentativi in caso di errore di connessione
         retry_delay: Secondi di attesa tra un tentativo e l'altro
+        par_params: parametri form in chiaro quando il Request Object non è firmato
 
     Returns:
         Dizionario JSON della risposta, o eccezione in caso di errore.
@@ -90,7 +130,13 @@ def request_as_par(
         "OAuth-Client-Attestation": wallet_attestation_jwt,
         "OAuth-Client-Attestation-PoP": wallet_attestation_dpop_jwt,
     }
-    data = {"client_id": client_id, "request": request_object_jwt}
+    if request_object_jwt is not None:
+        data = {"client_id": client_id, "request": request_object_jwt}
+    elif par_params is not None:
+        data = dict(par_params)
+        data.setdefault("client_id", client_id)
+    else:
+        raise ValueError("PAR richiede un Request Object firmato oppure i parametri in chiaro")
 
     logger.info(f"Header: {json.dumps(headers, indent=2)}")
 
@@ -99,6 +145,7 @@ def request_as_par(
     return http_request_with_retry(
         "POST",
         url,
+        purpose="inviare la pushed authorization request",
         headers=headers,
         data=data,
         max_retries=max_retries,
@@ -139,6 +186,7 @@ def request_authorize(
     return http_request_with_retry(
         "GET",
         full_url,
+        purpose="inviare la richiesta di autorizzazione",
         max_retries=max_retries,
         retry_delay=retry_delay,
         proxies=proxies,
@@ -197,6 +245,7 @@ def request_token(
     return http_request_with_retry(
         "POST",
         url,
+        purpose="scambiare il codice di autorizzazione con il token",
         headers=headers,
         data=data,
         max_retries=max_retries,
@@ -251,6 +300,7 @@ def request_credential(
     return http_request_with_retry(
         "POST",
         url,
+        purpose="richiedere l'attestato all'issuer",
         headers=headers,
         json_body=data,
         max_retries=max_retries,
@@ -298,6 +348,7 @@ def request_nonce(
     return http_request_with_retry(
         "POST",
         url,
+        purpose="richiedere il nonce all'issuer",
         headers=headers,
         max_retries=max_retries,
         retry_delay=retry_delay,
@@ -333,6 +384,7 @@ def request_request_uri(
     return http_request_with_retry(
         "GET",
         full_url,
+        purpose="scaricare la request object del relying party",
         max_retries=max_retries,
         retry_delay=retry_delay,
         proxies=proxies,
@@ -374,6 +426,7 @@ def request_response_uri(
     return http_request_with_retry(
         "POST",
         url,
+        purpose="inviare la risposta di presentazione al relying party",
         headers=headers,
         data=data,
         max_retries=max_retries,
@@ -430,6 +483,7 @@ def request_presentation_callback(
     return http_request_with_retry(
         "GET",
         url,
+        purpose="seguire la callback di presentazione",
         max_retries=max_retries,
         retry_delay=retry_delay,
         proxies=proxies,
@@ -453,6 +507,7 @@ def request_status_list(
     return http_request_with_retry(
         "GET",
         url,
+        purpose="scaricare la Status List",
         headers=headers,
         max_retries=max_retries,
         retry_delay=retry_delay,

@@ -10,6 +10,7 @@ from flask_babel import gettext as _
 from app.constants import (
     APP_SETTINGS_KEY,
     DEFAULT_CORRELATION_ID,
+    METADATA_TYPE_AUTHORIZATION_SERVER,
     METADATA_TYPE_CREDENTIAL_ISSUER,
     OID_FED_WELL_KNOWN_PATH,
 )
@@ -17,7 +18,7 @@ from app.i18n import get_locale
 from app.service.itwallet_service import ItWalletService
 from app.store import app_state
 from app.utils.diagnostic_log import list_entries, peer_role, remove_entries
-from app.utils.http_utils import http_request_with_retry
+from app.utils.http_utils import HttpExchangeError, http_request_with_retry
 from app.utils.utils import (
     estrai_parametro_query_string,
     guess_credential_configuration_icon,
@@ -30,6 +31,11 @@ _DISCOVERY_DIRECT = "openid"
 _DISCOVERY_FEDERATION = "openid-federation"
 _DISCOVERY_LOTL = "eudiw-lotl"
 _DIRECT_WELL_KNOWN = "/.well-known/openid-credential-issuer"
+_AS_WELL_KNOWN = "/.well-known/oauth-authorization-server"
+
+
+class AuthorizationServerMetadataError(ValueError):
+    """Raised when Authorization Server metadata cannot be attached during discovery."""
 
 
 def _with_credential_view_url(result: dict) -> dict:
@@ -136,28 +142,43 @@ def _claim_entries(config: dict) -> list[dict]:
     return entries
 
 
-def load_configured_issuers() -> str | None:
-    """Fetch each configured issuer into ec_store. Returns an Italian error, or None."""
-    urls = configured_issuer_urls()
-    if not urls:
-        return "Nessun credential issuer è configurato."
+def _known_issuer_urls() -> set:
     known = set()
     for key in app_state.ec_store.keys():
         payload = app_state.ec_store.get(key)
         if isinstance(payload, dict):
             known.add(payload.get("iss") or key)
+    return known
+
+
+def _load_one_configured_issuer(service: ItWalletService, url: str) -> str | None:
+    try:
+        ec_payload = _fetch_issuer_payload(service, url, _DISCOVERY_FEDERATION)
+        if not _attestations_from_ec(ec_payload):
+            return "Questo indirizzo non pubblica attestazioni ottenibili."
+        app_state.ec_store.add(ec_payload.get("iss") or url, ec_payload)
+    except AuthorizationServerMetadataError as exc:
+        logger.error("❌ %s", sanitize_for_logging(str(exc)))
+        return "Impossibile leggere i metadata dell'authorization server."
+    except Exception as exc:
+        logger.error("❌ %s", sanitize_for_logging(str(exc)))
+        return "Impossibile leggere i metadata di questo issuer."
+    return None
+
+
+def load_configured_issuers() -> str | None:
+    """Fetch each configured issuer into ec_store. Returns an Italian error, or None."""
+    urls = configured_issuer_urls()
+    if not urls:
+        return "Nessun credential issuer è configurato."
+    known = _known_issuer_urls()
     service = ItWalletService(session)
     for url in urls:
         if url in known:
             continue
-        try:
-            ec_payload = service._entity_configuration_management(url, [METADATA_TYPE_CREDENTIAL_ISSUER])
-            if not _attestations_from_ec(ec_payload):
-                return "Questo indirizzo non pubblica attestazioni ottenibili."
-            app_state.ec_store.add(ec_payload.get("iss") or url, ec_payload)
-        except Exception as exc:
-            logger.error("❌ %s", sanitize_for_logging(str(exc)))
-            return "Impossibile leggere i metadata di questo issuer."
+        error = _load_one_configured_issuer(service, url)
+        if error:
+            return error
     return None
 
 
@@ -292,6 +313,25 @@ def _direct_metadata_urls(issuer_url: str) -> list[str]:
     return [rfc, legacy]
 
 
+def _rfc_oauth_as_metadata_url(as_url: str) -> str:
+    """RFC 8414 §3: insert well-known between host and path."""
+    parts = urlparse((as_url or "").strip())
+    path = parts.path.rstrip("/")
+    return urlunsplit((parts.scheme, parts.netloc, f"{_AS_WELL_KNOWN}{path}", "", ""))
+
+
+def _legacy_oauth_as_metadata_url(as_url: str) -> str:
+    return f"{(as_url or '').strip().rstrip('/')}{_AS_WELL_KNOWN}"
+
+
+def _direct_as_metadata_urls(as_url: str) -> list[str]:
+    rfc = _rfc_oauth_as_metadata_url(as_url)
+    legacy = _legacy_oauth_as_metadata_url(as_url)
+    if rfc == legacy:
+        return [rfc]
+    return [rfc, legacy]
+
+
 def _metadata_source(entity_id: str, discovery: str, ec_payload: dict | None = None) -> str:
     if isinstance(ec_payload, dict):
         stored = str(ec_payload.get("_wallet_metadata_source") or "").strip()
@@ -384,6 +424,91 @@ def _parse_direct_metadata(response) -> dict:
     return metadata
 
 
+def _parse_direct_as_metadata(response) -> dict:
+    metadata = response.json()
+    if not isinstance(metadata, dict):
+        raise ValueError("authorization server metadata is not an object")
+    return metadata
+
+
+def _has_authorization_server_metadata(payload: dict) -> bool:
+    if not isinstance(payload, dict):
+        return False
+    metadata = (payload.get("metadata") or {}).get(METADATA_TYPE_AUTHORIZATION_SERVER)
+    return isinstance(metadata, dict) and bool(metadata)
+
+
+def _authorization_server_identifier(payload: dict) -> str:
+    ci = _credential_issuer_metadata(payload)
+    servers = ci.get("authorization_servers")
+    if isinstance(servers, list):
+        for entry in servers:
+            if isinstance(entry, str) and entry.strip():
+                return entry.strip()
+    return str(ci.get("credential_issuer") or payload.get("iss") or "").strip()
+
+
+def _fetch_direct_authorization_server_metadata(service: ItWalletService, as_id: str) -> dict:
+    last_error: Exception | None = None
+    metadata = None
+    urls = _direct_as_metadata_urls(as_id)
+    for index, metadata_url in enumerate(urls):
+        try:
+            metadata = http_request_with_retry(
+                "GET",
+                metadata_url,
+                purpose="scaricare i metadata OAuth Authorization Server",
+                headers={"Accept": "application/json"},
+                proxies=service.proxies,
+                no_proxy_domains=service.no_proxy_domains,
+                parse_response=_parse_direct_as_metadata,
+                max_retries=1 if index < len(urls) - 1 else 3,
+            )
+            break
+        except Exception as exc:
+            last_error = exc
+            logger.info(
+                "Direct authorization server metadata miss at %s: %s",
+                sanitize_for_logging(metadata_url),
+                sanitize_for_logging(str(exc)),
+            )
+    if metadata is None:
+        if isinstance(last_error, HttpExchangeError):
+            raise last_error
+        raise AuthorizationServerMetadataError("authorization server metadata unavailable") from last_error
+    return metadata
+
+
+def _fetch_federation_authorization_server_metadata(service: ItWalletService, as_id: str) -> dict:
+    try:
+        as_ec = service._entity_configuration_management(as_id, [METADATA_TYPE_AUTHORIZATION_SERVER])
+    except Exception as exc:
+        raise AuthorizationServerMetadataError("authorization server metadata unavailable") from exc
+    as_meta = (as_ec.get("metadata") or {}).get(METADATA_TYPE_AUTHORIZATION_SERVER)
+    if not isinstance(as_meta, dict) or not as_meta:
+        raise AuthorizationServerMetadataError("authorization server metadata unavailable")
+    return as_meta
+
+
+def _attach_authorization_server_metadata(service: ItWalletService, payload: dict, discovery: str) -> None:
+    if not isinstance(payload, dict):
+        return
+    if not _credential_issuer_metadata(payload):
+        return
+    if _has_authorization_server_metadata(payload):
+        return
+    as_id = _authorization_server_identifier(payload)
+    if not as_id:
+        raise AuthorizationServerMetadataError("authorization server metadata unavailable")
+    if discovery == _DISCOVERY_DIRECT:
+        as_meta = _fetch_direct_authorization_server_metadata(service, as_id)
+    elif discovery == _DISCOVERY_FEDERATION:
+        as_meta = _fetch_federation_authorization_server_metadata(service, as_id)
+    else:
+        return
+    payload.setdefault("metadata", {})[METADATA_TYPE_AUTHORIZATION_SERVER] = as_meta
+
+
 def _direct_issuer_payload(service: ItWalletService, issuer_url: str) -> dict:
     last_error: Exception | None = None
     metadata = None
@@ -394,6 +519,7 @@ def _direct_issuer_payload(service: ItWalletService, issuer_url: str) -> dict:
             metadata = http_request_with_retry(
                 "GET",
                 metadata_url,
+                purpose="scaricare i metadata OpenID4VCI dell'issuer",
                 headers={"Accept": "application/json"},
                 proxies=service.proxies,
                 no_proxy_domains=service.no_proxy_domains,
@@ -422,9 +548,11 @@ def _direct_issuer_payload(service: ItWalletService, issuer_url: str) -> dict:
 
 def _fetch_issuer_payload(service: ItWalletService, issuer_url: str, discovery: str) -> dict:
     if discovery == _DISCOVERY_DIRECT:
-        return _direct_issuer_payload(service, issuer_url)
-    payload = service._entity_configuration_management(issuer_url, [METADATA_TYPE_CREDENTIAL_ISSUER])
-    payload["_wallet_discovery"] = _DISCOVERY_FEDERATION
+        payload = _direct_issuer_payload(service, issuer_url)
+    else:
+        payload = service._entity_configuration_management(issuer_url, [METADATA_TYPE_CREDENTIAL_ISSUER])
+        payload["_wallet_discovery"] = _DISCOVERY_FEDERATION
+    _attach_authorization_server_metadata(service, payload, discovery)
     return payload
 
 
@@ -453,6 +581,18 @@ def _store_discovered_issuer(issuer_url: str, discovery: str):
         stored_as = ec_payload.get("iss") or issuer_url
         app_state.ec_store.add(stored_as, ec_payload)
         return jsonify({"success": True, "data": _catalog_section(stored_as, attestations, ec_payload)}), 200
+    except HttpExchangeError as he:
+        logger.error("❌ %s", sanitize_for_logging(str(he)))
+        return jsonify({"success": False, "field": "issuerUrl", "message": he.localized(_)}), 502
+    except AuthorizationServerMetadataError as ase:
+        logger.error("❌ %s", sanitize_for_logging(str(ase)))
+        return jsonify(
+            {
+                "success": False,
+                "field": "issuerUrl",
+                "message": _("Impossibile leggere i metadata dell'authorization server."),
+            }
+        ), 400
     except ValueError as ve:
         logger.error("❌ %s", sanitize_for_logging(str(ve)))
         return jsonify(
@@ -478,6 +618,24 @@ def _issuer_catalog_post():
     if rejected:
         return jsonify({"success": False, "field": "discovery", "message": rejected}), 400
     return _store_discovered_issuer(issuer_url, discovery)
+
+
+def _issuer_catalog_delete():
+    body = request.get_json(silent=True) or {}
+    issuer = (body.get("issuer") or "").strip()
+    if not issuer:
+        return jsonify({"success": False, "message": _("Indica l'issuer da rimuovere.")}), 400
+    for key in list(app_state.ec_store.keys()):
+        payload = app_state.ec_store.get(key)
+        if not isinstance(payload, dict):
+            continue
+        if key != issuer and payload.get("iss") != issuer:
+            continue
+        if not _attestations_from_ec(payload):
+            continue
+        app_state.ec_store.remove(key)
+        return jsonify({"success": True}), 200
+    return jsonify({"success": False, "message": _("Issuer non trovato nel catalogo.")}), 404
 
 
 def _require_param(value: str | None, msg: str) -> str:
