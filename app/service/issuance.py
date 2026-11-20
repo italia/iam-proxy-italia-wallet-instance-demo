@@ -79,6 +79,7 @@ from app.utils.cborUtils import decode_and_verify_issuer_signed
 from app.utils.diagnostic_log import diagnostic_peer
 from app.utils.http_utils import _parse_json_response, http_request_with_retry
 from app.utils.itwalletUtils import (
+    build_par_cleartext_params,
     generate_dpop_jwt,
     generate_par_request_object_jwt,
     generate_proof_jwt,
@@ -94,6 +95,7 @@ from app.utils.itwalletUtils import (
     request_request_uri,
     request_response_uri,
     request_token,
+    requires_signed_request_object,
 )
 from app.utils.jwtUtils import decode_and_verify_jwt, extract_key_for_enc, is_jwt
 from app.utils.oidFedUtils import oid_fed_fetch_openid_configuration, oid_fed_list
@@ -329,22 +331,6 @@ class IssuanceFlow:
         if not session_id:
             raise ValueError("Sessione non inizializzata")
 
-        request_object_jwt = generate_par_request_object_jwt(
-            issuer_private_key=wallet_private_key,
-            audience=pid_provider_url,
-            state=oauth_state,
-            code_challenge=pkce["code_challenge"],
-            code_challenge_method=pkce["code_challenge_method"],
-            response_type=initialize_flow_response_type,
-            redirect_uri=initialize_flow_redirect_uri,
-            scope=credential_configuration_scope(pid_provider_ec, cred_config_id),
-            authorization_details=authorization_details,
-        )
-        if not request_object_jwt:
-            raise ValueError("Fallita generazione Request Object JWT")
-
-        logger.info("📄 Request Object JWT generato.")
-
         # recupero EC del pid provider dalla memoria
         query_filter = f"metadata.{METADATA_TYPE_AUTHORIZATION_SERVER}.pushed_authorization_request_endpoint"
         pid_provider_as_par_url = extract_claim(pid_provider_ec, query_filter)
@@ -352,15 +338,20 @@ class IssuanceFlow:
         # codeql[py/log-injection]
         logger.info("🚀 Invio PAR request al PAR endpoint %s", sanitize_for_logging(pid_provider_as_par_url))
 
-        # Effettua una par request
-        as_par_response = request_as_par(
-            url=pid_provider_as_par_url,
+        as_par_response = self._send_par_request(
+            provider_ec=pid_provider_ec,
+            par_url=pid_provider_as_par_url,
+            wallet_private_key=wallet_private_key,
+            wallet_client_id=wallet_client_id,
             wallet_attestation_jwt=wallet_attestation_jwt,
-            wallet_attestation_dpop_jwt=client_attestation_pop_jwt,
-            request_object_jwt=request_object_jwt,
-            client_id=wallet_client_id,
-            proxies=self.proxies,
-            no_proxy_domains=self.no_proxy_domains,
+            client_attestation_pop_jwt=client_attestation_pop_jwt,
+            audience=pid_provider_url,
+            oauth_state=oauth_state,
+            pkce=pkce,
+            response_type=initialize_flow_response_type,
+            redirect_uri=initialize_flow_redirect_uri,
+            scope=credential_configuration_scope(pid_provider_ec, cred_config_id),
+            authorization_details=authorization_details,
         )
 
         logger.info("✅ Ricevuta risposta dal PAR endpoint %s", sanitize_for_logging(pid_provider_as_par_url))
@@ -653,29 +644,21 @@ class IssuanceFlow:
 
         logger.info(f"session_id: {session_id}")
 
-        request_object_jwt = generate_par_request_object_jwt(
-            issuer_private_key=wallet_private_key,
+        eaa_provider_as_par_url = self._get_eaa_par_url(eaa_provider_ec)
+        as_par_response = self._send_par_request(
+            provider_ec=eaa_provider_ec,
+            par_url=eaa_provider_as_par_url,
+            wallet_private_key=wallet_private_key,
+            wallet_client_id=wallet_client_id,
+            wallet_attestation_jwt=wallet_attestation_jwt,
+            client_attestation_pop_jwt=client_attestation_pop_jwt,
             audience=eaa_provider_url,
-            state=oauth_state,
-            code_challenge=pkce["code_challenge"],
-            code_challenge_method=pkce["code_challenge_method"],
+            oauth_state=oauth_state,
+            pkce=pkce,
             response_type=credential_flow_response_type,
             redirect_uri=credential_flow_redirect_uri,
             scope=credential_configuration_scope(eaa_provider_ec, credential_configuration_id),
             authorization_details=authorization_details,
-        )
-        if not request_object_jwt:
-            raise ValueError("Non riesco a preparare la richiesta di autorizzazione verso l'issuer.")
-
-        eaa_provider_as_par_url = self._get_eaa_par_url(eaa_provider_ec)
-        as_par_response = request_as_par(
-            url=eaa_provider_as_par_url,
-            wallet_attestation_jwt=wallet_attestation_jwt,
-            wallet_attestation_dpop_jwt=client_attestation_pop_jwt,
-            request_object_jwt=request_object_jwt,
-            client_id=wallet_client_id,
-            proxies=self.proxies,
-            no_proxy_domains=self.no_proxy_domains,
         )
 
         logger.info(f"Par response: {as_par_response}")
@@ -762,6 +745,70 @@ class IssuanceFlow:
         if self.session.get("oauth_state") == oauth_state:
             self.session.pop("query_params", None)
         return {"success": True, "data": {"credential_id": credential_id}}
+
+    def _send_par_request(
+        self,
+        *,
+        provider_ec: dict,
+        par_url: str,
+        wallet_private_key: EllipticCurvePrivateKey,
+        wallet_client_id: str,
+        wallet_attestation_jwt: str,
+        client_attestation_pop_jwt: str,
+        audience: str,
+        oauth_state: str,
+        pkce: dict,
+        response_type: str,
+        redirect_uri: str,
+        scope: str,
+        authorization_details: list,
+    ) -> dict:
+        """Push authorization request. Sign the Request Object only when AS metadata requires it."""
+        if requires_signed_request_object(provider_ec):
+            logger.info("📄 AS richiede Request Object firmato (require_signed_request_object=true)")
+            request_object_jwt = generate_par_request_object_jwt(
+                issuer_private_key=wallet_private_key,
+                audience=audience,
+                state=oauth_state,
+                code_challenge=pkce["code_challenge"],
+                code_challenge_method=pkce["code_challenge_method"],
+                response_type=response_type,
+                redirect_uri=redirect_uri,
+                scope=scope,
+                authorization_details=authorization_details,
+            )
+            if not request_object_jwt:
+                raise ValueError("Fallita generazione Request Object JWT")
+            return request_as_par(
+                url=par_url,
+                wallet_attestation_jwt=wallet_attestation_jwt,
+                wallet_attestation_dpop_jwt=client_attestation_pop_jwt,
+                request_object_jwt=request_object_jwt,
+                client_id=wallet_client_id,
+                proxies=self.proxies,
+                no_proxy_domains=self.no_proxy_domains,
+            )
+
+        logger.info("📄 AS non richiede JAR: PAR inviata in chiaro")
+        return request_as_par(
+            url=par_url,
+            wallet_attestation_jwt=wallet_attestation_jwt,
+            wallet_attestation_dpop_jwt=client_attestation_pop_jwt,
+            request_object_jwt=None,
+            client_id=wallet_client_id,
+            proxies=self.proxies,
+            no_proxy_domains=self.no_proxy_domains,
+            par_params=build_par_cleartext_params(
+                client_id=wallet_client_id,
+                state=oauth_state,
+                code_challenge=pkce["code_challenge"],
+                code_challenge_method=pkce["code_challenge_method"],
+                response_type=response_type,
+                redirect_uri=redirect_uri,
+                scope=scope,
+                authorization_details=authorization_details,
+            ),
+        )
 
     def _get_eaa_par_url(self, eaa_provider_ec: dict) -> str:
         query_filter = f"metadata.{METADATA_TYPE_AUTHORIZATION_SERVER}.pushed_authorization_request_endpoint"

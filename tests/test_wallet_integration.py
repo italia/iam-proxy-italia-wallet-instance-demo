@@ -358,11 +358,13 @@ class ProtocolHelperIntegrationTests(unittest.TestCase):
             http_request_with_retry,
         )
         from app.utils.itwalletUtils import (
+            build_par_cleartext_params,
             get_status_description,
             request_as_par,
             request_authorize,
             request_nonce,
             request_status_list,
+            requires_signed_request_object,
         )
 
         self.assertFalse(_should_use_proxy("https://issuer.example.org", None, None))
@@ -388,6 +390,44 @@ class ProtocolHelperIntegrationTests(unittest.TestCase):
         with patch("app.utils.http_utils.requests.post", return_value=ok), patch("app.utils.http_utils.time.sleep"):
             parsed = request_as_par("https://issuer.example.org/par", "att", "pop", "request", "wallet")
         self.assertEqual(parsed["request_uri"], "urn:request")
+
+        self.assertTrue(
+            requires_signed_request_object(
+                {"metadata": {"oauth_authorization_server": {"require_signed_request_object": True}}}
+            )
+        )
+        self.assertFalse(
+            requires_signed_request_object({"metadata": {"oauth_authorization_server": {}}})
+        )
+        self.assertFalse(
+            requires_signed_request_object(
+                {"metadata": {"oauth_authorization_server": {"require_signed_request_object": False}}}
+            )
+        )
+        cleartext = build_par_cleartext_params(
+            client_id="wallet",
+            state="state",
+            code_challenge="challenge",
+            code_challenge_method="S256",
+            response_type="code",
+            redirect_uri="https://demo-wi.example.org/cb",
+            scope="pid",
+            authorization_details=[{"type": "openid_credential", "credential_configuration_id": "dc_sd_jwt_eid"}],
+        )
+        self.assertNotIn("request", cleartext)
+        self.assertIn("authorization_details", cleartext)
+        with patch("app.utils.http_utils.requests.post", return_value=ok) as post_clear:
+            clear_parsed = request_as_par(
+                "https://issuer.example.org/par",
+                "att",
+                "pop",
+                None,
+                "wallet",
+                par_params=cleartext,
+            )
+        self.assertEqual(clear_parsed["request_uri"], "urn:request")
+        self.assertNotIn("request", post_clear.call_args.kwargs["data"])
+        self.assertEqual(post_clear.call_args.kwargs["data"]["scope"], "pid")
 
         text = requests.Response()
         text.status_code = 200

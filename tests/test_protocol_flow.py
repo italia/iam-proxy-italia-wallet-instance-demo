@@ -135,6 +135,7 @@ class LocalIssuer:
                 "authorization_endpoint": ISSUER + "/authorize",
                 "pushed_authorization_request_endpoint": ISSUER + "/par",
                 "token_endpoint": ISSUER + "/token",
+                "require_signed_request_object": True,
                 "jwks": {"keys": [SIGN_PUBLIC]},
             },
             "openid_credential_issuer": {
