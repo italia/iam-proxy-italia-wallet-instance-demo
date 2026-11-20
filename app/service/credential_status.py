@@ -297,6 +297,10 @@ def eloquent_presentation_error(message: str, failure: str) -> str:
 
 
 def presentation_error_message(exc: BaseException) -> str:
+    from app.utils.http_utils import HttpExchangeError
+
+    if isinstance(exc, HttpExchangeError):
+        return exc.localized(_)
     failure = session.get("presentation_failure") or ""
     if not isinstance(failure, str):
         failure = ""

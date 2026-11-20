@@ -316,6 +316,12 @@ def guess_credential_configuration_icon(credential_configuration_id):
         return "📜"
 
 
+def quote_jmespath_key(key: str) -> str:
+    """Return a JMESPath quoted identifier for keys with hyphens, colons, or dots."""
+    escaped = str(key).replace("\\", "\\\\").replace('"', '\\"')
+    return f'"{escaped}"'
+
+
 def has_claim(entity: dict, jmes_query: str) -> bool:
     """
     Controlla se il dizionario JSON ha un claim specifico usando una query JMESPath.

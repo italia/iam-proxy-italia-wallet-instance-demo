@@ -1226,7 +1226,12 @@ class IssuanceFlow:
         provider_url = provider_url[:-1] + provider_url[-1].replace("/", "")
         http_headers = {"Accept": "application/json"}
         nonce_url = provider_url + "/nonce"
-        nonce_response = http_request_with_retry("GET", url=nonce_url, headers=http_headers)
+        nonce_response = http_request_with_retry(
+            "GET",
+            url=nonce_url,
+            purpose="richiedere il nonce al wallet provider",
+            headers=http_headers,
+        )
         nonce = _parse_json_response(nonce_response, nonce_url).get("nonce")
         hardware_signature = ""  # todo
         integrity_assertion = ""
@@ -1245,7 +1250,13 @@ class IssuanceFlow:
         req_att_body = dict(assertion=signed_jwt)
 
         att_url = provider_url + "/wallet-attestation"
-        attestations_resp = http_request_with_retry("POST", url=att_url, headers=http_headers, json_body=req_att_body)
+        attestations_resp = http_request_with_retry(
+            "POST",
+            url=att_url,
+            purpose="richiedere le attestazioni del wallet",
+            headers=http_headers,
+            json_body=req_att_body,
+        )
         attestations = _parse_json_response(attestations_resp, att_url).get("wallet_attestations") or []
 
         res = {}

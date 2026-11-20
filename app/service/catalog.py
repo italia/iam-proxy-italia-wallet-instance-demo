@@ -17,7 +17,7 @@ from app.i18n import get_locale
 from app.service.itwallet_service import ItWalletService
 from app.store import app_state
 from app.utils.diagnostic_log import list_entries, peer_role, remove_entries
-from app.utils.http_utils import http_request_with_retry
+from app.utils.http_utils import HttpExchangeError, http_request_with_retry
 from app.utils.utils import (
     estrai_parametro_query_string,
     guess_credential_configuration_icon,
@@ -394,6 +394,7 @@ def _direct_issuer_payload(service: ItWalletService, issuer_url: str) -> dict:
             metadata = http_request_with_retry(
                 "GET",
                 metadata_url,
+                purpose="scaricare i metadata OpenID4VCI dell'issuer",
                 headers={"Accept": "application/json"},
                 proxies=service.proxies,
                 no_proxy_domains=service.no_proxy_domains,
@@ -453,6 +454,9 @@ def _store_discovered_issuer(issuer_url: str, discovery: str):
         stored_as = ec_payload.get("iss") or issuer_url
         app_state.ec_store.add(stored_as, ec_payload)
         return jsonify({"success": True, "data": _catalog_section(stored_as, attestations, ec_payload)}), 200
+    except HttpExchangeError as he:
+        logger.error("❌ %s", sanitize_for_logging(str(he)))
+        return jsonify({"success": False, "field": "issuerUrl", "message": he.localized(_)}), 502
     except ValueError as ve:
         logger.error("❌ %s", sanitize_for_logging(str(ve)))
         return jsonify(

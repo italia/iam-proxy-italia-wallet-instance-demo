@@ -99,6 +99,7 @@ def request_as_par(
     return http_request_with_retry(
         "POST",
         url,
+        purpose="inviare la pushed authorization request",
         headers=headers,
         data=data,
         max_retries=max_retries,
@@ -139,6 +140,7 @@ def request_authorize(
     return http_request_with_retry(
         "GET",
         full_url,
+        purpose="inviare la richiesta di autorizzazione",
         max_retries=max_retries,
         retry_delay=retry_delay,
         proxies=proxies,
@@ -197,6 +199,7 @@ def request_token(
     return http_request_with_retry(
         "POST",
         url,
+        purpose="scambiare il codice di autorizzazione con il token",
         headers=headers,
         data=data,
         max_retries=max_retries,
@@ -251,6 +254,7 @@ def request_credential(
     return http_request_with_retry(
         "POST",
         url,
+        purpose="richiedere l'attestato all'issuer",
         headers=headers,
         json_body=data,
         max_retries=max_retries,
@@ -298,6 +302,7 @@ def request_nonce(
     return http_request_with_retry(
         "POST",
         url,
+        purpose="richiedere il nonce all'issuer",
         headers=headers,
         max_retries=max_retries,
         retry_delay=retry_delay,
@@ -333,6 +338,7 @@ def request_request_uri(
     return http_request_with_retry(
         "GET",
         full_url,
+        purpose="scaricare la request object del relying party",
         max_retries=max_retries,
         retry_delay=retry_delay,
         proxies=proxies,
@@ -374,6 +380,7 @@ def request_response_uri(
     return http_request_with_retry(
         "POST",
         url,
+        purpose="inviare la risposta di presentazione al relying party",
         headers=headers,
         data=data,
         max_retries=max_retries,
@@ -430,6 +437,7 @@ def request_presentation_callback(
     return http_request_with_retry(
         "GET",
         url,
+        purpose="seguire la callback di presentazione",
         max_retries=max_retries,
         retry_delay=retry_delay,
         proxies=proxies,
@@ -453,6 +461,7 @@ def request_status_list(
     return http_request_with_retry(
         "GET",
         url,
+        purpose="scaricare la Status List",
         headers=headers,
         max_retries=max_retries,
         retry_delay=retry_delay,

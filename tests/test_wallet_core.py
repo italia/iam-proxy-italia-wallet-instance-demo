@@ -13,12 +13,18 @@ from app.constants import (
     METADATA_TYPE_WALLET_PROVIDER,
 )
 from app.service.itwallet_helpers import (
+    _credential_configuration_path,
     credential_configuration_doctype,
+    credential_configuration_format,
     credential_configuration_namespaces,
+    credential_configuration_scope,
     validate_ec,
 )
 from app.store.credential_store import CredentialStore
+from app.store.entity_config_store import EntityConfigurationStore
+from app.utils.http_utils import HttpExchangeError, http_request_with_retry
 from app.utils.itwalletUtils import request_status_list
+from app.utils.utils import quote_jmespath_key
 
 _ISSUER = "https://issuer.example.org"
 _FEDERATION = METADATA_TYPE_FEDERATION_ENTITY
@@ -228,6 +234,9 @@ class HttpHistoryTests(unittest.TestCase):
         remove_entries([entry["id"]])
 
 
+_HYPHENATED_CREDENTIAL_ID = "urn:eu.europa.ec.eudi:pid:1.sd-jwt.key-attestation-required"
+
+
 class IssuerConfigurationTests(unittest.TestCase):
     def test_doctype_and_namespaces_come_from_the_credential_configuration(self):
         configuration = {
@@ -256,12 +265,83 @@ class IssuerConfigurationTests(unittest.TestCase):
             ["org.iso.18013.5.1"],
         )
 
+    def test_hyphenated_credential_configuration_id_is_readable(self):
+        configuration = {
+            "iss": _ISSUER,
+            "metadata": {
+                METADATA_TYPE_CREDENTIAL_ISSUER: {
+                    "credential_configurations_supported": {
+                        _HYPHENATED_CREDENTIAL_ID: {
+                            "scope": "pid",
+                            "format": "vc+sd-jwt",
+                            "doctype": "eu.europa.ec.eudi.pid.1",
+                            "credential_metadata": {
+                                "claims": [{"path": ["eu.europa.ec.eudi.pid.1", "family_name"]}]
+                            },
+                        }
+                    }
+                }
+            },
+        }
+        self.assertEqual(quote_jmespath_key(_HYPHENATED_CREDENTIAL_ID), f'"{_HYPHENATED_CREDENTIAL_ID}"')
+        self.assertIn(quote_jmespath_key(_HYPHENATED_CREDENTIAL_ID), _credential_configuration_path(_HYPHENATED_CREDENTIAL_ID))
+        self.assertEqual(credential_configuration_scope(configuration, _HYPHENATED_CREDENTIAL_ID), "pid")
+        self.assertEqual(credential_configuration_format(configuration, _HYPHENATED_CREDENTIAL_ID), "vc+sd-jwt")
+        self.assertEqual(
+            credential_configuration_doctype(configuration, _HYPHENATED_CREDENTIAL_ID),
+            "eu.europa.ec.eudi.pid.1",
+        )
+        self.assertEqual(
+            credential_configuration_namespaces(configuration, _HYPHENATED_CREDENTIAL_ID),
+            ["eu.europa.ec.eudi.pid.1"],
+        )
+        store = EntityConfigurationStore(cleanup_interval=3600)
+        store.add(_ISSUER, configuration)
+        matched = store.all_values(_credential_configuration_path(_HYPHENATED_CREDENTIAL_ID))
+        self.assertEqual(len(matched), 1)
+        self.assertEqual(matched[0]["iss"], _ISSUER)
+
     def test_missing_doctype_stops_the_read(self):
         configuration = {
             "metadata": {METADATA_TYPE_CREDENTIAL_ISSUER: {"credential_configurations_supported": {"mso_mdoc_mDL": {}}}}
         }
         with self.assertRaises(ValueError):
             credential_configuration_doctype(configuration, "mso_mdoc_mDL")
+
+
+class HttpExchangeErrorTests(unittest.TestCase):
+    def test_non_ok_response_includes_endpoint_and_purpose(self):
+        failed = requests.Response()
+        failed.status_code = 503
+        failed.headers["Content-Type"] = "text/plain"
+        failed._content = b"down"
+        failed.url = "https://issuer.example.org/.well-known/openid-federation"
+        failed.reason = "Unavailable"
+        failed.request = requests.Request("GET", failed.url).prepare()
+        purpose = "scaricare la entity configuration OpenID Federation"
+        with patch("app.utils.http_utils.requests.get", return_value=failed):
+            with self.assertRaises(HttpExchangeError) as raised:
+                http_request_with_retry("GET", failed.url, purpose=purpose, max_retries=1, retry_delay=0)
+        error = raised.exception
+        self.assertEqual(error.endpoint, failed.url)
+        self.assertEqual(error.purpose, purpose)
+        self.assertIn(failed.url, str(error))
+        self.assertIn(purpose, str(error))
+        self.assertIn("HTTP 503", str(error))
+        self.assertIn(failed.url, error.localized())
+        self.assertIn(purpose, error.localized())
+
+    def test_connection_failure_includes_endpoint_and_purpose(self):
+        purpose = "scaricare i metadata OpenID4VCI dell'issuer"
+        url = "https://issuer.example.org/.well-known/openid-credential-issuer"
+        with patch(
+            "app.utils.http_utils.requests.get",
+            side_effect=requests.ConnectionError("refused"),
+        ), patch("app.utils.http_utils.time.sleep"):
+            with self.assertRaises(HttpExchangeError) as raised:
+                http_request_with_retry("GET", url, purpose=purpose, max_retries=1, retry_delay=0)
+        self.assertIn(url, str(raised.exception))
+        self.assertIn(purpose, str(raised.exception))
 
 
 class ValidateEcTests(unittest.TestCase):

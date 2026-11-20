@@ -578,8 +578,18 @@ class BranchCoverageTests(unittest.TestCase):
                 raise ValueError("no")
 
         self.assertIn("plain", _extract_error_from_response(_Raw()))
-        with self.assertRaises(ConnectionError):
-            http_request_with_retry("GET", "https://missing.example", max_retries=1)
+        from app.utils.http_utils import HttpExchangeError
+
+        with self.assertRaises(HttpExchangeError) as raised:
+            http_request_with_retry(
+                "GET",
+                "https://missing.example",
+                purpose="scaricare la entity configuration OpenID Federation",
+                max_retries=1,
+                retry_delay=0,
+            )
+        self.assertIn("https://missing.example", str(raised.exception))
+        self.assertIn("scaricare la entity configuration OpenID Federation", str(raised.exception))
         self.assertEqual(oid_fed_list(TRUST, "?entity_type=openid_credential_issuer")[0], ISSUER)
         self.assertTrue(oid_fed_fetch_openid_configuration(ISSUER))
 

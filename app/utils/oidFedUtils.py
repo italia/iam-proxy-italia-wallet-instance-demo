@@ -53,6 +53,7 @@ def oid_fed_list(
     result = http_request_with_retry(
         "GET",
         url,
+        purpose="scaricare l'elenco delle entità della federazione OpenID",
         headers=headers,
         max_retries=max_retries,
         retry_delay=retry_delay,
@@ -114,6 +115,7 @@ def oid_fed_fetch_openid_configuration(
     return http_request_with_retry(
         "GET",
         url,
+        purpose="scaricare la entity configuration OpenID Federation",
         headers=headers,
         max_retries=max_retries,
         retry_delay=retry_delay,

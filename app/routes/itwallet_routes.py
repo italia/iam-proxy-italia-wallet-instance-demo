@@ -59,7 +59,7 @@ from app.service.credential_status import presentation_error_message
 from app.service.itwallet_service import ItWalletService
 from app.store import app_state, transaction_log
 from app.utils.diagnostic_log import list_entries, peer_role, remove_entries
-from app.utils.http_utils import http_request_with_retry
+from app.utils.http_utils import HttpExchangeError
 from app.utils.utils import (
     estrai_parametro_query_string,
     guess_credential_configuration_icon,
@@ -256,6 +256,9 @@ def addCredentialItWallet():
         status_code = 200 if result["success"] else 500
         return jsonify(result), status_code
 
+    except HttpExchangeError as he:
+        logger.error("❌ %s", sanitize_for_logging(str(he)))
+        return jsonify({"success": False, "data": {"error": he.localized(_)}}), 502
     except ValueError as ve:
         logger.error("❌ %s", sanitize_for_logging(str(ve)))
         return jsonify({"success": False, "data": {"error": _(str(ve))}}), 400
@@ -303,6 +306,9 @@ def completedAddCredentialItWallet():
             return _complete_with_shared_data(credentials_presenting)
         return _complete_from_browser(data)
 
+    except HttpExchangeError as he:
+        logger.error("❌ %s", sanitize_for_logging(str(he)))
+        return jsonify({"success": False, "data": {"error": he.localized(_)}}), 502
     except ValueError as ve:
         logger.error("❌ %s", sanitize_for_logging(str(ve)))
         return jsonify({"success": False, "data": {"error": _(str(ve))}}), 400
@@ -330,6 +336,9 @@ def loginToRelyingParty():
 
         status_code = 200 if result["success"] else 500
         return jsonify(result), status_code
+    except HttpExchangeError as he:
+        logger.error("Errore: %s", sanitize_for_logging(str(he)))
+        return jsonify({"success": False, "data": {"error": he.localized(_)}}), 502
     except ValueError as ve:
         logger.error("Errore: %s", sanitize_for_logging(str(ve)))
         return jsonify({"success": False, "data": {"error": _(str(ve))}}), 400
@@ -358,6 +367,9 @@ def completedLoginToVerifier():
         status_code = 200 if result["success"] else 500
         return jsonify(result), status_code
 
+    except HttpExchangeError as he:
+        logger.error("Errore: %s", sanitize_for_logging(str(he)))
+        return jsonify({"success": False, "data": {"error": he.localized(_)}}), 502
     except ValueError as ve:
         logger.error("Errore: %s", sanitize_for_logging(str(ve)))
         return jsonify({"success": False, "data": {"error": _(str(ve))}}), 400

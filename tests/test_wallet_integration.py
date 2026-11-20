@@ -306,6 +306,7 @@ class WalletDemoIntegrationTests(unittest.TestCase):
             status = self.client.get(status.headers["Location"])
         self.assertEqual(status.status_code, 200)
         self.assertIn("status list", status.get_data(as_text=True))
+        self.client.get("/wallet/lang/it?next=/wallet/credentials")
         removed = self.client.post(
             "/wallet/credentials/delete", data={"issuer": _ISSUER, "credential_id": "pid"}, follow_redirects=True
         )
@@ -419,8 +420,19 @@ class ProtocolHelperIntegrationTests(unittest.TestCase):
         failed.reason = "Unavailable"
         failed.request = requests.Request("POST", failed.url).prepare()
         with patch("app.utils.http_utils.requests.post", return_value=failed), patch("app.utils.http_utils.time.sleep"):
-            with self.assertRaises(RuntimeError):
-                http_request_with_retry("POST", failed.url, max_retries=1, retry_delay=0)
+            from app.utils.http_utils import HttpExchangeError
+
+            with self.assertRaises(HttpExchangeError) as raised:
+                http_request_with_retry(
+                    "POST",
+                    failed.url,
+                    purpose="inviare la pushed authorization request",
+                    max_retries=1,
+                    retry_delay=0,
+                )
+            message = str(raised.exception)
+            self.assertIn(failed.url, message)
+            self.assertIn("inviare la pushed authorization request", message)
         self.assertEqual(get_status_description("0x00"), "Valido")
         self.assertEqual(get_status_description("0x09"), "Indefinito")
 
