@@ -233,6 +233,20 @@ class IssuanceFlow:
         remembered.pop(state, None)
         self.session["issuance_requests"] = remembered
 
+    def _abandon_incomplete_issuance(self) -> None:
+        """Drop in-flight add-credential requests so a later OAuth callback cannot store them."""
+        remembered = self.session.get("issuance_requests")
+        abandoned_states = list(remembered.keys()) if isinstance(remembered, dict) else []
+        # Completed exchanges are removed in _forget_issuance; anything still listed is incomplete.
+        self.session["issuance_requests"] = {}
+        self.session.pop("oauth_state", None)
+        self.session.pop("query_params", None)
+        if abandoned_states:
+            logger.info(
+                "Abandoned incomplete issuance requests: %s",
+                sanitize_for_logging(abandoned_states),
+            )
+
     def initialize_wallet(self, idp: str, country: str):
         """
         Metodo pubblico per inizializzare l'IT Wallet per il paese indicato
@@ -1127,6 +1141,9 @@ class IssuanceFlow:
                 expected_version="1.0",
                 expected_doc_type=expected_doc,
             )
+            if not result_json:
+                logger.info("Invalid credential #%d (mdoc)", index)
+                return None
             logger.info("Valid credential #%d (mdoc)", index)
             return credential, expected_doc, result_json
         return None
@@ -1259,7 +1276,7 @@ class IssuanceFlow:
                 result = self._decode_and_validate_single_credential(
                     cred, index, credential_configuration_id, credential_issuer_jwks, entity_configuration
                 )
-                if result:
+                if result and result[2] is not None:
                     last_valid = (credential_id, *result)
         return last_valid
 

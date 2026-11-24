@@ -287,6 +287,9 @@ class PresentationFlow:
         except Exception:
             presented = credentials_presenting if isinstance(credentials_presenting, list) else []
             self._record_presentation("fallita", presented)
+            abandon = getattr(self, "_abandon_incomplete_issuance", None)
+            if callable(abandon):
+                abandon()
             raise
 
     def _complete_presentation_body(self, credentials_presenting: list[dict]):

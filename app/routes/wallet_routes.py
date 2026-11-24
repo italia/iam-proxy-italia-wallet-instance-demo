@@ -737,7 +737,9 @@ def authorization_phase():
     it_wallet_service = ItWalletService(session, external_discovery=True)
     try:
         result = it_wallet_service.complete_presentation(credentials_presenting)
-        status_code = 200 if result["success"] else 500
+        if not result.get("success"):
+            it_wallet_service._abandon_incomplete_issuance()
+        status_code = 200 if result.get("success") else 500
         return jsonify(result), status_code
     except Exception as e:
         logger.error(f"Error, message: {e}")
