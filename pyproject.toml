@@ -31,7 +31,7 @@ dependencies = [
     "requests==2.33.0",
     "urllib3==2.8.0",
     "pymdoccbor>=1.4.0",
-    "pyeudiw @ git+https://github.com/italia/eudi-wallet-it-python@main",
+    "pyeudiw @ git+https://github.com/italia/eudi-wallet-it-python@dev",
     "pyyaml (>=6.0.3,<7.0.0)"
 ]
 
