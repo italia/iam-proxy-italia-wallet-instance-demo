@@ -306,6 +306,7 @@ class WalletDemoIntegrationTests(unittest.TestCase):
             status = self.client.get(status.headers["Location"])
         self.assertEqual(status.status_code, 200)
         self.assertIn("status list", status.get_data(as_text=True))
+        self.client.get("/wallet/lang/it?next=/wallet/credentials")
         removed = self.client.post(
             "/wallet/credentials/delete", data={"issuer": _ISSUER, "credential_id": "pid"}, follow_redirects=True
         )
@@ -318,6 +319,15 @@ class WalletDemoIntegrationTests(unittest.TestCase):
         catalog = self.client.get("/itwallet/issuerCatalog")
         self.assertTrue(catalog.get_json()["success"])
         self.assertEqual(self.client.post("/itwallet/issuerCatalog", json={}).status_code, 400)
+        self.assertEqual(self.client.delete("/itwallet/issuerCatalog", json={}).status_code, 400)
+        self.assertEqual(
+            self.client.delete("/itwallet/issuerCatalog", json={"issuer": "https://missing.example.org"}).status_code,
+            404,
+        )
+        deleted = self.client.delete("/itwallet/issuerCatalog", json={"issuer": _ISSUER})
+        self.assertTrue(deleted.get_json()["success"])
+        self.assertFalse(app_state.ec_store.exists(_ISSUER))
+        self.assertEqual(self.client.get("/itwallet/issuerCatalog").get_json()["data"], [])
         supported = self.client.get("/itwallet/credentialSupported")
         self.assertTrue(supported.get_json()["success"])
         types = self.client.get("/itwallet/objectTypesInMemory")
@@ -348,11 +358,13 @@ class ProtocolHelperIntegrationTests(unittest.TestCase):
             http_request_with_retry,
         )
         from app.utils.itwalletUtils import (
+            build_par_cleartext_params,
             get_status_description,
             request_as_par,
             request_authorize,
             request_nonce,
             request_status_list,
+            requires_signed_request_object,
         )
 
         self.assertFalse(_should_use_proxy("https://issuer.example.org", None, None))
@@ -378,6 +390,42 @@ class ProtocolHelperIntegrationTests(unittest.TestCase):
         with patch("app.utils.http_utils.requests.post", return_value=ok), patch("app.utils.http_utils.time.sleep"):
             parsed = request_as_par("https://issuer.example.org/par", "att", "pop", "request", "wallet")
         self.assertEqual(parsed["request_uri"], "urn:request")
+
+        self.assertTrue(
+            requires_signed_request_object(
+                {"metadata": {"oauth_authorization_server": {"require_signed_request_object": True}}}
+            )
+        )
+        self.assertFalse(requires_signed_request_object({"metadata": {"oauth_authorization_server": {}}}))
+        self.assertFalse(
+            requires_signed_request_object(
+                {"metadata": {"oauth_authorization_server": {"require_signed_request_object": False}}}
+            )
+        )
+        cleartext = build_par_cleartext_params(
+            client_id="wallet",
+            state="state",
+            code_challenge="challenge",
+            code_challenge_method="S256",
+            response_type="code",
+            redirect_uri="https://demo-wi.example.org/cb",
+            scope="pid",
+            authorization_details=[{"type": "openid_credential", "credential_configuration_id": "dc_sd_jwt_eid"}],
+        )
+        self.assertNotIn("request", cleartext)
+        self.assertIn("authorization_details", cleartext)
+        with patch("app.utils.http_utils.requests.post", return_value=ok) as post_clear:
+            clear_parsed = request_as_par(
+                "https://issuer.example.org/par",
+                "att",
+                "pop",
+                None,
+                "wallet",
+                par_params=cleartext,
+            )
+        self.assertEqual(clear_parsed["request_uri"], "urn:request")
+        self.assertNotIn("request", post_clear.call_args.kwargs["data"])
+        self.assertEqual(post_clear.call_args.kwargs["data"]["scope"], "pid")
 
         text = requests.Response()
         text.status_code = 200
@@ -419,8 +467,19 @@ class ProtocolHelperIntegrationTests(unittest.TestCase):
         failed.reason = "Unavailable"
         failed.request = requests.Request("POST", failed.url).prepare()
         with patch("app.utils.http_utils.requests.post", return_value=failed), patch("app.utils.http_utils.time.sleep"):
-            with self.assertRaises(RuntimeError):
-                http_request_with_retry("POST", failed.url, max_retries=1, retry_delay=0)
+            from app.utils.http_utils import HttpExchangeError
+
+            with self.assertRaises(HttpExchangeError) as raised:
+                http_request_with_retry(
+                    "POST",
+                    failed.url,
+                    purpose="inviare la pushed authorization request",
+                    max_retries=1,
+                    retry_delay=0,
+                )
+            message = str(raised.exception)
+            self.assertIn(failed.url, message)
+            self.assertIn("inviare la pushed authorization request", message)
         self.assertEqual(get_status_description("0x00"), "Valido")
         self.assertEqual(get_status_description("0x09"), "Indefinito")
 

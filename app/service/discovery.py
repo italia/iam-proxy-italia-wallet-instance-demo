@@ -33,6 +33,7 @@ class FederationDiscovery:
         token = http_request_with_retry(
             "GET",
             url.rstrip("/") + _FEDERATION_PATH,
+            purpose="scaricare la entity configuration OpenID Federation",
             headers=_ENTITY_STATEMENT_HEADERS,
             proxies=self.proxies,
             no_proxy_domains=self.no_proxy_domains,

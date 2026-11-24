@@ -135,6 +135,7 @@ class LocalIssuer:
                 "authorization_endpoint": ISSUER + "/authorize",
                 "pushed_authorization_request_endpoint": ISSUER + "/par",
                 "token_endpoint": ISSUER + "/token",
+                "require_signed_request_object": True,
                 "jwks": {"keys": [SIGN_PUBLIC]},
             },
             "openid_credential_issuer": {
@@ -276,6 +277,12 @@ class LocalIssuer:
             return _Response(self._metadata(ISSUER)["openid_credential_issuer"], "application/json")
         if path.endswith("/.well-known/openid-credential-issuer"):
             return _Response(self._metadata(ISSUER)["openid_credential_issuer"], "application/json")
+        if parsed_path == "/.well-known/oauth-authorization-server" or parsed_path.startswith(
+            "/.well-known/oauth-authorization-server/"
+        ):
+            return _Response(self._metadata(ISSUER)["oauth_authorization_server"], "application/json")
+        if path.endswith("/.well-known/oauth-authorization-server"):
+            return _Response(self._metadata(ISSUER)["oauth_authorization_server"], "application/json")
         raise AssertionError(f"unexpected {method} {url}")
 
 

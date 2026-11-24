@@ -442,6 +442,60 @@ msgstr "Enter an http or https URL."
 msgid "Impossibile leggere i metadata di questo issuer."
 msgstr "The wallet cannot read this issuer's metadata."
 
+msgid "Impossibile leggere i metadata dell'authorization server."
+msgstr "The wallet cannot read this authorization server's metadata."
+
+msgid "La richiesta HTTP verso %(endpoint)s per %(purpose)s è fallita: %(detail)s."
+msgstr "The HTTP request to %(endpoint)s for %(purpose)s failed: %(detail)s."
+
+msgid "scaricare la entity configuration OpenID Federation"
+msgstr "download the OpenID Federation entity configuration"
+
+msgid "scaricare l'elenco delle entità della federazione OpenID"
+msgstr "download the OpenID Federation entity list"
+
+msgid "scaricare i metadata OpenID4VCI dell'issuer"
+msgstr "download the issuer OpenID4VCI metadata"
+
+msgid "scaricare i metadata OAuth Authorization Server"
+msgstr "download the OAuth Authorization Server metadata"
+
+msgid "inviare la pushed authorization request"
+msgstr "send the pushed authorization request"
+
+msgid "inviare la richiesta di autorizzazione"
+msgstr "send the authorization request"
+
+msgid "scambiare il codice di autorizzazione con il token"
+msgstr "exchange the authorization code for the token"
+
+msgid "richiedere l'attestato all'issuer"
+msgstr "request the attestation from the issuer"
+
+msgid "richiedere il nonce all'issuer"
+msgstr "request the nonce from the issuer"
+
+msgid "scaricare la request object del relying party"
+msgstr "download the relying party request object"
+
+msgid "inviare la risposta di presentazione al relying party"
+msgstr "send the presentation response to the relying party"
+
+msgid "seguire la callback di presentazione"
+msgstr "follow the presentation callback"
+
+msgid "scaricare la Status List"
+msgstr "download the Status List"
+
+msgid "richiedere il nonce al wallet provider"
+msgstr "request the nonce from the wallet provider"
+
+msgid "richiedere le attestazioni del wallet"
+msgstr "request the wallet attestations"
+
+msgid "chiamare l'endpoint remoto"
+msgstr "call the remote endpoint"
+
 msgid "Questo indirizzo non pubblica attestazioni ottenibili."
 msgstr "This address does not publish attestations you can obtain."
 
@@ -700,6 +754,9 @@ msgstr "Disclosure"
 msgid "Payload"
 msgstr "Payload"
 
+msgid "Certificato"
+msgstr "Certificate"
+
 msgid "Notazione diagnostica"
 msgstr "Diagnostic notation"
 
@@ -795,6 +852,12 @@ msgstr "Remove"
 
 msgid "Rimuovi {name}"
 msgstr "Remove {name}"
+
+msgid "Indica l'issuer da rimuovere."
+msgstr "Specify the issuer to remove."
+
+msgid "Issuer non trovato nel catalogo."
+msgstr "Issuer not found in the catalog."
 
 msgid "Rimuovere questa attestato?"
 msgstr "Remove this attestation?"
