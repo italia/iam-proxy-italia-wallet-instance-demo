@@ -479,9 +479,7 @@ class DecodeCredentialGateTests(unittest.TestCase):
                         "mso_mdoc_mDL": {
                             "format": "mso_mdoc",
                             "doctype": "org.iso.18013.5.1.mDL",
-                            "credential_metadata": {
-                                "claims": [{"path": ["org.iso.18013.5.1", "family_name"]}]
-                            },
+                            "credential_metadata": {"claims": [{"path": ["org.iso.18013.5.1", "family_name"]}]},
                         }
                     }
                 }
