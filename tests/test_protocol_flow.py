@@ -437,3 +437,65 @@ class ProtocolFlowTests(unittest.TestCase):
                     ]
                 )
                 self.assertTrue(shared["success"])
+
+    def test_failed_presentation_abandons_incomplete_issuance(self):
+        from app.service.itwallet_service import ItWalletService
+
+        with self.app.test_request_context():
+            session["authenticated"] = True
+            session["session_id"] = "session-abandon"
+            session["oauth_state"] = "pending-state"
+            session["issuance_requests"] = {
+                "pending-state": {
+                    "code_verifier": "verifier",
+                    "issuer_url": ISSUER,
+                    "credential_configuration_id": "dc_sd_jwt_other",
+                }
+            }
+            service = ItWalletService(session)
+            with patch.object(
+                service,
+                "_complete_presentation_body",
+                side_effect=ValueError("invalid DCQL response"),
+            ):
+                with self.assertRaises(ValueError):
+                    service.complete_presentation([{"id": "pid"}])
+
+            self.assertEqual(session.get("issuance_requests"), {})
+            self.assertNotIn("oauth_state", session)
+            with self.assertRaises(ValueError):
+                service.complete_add_credential_from_browser("pending-state")
+
+
+class DecodeCredentialGateTests(unittest.TestCase):
+    def test_mdoc_none_is_not_stored(self):
+        from app.service.issuance import IssuanceFlow
+
+        service = object.__new__(IssuanceFlow)
+        entity_configuration = {
+            "metadata": {
+                "openid_credential_issuer": {
+                    "credential_configurations_supported": {
+                        "mso_mdoc_mDL": {
+                            "format": "mso_mdoc",
+                            "doctype": "org.iso.18013.5.1.mDL",
+                            "credential_metadata": {
+                                "claims": [{"path": ["org.iso.18013.5.1", "family_name"]}]
+                            },
+                        }
+                    }
+                }
+            }
+        }
+        with patch(
+            "app.service.issuance.decode_and_verify_issuer_signed",
+            return_value=None,
+        ):
+            result = service._decode_and_validate_single_credential(
+                {"credential": "unused"},
+                1,
+                "mso_mdoc_mDL",
+                {},
+                entity_configuration,
+            )
+        self.assertIsNone(result)
