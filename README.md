@@ -1,17 +1,24 @@
 # iam-proxy-italia-wallet-instance-demo
 
-Demo wallet instance for the [IAM Proxy Italia](https://github.com/italia/iam-proxy-italia) ecosystem. It obtains attestations from a Credential Issuer and presents them to a Relying Party. The application is aligned with the [IT-Wallet specifications 1.4.7](https://italia.github.io/eid-wallet-it-docs/releases/1.4.7/en/).
+Developer inspection wallet for Credential Issuer and Relying Party behaviour. Features, protocol checks, and HTTP object transparency are listed in [docs/SCOPE.md](docs/SCOPE.md).
 
-This product is for testing and learning. Do not use it in production.
+Born as demo wallet instance for the [IAM Proxy Italia](https://github.com/italia/iam-proxy-italia) ecosystem. 
+
+It request and handles attestations from a Credential Issuer and presents them to a Relying Party. The application is aligned with the [IT-Wallet specifications 1.4.7](https://italia.github.io/eid-wallet-it-docs/releases/1.4.7/en/).
+
+This product is for testing and learning. Even if checked over coda quality and security best practices, it is not intended for production use.
 
 ## What it does
 
+- Discover Credential Issuers using three dirfferent trust evaluation mechanisms: direct, openid federation and ETSI LoTL (EUDIW's approach).
 - Obtain and hold the attestations published by the configured issuer, including PID and mDL.
 - Present a held attestation to a Relying Party.
 - Read revocation from the Status List carried in the attestation.
 - Keep a local history of presentations on the Presentations Dashboard.
 
 Held attestations stay in memory. Restarting the process clears them.
+
+Screenshots of the main features, each with a caption, are in [docs/FEATURES.md](docs/FEATURES.md).
 
 ## Specifications
 
@@ -20,7 +27,9 @@ The application is Python 3.12 and Flask. Credential handling uses [pyeudiw](htt
 - [IT-Wallet Technical Documentation 1.4.7](https://italia.github.io/eid-wallet-it-docs/releases/1.4.7/en/)
 - [OpenID4VCI 1.0](https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html)
 - [OpenID4VP 1.0](https://openid.net/specs/openid-4-verifiable-presentations-1_0.html)
+- [OpenID4VC HAIP 1.0](https://openid.net/specs/openid4vc-high-assurance-interoperability-profile-1_0.html)
 - [OpenID Federation 1.0](https://openid.net/specs/openid-federation-1_0.html)
+- [OpenID Federation for Wallet Architectures 1.0](https://openid.net/specs/openid-federation-wallet-1_0.html)
 
 ## Configuration
 
